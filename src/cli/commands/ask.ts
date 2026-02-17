@@ -6,6 +6,7 @@ import { log } from "../../utils/logger.js";
 import { OpenRouterProvider } from "../../providers/openrouter.js";
 import { OllamaProvider } from "../../providers/ollama.js";
 import { OpenAIProvider } from "../../providers/openai.js";
+import { memphis } from "../../agents/logger.js";
 import type { LLMMessage } from "../../providers/index.js";
 
 export async function askCommand(question: string) {
@@ -93,19 +94,25 @@ relevant information, say so honestly. Be concise and helpful.`,
       });
 
       console.log(chalk.gray(`🤔 Consulting ${providerName} (${model})...\n`));
+      const startTime = Date.now();
       const response = await provider.chat(messages, {
         model: model,
         temperature: 0.7,
       });
+      const duration = (Date.now() - startTime) / 1000;
 
       console.log(chalk.white(response.content));
       
       if (response.usage) {
         console.log(chalk.gray(`\nTokens used: ${response.usage.total_tokens}`));
       }
+      
+      // Log to unified logger
+      memphis.api(providerName.toLowerCase(), "ok", duration);
       return;
     } catch (err) {
       console.log(chalk.yellow(`⚠ ${providerName} error: ${err}. Falling back to memory search.\n`));
+      memphis.error(providerName, String(err));
     }
   }
 

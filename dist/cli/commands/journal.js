@@ -1,6 +1,7 @@
 import { Store } from "../../memory/store.js";
 import { loadConfig } from "../../config/loader.js";
 import { log } from "../../utils/logger.js";
+import { memphis } from "../../agents/logger.js";
 export async function journalCommand(message, options) {
     const config = loadConfig();
     const store = new Store(config.memory.path);
@@ -13,5 +14,7 @@ export async function journalCommand(message, options) {
     });
     log.block("journal", block.index, block.hash);
     log.info(message);
+    // Log to unified logger
+    memphis.cmd("journal", "ok");
 }
 //# sourceMappingURL=journal.js.map

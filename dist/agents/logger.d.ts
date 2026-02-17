@@ -10,23 +10,15 @@ export interface AgentLogEntry {
     tags: string[];
 }
 /**
- * Add entry to buffer (batched)
+ * Add entry - writes directly to chain (no batching)
+ * For high-frequency logging, consider external batching
  */
 export declare function agentLog(entry: Omit<AgentLogEntry, "tags">): void;
 /**
- * Flush buffer to Memphis chain
- */
-export declare function flush(): void;
-/**
- * Manual flush (for testing)
- */
-export declare function forceFlush(): void;
-/**
- * Get buffer status
+ * Get status
  */
 export declare function getStatus(): {
-    buffered: number;
-    lastFlush: number;
+    active: boolean;
 };
 export declare const openclaw: {
     api: (target: string, status: "ok" | "error", duration?: number) => void;

@@ -10,17 +10,12 @@ export type LogType = "api" | "file" | "cmd" | "error";
 export interface AgentLogEntry {
   source: AgentSource;
   type: LogType;
-  action: string;      // e.g., "edit", "read", "exec"
-  target: string;       // e.g., "src/index.ts", "api.openai.com"
+  action: string;
+  target: string;
   status: "ok" | "error" | "pending";
-  duration?: number;   // in seconds
+  duration?: number;
   tags: string[];
 }
-
-// Buffer for batching - flushed every 5 minutes
-const logBuffer: AgentLogEntry[] = [];
-let lastFlush = Date.now();
-const FLUSH_INTERVAL = 5 * 60 * 1000; // 5 minutes
 
 // In-memory store (singleton)
 let storeInstance: Store | null = null;
@@ -43,7 +38,8 @@ function formatEntry(entry: AgentLogEntry): string {
 }
 
 /**
- * Add entry to buffer (batched)
+ * Add entry - writes directly to chain (no batching)
+ * For high-frequency logging, consider external batching
  */
 export function agentLog(entry: Omit<AgentLogEntry, "tags">): void {
   const fullEntry: AgentLogEntry = {
@@ -51,56 +47,23 @@ export function agentLog(entry: Omit<AgentLogEntry, "tags">): void {
     tags: ["auto", "agent", entry.source],
   };
   
-  logBuffer.push(fullEntry);
-  
-  // Check if should flush
-  const now = Date.now();
-  if (now - lastFlush > FLUSH_INTERVAL || logBuffer.length >= 10) {
-    flush();
-  }
-}
-
-/**
- * Flush buffer to Memphis chain
- */
-export function flush(): void {
-  if (logBuffer.length === 0) return;
-  
   const store = getStore();
-  const entries = [...logBuffer];
-  logBuffer.length = 0;
-  lastFlush = Date.now();
-  
-  // Format as compact batch
-  const content = entries.map(formatEntry).join("\n");
+  const content = formatEntry(fullEntry);
   
   store.addBlock("journal", {
     type: "journal",
     content,
-    tags: ["auto", "batch", `count:${entries.length}`],
+    tags: fullEntry.tags,
     agent: "agent-logger",
   });
 }
 
 /**
- * Manual flush (for testing)
+ * Get status
  */
-export function forceFlush(): void {
-  flush();
+export function getStatus(): { active: boolean } {
+  return { active: true };
 }
-
-/**
- * Get buffer status
- */
-export function getStatus(): { buffered: number; lastFlush: number } {
-  return {
-    buffered: logBuffer.length,
-    lastFlush,
-  };
-}
-
-// Auto-flush every 5 minutes
-setInterval(flush, FLUSH_INTERVAL);
 
 // Helper functions for each agent
 export const openclaw = {

@@ -2,10 +2,6 @@
 // Format: [AGENT] type:action target → status
 import { Store } from "../memory/store.js";
 import { loadConfig } from "../config/loader.js";
-// Buffer for batching - flushed every 5 minutes
-const logBuffer = [];
-let lastFlush = Date.now();
-const FLUSH_INTERVAL = 5 * 60 * 1000; // 5 minutes
 // In-memory store (singleton)
 let storeInstance = null;
 function getStore() {
@@ -24,56 +20,29 @@ function formatEntry(entry) {
     return `[${entry.source}] ${entry.type}:${entry.action} ${entry.target} → ${entry.status}${duration}`;
 }
 /**
- * Add entry to buffer (batched)
+ * Add entry - writes directly to chain (no batching)
+ * For high-frequency logging, consider external batching
  */
 export function agentLog(entry) {
     const fullEntry = {
         ...entry,
         tags: ["auto", "agent", entry.source],
     };
-    logBuffer.push(fullEntry);
-    // Check if should flush
-    const now = Date.now();
-    if (now - lastFlush > FLUSH_INTERVAL || logBuffer.length >= 10) {
-        flush();
-    }
-}
-/**
- * Flush buffer to Memphis chain
- */
-export function flush() {
-    if (logBuffer.length === 0)
-        return;
     const store = getStore();
-    const entries = [...logBuffer];
-    logBuffer.length = 0;
-    lastFlush = Date.now();
-    // Format as compact batch
-    const content = entries.map(formatEntry).join("\n");
+    const content = formatEntry(fullEntry);
     store.addBlock("journal", {
         type: "journal",
         content,
-        tags: ["auto", "batch", `count:${entries.length}`],
+        tags: fullEntry.tags,
         agent: "agent-logger",
     });
 }
 /**
- * Manual flush (for testing)
- */
-export function forceFlush() {
-    flush();
-}
-/**
- * Get buffer status
+ * Get status
  */
 export function getStatus() {
-    return {
-        buffered: logBuffer.length,
-        lastFlush,
-    };
+    return { active: true };
 }
-// Auto-flush every 5 minutes
-setInterval(flush, FLUSH_INTERVAL);
 // Helper functions for each agent
 export const openclaw = {
     api: (target, status, duration) => agentLog({ source: "openclaw", type: "api", action: "call", target, status, duration }),
