@@ -1,0 +1,53 @@
+import { BaseProvider, type LLMMessage, type LLMResponse } from "./index.js";
+
+export class MiniMaxProvider extends BaseProvider {
+  name = "minimax";
+  baseUrl = "https://api.minimax.chat/v1";
+  models = [
+    "minimax-text-01",
+  ];
+  
+  apiKey = "";
+  groupId = "";
+  
+  constructor(apiKey?: string, groupId?: string) {
+    super();
+    this.apiKey = apiKey || process.env.MINIMAX_API_KEY || "";
+    this.groupId = groupId || process.env.MINIMAX_GROUP_ID || "";
+  }
+  
+  async chat(
+    messages: LLMMessage[],
+    options?: {
+      model?: string;
+      temperature?: number;
+      max_tokens?: number;
+    }
+  ): Promise<LLMResponse> {
+    if (!this.isConfigured()) {
+      throw new Error("MiniMax not configured. Set MINIMAX_API_KEY and MINIMAX_GROUP_ID");
+    }
+    
+    const model = options?.model || this.models[0];
+    
+    const response = await this.fetch<{
+      choices: Array<{ message: { content: string } }>;
+      usage: {
+        prompt_tokens: number;
+        completion_tokens: number;
+        total_tokens: number;
+      };
+    }>("/text/chatcompletion_v2", {
+      model,
+      messages,
+      temperature: options?.temperature ?? 0.7,
+      max_tokens: options?.max_tokens,
+      group_id: this.groupId,
+    });
+    
+    return {
+      content: response.choices[0]?.message?.content || "",
+      usage: response.usage,
+    };
+  }
+}
