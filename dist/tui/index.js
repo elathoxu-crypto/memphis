@@ -163,8 +163,11 @@ export class MemphisTUI {
         this.screen.key(["1", "2", "3", "4", "5", "6", "7", "8"], (ch) => {
             this.navigateToMenu(parseInt(ch));
         });
-        // Also allow 'c' for Cline
+        // Also allow 'c' for Cline, 'o' for Offline
         this.screen.key(["c"], () => {
+            this.navigateToMenu(7);
+        });
+        this.screen.key(["o"], () => {
             this.navigateToMenu(8);
         });
         // Also allow j/k for vim-style navigation
@@ -179,7 +182,7 @@ export class MemphisTUI {
         this.screen.render();
     }
     handleNavigation(direction) {
-        const menuItems = ["dashboard", "journal", "vault", "recall", "ask", "openclaw", "cline", "settings"];
+        const menuItems = ["dashboard", "journal", "vault", "recall", "ask", "openclaw", "cline", "offline", "settings"];
         const currentIndex = menuItems.indexOf(this.currentScreen);
         let newIndex = currentIndex;
         if (direction === "down")
@@ -203,7 +206,8 @@ export class MemphisTUI {
             ask: 5,
             openclaw: 6,
             cline: 7,
-            settings: 8
+            offline: 8,
+            settings: 9
         };
         return menuMap[this.currentScreen] || 1;
     }
@@ -216,6 +220,7 @@ export class MemphisTUI {
             " Ask",
             " OpenClaw",
             " Cline",
+            " Offline",
             " Settings",
         ];
         let content = "{bold}Navigation{/bold}\n\n";
@@ -287,6 +292,9 @@ export class MemphisTUI {
                 this.renderCline();
                 break;
             case 8:
+                this.renderOffline();
+                break;
+            case 9:
                 this.renderSettings();
                 break;
         }
@@ -644,6 +652,84 @@ export class MemphisTUI {
                     content += `{yellow}Note: Cline integration is planned.{/yellow}\n`;
                     content += `\n{white}Press any key to continue...{/white}`;
                     this.contentBox.setContent(content);
+                }
+                this.inputMode = "";
+                this.inputBox.hide();
+                this.screen.render();
+            });
+        }, 100);
+    }
+    renderOffline() {
+        this.currentScreen = "offline";
+        // Get system info
+        const chains = this.store.listChains();
+        const journalBlocks = this.store.getChainStats("journal");
+        const vaultBlocks = this.store.getChainStats("vault");
+        let content = `{bold}{cyan} 📡 Memphis Offline Control Panel{/cyan}{/bold}\n\n`;
+        // Status section
+        content += `{bold}{yellow}╔══════════════════════════════════════╗{/yellow}\n`;
+        content += `{bold}{yellow}║     🟢 OFFLINE MODE ACTIVE         ║{/yellow}\n`;
+        content += `{bold}{yellow}╚══════════════════════════════════════╝{/yellow}\n\n`;
+        // Model info
+        content += `{bold}🤖 LLM Configuration:{/bold}\n`;
+        content += `   Model: {cyan}llama3.2:1b{/cyan} (primary)\n`;
+        content += `   Fallback: {gray}llama3.2:3b → gemma3:4b{/gray}\n\n`;
+        // System stats
+        content += `{bold}📊 System Stats:{/bold}\n`;
+        content += `   Journal: {green}${journalBlocks.blocks} blocks{/green}\n`;
+        content += `   Vault: {green}${vaultBlocks.blocks} secrets{/green}\n`;
+        content += `   Memory: ${chains.length} chains\n\n`;
+        // Quick actions
+        content += `{bold}⚡ Quick Actions:{/bold}\n`;
+        content += `   [1] Ask Memphis    - Query the AI brain\n`;
+        content += `   [2] Add Journal    - Record a thought\n`;
+        content += `   [3] Search         - Find in memory\n`;
+        content += `   [4] Agents         - View connected agents\n\n`;
+        // Network status
+        content += `{bold}🌐 Network Status:{/bold}\n`;
+        content += `   {green}●{/green} Local: Connected (Ollama running)\n`;
+        content += `   {red}○{/red} Cloud: Disconnected\n\n`;
+        content += `{white}Press Enter for more options...{/white}\n`;
+        content += `{gray}(Or press 'm' to switch model){/gray}\n`;
+        this.contentBox.setContent(content);
+        this.sidebarBox.setContent(this.getSidebarContent());
+        setTimeout(() => {
+            this.inputMode = "offline_menu";
+            this.inputBox.show();
+            this.inputField.options.placeholder = "Press number or Enter:";
+            this.inputField.focus();
+            this.inputField.readInput((err, value) => {
+                if (value && value.trim()) {
+                    const input = value.trim().toLowerCase();
+                    if (input === 'm') {
+                        // Switch model
+                        this.inputField.setValue("");
+                        this.inputField.options.placeholder = "Enter model name (llama3.2:1b, llama3.2:3b, gemma3:4b):";
+                        this.inputField.readInput((err2, modelValue) => {
+                            if (modelValue && modelValue.trim()) {
+                                process.env.OLLAMA_MODEL = modelValue.trim();
+                                this.contentBox.setContent(`{green}Model switched to: ${modelValue.trim()}{/green}\n\nPress any key to continue...`);
+                            }
+                            this.inputMode = "";
+                            this.inputBox.hide();
+                            this.screen.render();
+                        });
+                    }
+                    else if (input === '1') {
+                        this.navigateToMenu(5); // Ask
+                    }
+                    else if (input === '2') {
+                        this.navigateToMenu(2); // Journal
+                    }
+                    else if (input === '3') {
+                        this.navigateToMenu(4); // Recall
+                    }
+                    else if (input === '4') {
+                        this.navigateToMenu(6); // OpenClaw
+                    }
+                    else {
+                        this.contentBox.setContent(`{yellow}Unknown command: ${input}{/yellow}\n\nPress any key to continue...`);
+                    }
                 }
                 this.inputMode = "";
                 this.inputBox.hide();

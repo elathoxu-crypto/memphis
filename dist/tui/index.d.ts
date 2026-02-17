@@ -30,5 +30,6 @@ export declare class MemphisTUI {
     private renderVault;
     private renderOpenClaw;
     private renderCline;
+    private renderOffline;
     run(): void;
 }
