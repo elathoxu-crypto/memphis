@@ -13,10 +13,12 @@ Every AI tool forgets. You explain the same context every session. Memphis remem
     git clone https://github.com/elathoxu-crypto/memphis.git
     cd memphis
     npm install
-    npx tsx src/cli/index.ts init
-    npx tsx src/cli/index.ts journal "Memphis is alive" -t "genesis"
-    npx tsx src/cli/index.ts recall "alive"
-    npx tsx src/cli/index.ts status
+    npm run build
+    npm link  # Or use: npx memphis-cli init
+
+### Or install from GitHub Package (for contributors):
+
+    npm install @elathoxu-crypto/memphis --registry=https://npm.pkg.github.com
 
 ## Features
 
@@ -37,18 +39,22 @@ Every AI tool forgets. You explain the same context every session. Memphis remem
 | memphis ask "..." | Search memory (LLM coming) |
 | memphis recall "keyword" | Search by keyword |
 | memphis status | Show chains and providers |
+| memphis vault init | Initialize encrypted vault (SSI) |
+| memphis vault add <key> <value> | Add encrypted secret |
+| memphis vault list | List stored secrets |
+| memphis vault get <key> | Decrypt and show secret |
 
 ## Roadmap
 
 - [x] Memory chain with SHA256
 - [x] CLI (journal, ask, recall, status, init)
 - [x] Tests
+- [x] Vault (encrypted secrets with AES-256-GCM + SSI)
 - [ ] LLM provider integration (Minimax, OpenRouter, Ollama)
 - [ ] Context window (feed relevant memory to LLM)
 - [ ] Git auto-commit on every block
 - [ ] Bridge to Cline (VS Code AI)
 - [ ] Bridge to OpenClaw (automation)
-- [ ] npm package (npx memphis-ai)
 
 ## Tech Stack
 
