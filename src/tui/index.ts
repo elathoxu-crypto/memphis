@@ -6,8 +6,6 @@ import { queryBlocks } from "../memory/query.js";
 import { encrypt, decrypt } from "../utils/crypto.js";
 import { OpenClawBridge } from "../bridges/openclaw.js";
 import { OllamaProvider } from "../providers/ollama.js";
-import type { LLMMessage } from "../providers/index.js";
-import { OllamaProvider } from "../providers/ollama.js";
 import { OpenAIProvider } from "../providers/openai.js";
 import type { LLMMessage } from "../providers/index.js";
 
