@@ -1,5 +1,14 @@
 #!/usr/bin/env node
-import blessed from "blessed";
+/**
+ * Memphis TUI - Main Entry Point
+ * Refactored with modular structure
+ *
+ * Refactoring:
+ * 1. Magic numbers extracted to constants.ts
+ * 2. Helper functions moved to helpers.ts
+ * 3. UI components factored to components.ts
+ * 4. Better error handling throughout
+ */
 import { Store } from "../memory/store.js";
 import { loadConfig } from "../config/loader.js";
 import { queryBlocks } from "../memory/query.js";
@@ -7,41 +16,29 @@ import { encrypt } from "../utils/crypto.js";
 import { OpenClawBridge } from "../bridges/openclaw.js";
 import { OllamaProvider } from "../providers/ollama.js";
 import { OpenAIProvider } from "../providers/openai.js";
-// Enhanced Colors with better contrast
-const COLORS = {
-    primary: "cyan",
-    secondary: "magenta",
-    success: "green",
-    warning: "yellow",
-    error: "red",
-    text: "white",
-    muted: "gray",
-    bg: "black",
-    highlight: "blue",
-    accent: "bright cyan",
-};
-// Helper for boxed content with frames
-function box(title, content) {
-    const width = 60;
-    const line = "─".repeat(width - 2);
-    return `
-╔${line}╗
-║ ${title.padEnd(width - 4)}║
-╠${line}╣
-${content.split('\n').map(l => `║ ${l.padEnd(width - 4)}║`).join('\n')}
-╚${line}╝
-`;
-}
+// Components (UI factories)
+import { createScreen, createHeaderBox, createSidebarBox, createContentBox, createInputBox, createInputField, createStatusBar, applyKeyBindings, setBoxContent, setInputBoxVisible, focusInput, setInputPlaceholder, clearInput, readInput, renderScreen, } from "./components.js";
+// Constants
+import { MENU, NAV_ITEMS, LIMITS, DEFAULT_MODELS, STATUS_MESSAGES, TIMING, } from "./constants.js";
+// Helpers
+import { safeAsync, safeSync, validateInput, truncateContent, formatSearchResults, formatSuccess, formatError, formatWarning, buildLLMMessages, sleep, } from "./helpers.js";
+/**
+ * Memphis TUI - Main Class
+ * Refactored version with better organization and error handling
+ */
 export class MemphisTUI {
-    screen;
+    // Core dependencies
     store;
     config;
     openclawBridge;
+    // LLM Provider
     llmProvider = null;
     llmProviderName = "";
+    // UI State
     currentScreen = "dashboard";
     inputMode = "";
     // UI Elements
+    screen;
     headerBox;
     sidebarBox;
     contentBox;
@@ -49,138 +46,91 @@ export class MemphisTUI {
     inputField;
     statusBar;
     constructor() {
-        // Initialize store and config
-        const config = loadConfig();
-        this.config = config;
-        this.store = new Store(config.memory?.path || `${process.env.HOME}/.memphis/chains`);
-        // Initialize OpenClaw bridge
+        // Initialize core dependencies with error handling
+        const configResult = safeSync(() => loadConfig(), "Failed to load config");
+        if (!configResult.success || !configResult.data) {
+            console.error("Failed to load config:", configResult.error);
+            process.exit(1);
+        }
+        this.config = configResult.data;
+        this.store = new Store(this.config.memory?.path || `${process.env.HOME}/.memphis/chains`);
         this.openclawBridge = new OpenClawBridge();
-        // Initialize LLM provider (Ollama first, then OpenAI)
+        // Initialize LLM provider
         this.initLLM();
-        // Create screen
-        this.screen = blessed.screen({
-            smartCSR: true,
-            title: "Memphis - AI Brain",
-            fullUnicode: true,
-        });
-        // Create header
-        this.headerBox = blessed.box({
-            top: 0,
-            left: 0,
-            width: "100%",
-            height: 3,
-            style: {
-                fg: COLORS.text,
-                bg: COLORS.primary,
-                bold: true,
-            },
-            content: `{center}{bold} Memphis - Local-first AI Brain{/bold}{/center}`,
-        });
-        // Create sidebar
-        this.sidebarBox = blessed.box({
-            top: 3,
-            left: 0,
-            width: "25%",
-            height: "90%",
-            style: {
-                fg: COLORS.text,
-                bg: "black",
-                border: { fg: COLORS.primary },
-            },
-            tags: true,
-            content: this.getSidebarContent(),
-        });
-        // Create content area
-        this.contentBox = blessed.box({
-            top: 3,
-            left: "25%",
-            width: "75%",
-            height: "90%",
-            style: {
-                fg: COLORS.text,
-                bg: "black",
-                border: { fg: COLORS.primary },
-            },
-            tags: true,
-            scrollable: true,
-            content: "",
-        });
-        // Create input area
-        this.inputBox = blessed.box({
-            bottom: 2,
-            left: 0,
-            width: "100%",
-            height: 3,
-            style: {
-                fg: COLORS.text,
-                bg: "black",
-                border: { fg: COLORS.secondary },
-            },
-            visible: false,
-        });
-        this.inputField = blessed.textbox({
-            parent: this.inputBox,
-            top: 0,
-            left: 1,
-            width: "98%",
-            height: 1,
-            style: {
-                fg: COLORS.text,
-                bg: "black",
-            },
-            placeholder: "Type your input...",
-        });
-        // Create status bar
-        this.statusBar = blessed.box({
-            bottom: 0,
-            left: 0,
-            width: "100%",
-            height: 1,
-            style: {
-                fg: COLORS.text,
-                bg: COLORS.secondary,
-            },
-            content: "Press 'q' to quit | Arrow keys to navigate | Enter to select",
-        });
-        // Append all elements
-        this.screen.append(this.headerBox);
-        this.screen.append(this.sidebarBox);
-        this.screen.append(this.contentBox);
-        this.screen.append(this.inputBox);
-        this.screen.append(this.statusBar);
-        // Key bindings
-        this.screen.key(["escape", "q", "C-c"], () => {
-            process.exit(0);
-        });
-        // Arrow key navigation
-        this.screen.key(["up", "down"], (ch, key) => {
-            this.handleNavigation(key.name);
-        });
-        this.screen.key(["enter"], () => {
-            this.handleEnter();
-        });
-        // Number key navigation
-        this.screen.key(["1", "2", "3", "4", "5", "6", "7", "8"], (ch) => {
-            this.navigateToMenu(parseInt(ch));
-        });
-        // Also allow 'c' for Cline, 'o' for Offline
-        this.screen.key(["c"], () => {
-            this.navigateToMenu(7);
-        });
-        this.screen.key(["o"], () => {
-            this.navigateToMenu(8);
-        });
-        // Also allow j/k for vim-style navigation
-        this.screen.key(["j", "k"], (ch) => {
-            if (ch === "j")
-                this.handleNavigation("down");
-            else
-                this.handleNavigation("up");
-        });
-        // Render initial screen
+        // Create UI
+        this.screen = createScreen();
+        this.headerBox = createHeaderBox();
+        this.sidebarBox = createSidebarBox(this.getSidebarContent());
+        this.contentBox = createContentBox();
+        this.inputBox = createInputBox();
+        this.inputField = createInputField(this.inputBox);
+        this.statusBar = createStatusBar(STATUS_MESSAGES.QUIT_HINT);
+        // Setup key bindings
+        this.setupKeyBindings();
+        // Initial render
         this.renderDashboard();
-        this.screen.render();
+        renderScreen(this.screen);
     }
+    /**
+     * Initialize LLM provider with fallback
+     */
+    initLLM() {
+        // Try Ollama first (local, free)
+        const ollamaConfig = this.config.providers?.ollama;
+        if (ollamaConfig) {
+            this.llmProvider = new OllamaProvider();
+            this.llmProviderName = "Ollama";
+            if (this.llmProvider.isConfigured()) {
+                console.log("🤖 TUI: Using Ollama for LLM");
+                return;
+            }
+        }
+        // Try OpenAI as fallback
+        const openaiConfig = this.config.providers?.openai;
+        if (openaiConfig?.api_key || process.env.OPENAI_API_KEY) {
+            this.llmProvider = new OpenAIProvider();
+            this.llmProviderName = "OpenAI";
+            if (this.llmProvider.isConfigured()) {
+                console.log("🤖 TUI: Using OpenAI for LLM");
+                return;
+            }
+        }
+        console.log("⚠️ TUI: No LLM provider configured");
+    }
+    /**
+     * Setup keyboard bindings
+     */
+    setupKeyBindings() {
+        applyKeyBindings(this.screen, {
+            onQuit: () => process.exit(0),
+            onNavigation: (direction) => this.handleNavigation(direction),
+            onEnter: () => this.handleEnter(),
+            onNumber: (num) => this.navigateToMenu(num),
+            onChar: (char) => this.handleCharKey(char),
+        });
+    }
+    /**
+     * Handle character key presses
+     */
+    handleCharKey(char) {
+        switch (char) {
+            case "c":
+                this.navigateToMenu(MENU.CLINE);
+                break;
+            case "o":
+                this.navigateToMenu(MENU.OFFLINE);
+                break;
+            case "j":
+                this.handleNavigation("down");
+                break;
+            case "k":
+                this.handleNavigation("up");
+                break;
+        }
+    }
+    /**
+     * Handle arrow key navigation
+     */
     handleNavigation(direction) {
         const menuItems = ["dashboard", "journal", "vault", "recall", "ask", "openclaw", "cline", "offline", "settings"];
         const currentIndex = menuItems.indexOf(this.currentScreen);
@@ -193,42 +143,37 @@ export class MemphisTUI {
             this.navigateToMenu(newIndex + 1);
         }
     }
+    /**
+     * Handle enter key
+     */
     handleEnter() {
-        // Handle enter - just re-render current screen to activate input
         this.navigateToMenu(this.getCurrentMenuIndex());
     }
+    /**
+     * Get current menu index
+     */
     getCurrentMenuIndex() {
         const menuMap = {
-            dashboard: 1,
-            journal: 2,
-            vault: 3,
-            recall: 4,
-            ask: 5,
-            openclaw: 6,
-            cline: 7,
-            offline: 8,
-            settings: 9
+            dashboard: MENU.DASHBOARD,
+            journal: MENU.JOURNAL,
+            vault: MENU.VAULT,
+            recall: MENU.RECALL,
+            ask: MENU.ASK,
+            openclaw: MENU.OPENCLAW,
+            cline: MENU.CLINE,
+            offline: MENU.OFFLINE,
+            settings: MENU.SETTINGS,
         };
-        return menuMap[this.currentScreen] || 1;
+        return menuMap[this.currentScreen] || MENU.DASHBOARD;
     }
+    /**
+     * Get sidebar content
+     */
     getSidebarContent() {
-        const menuItems = [
-            " Dashboard",
-            " Journal",
-            " Vault",
-            " Recall",
-            " Ask",
-            " OpenClaw",
-            " Cline",
-            " Offline",
-            " Settings",
-        ];
         let content = "{bold}Navigation{/bold}\n\n";
-        menuItems.forEach((item, index) => {
-            const prefix = this.currentScreen === item.toLowerCase().slice(1)
-                ? "> "
-                : "  ";
-            content += `${prefix}${item}\n`;
+        NAV_ITEMS.forEach((item) => {
+            const prefix = this.currentScreen === item.key ? "> " : "  ";
+            content += `${prefix}${item.label}\n`;
         });
         content += "\n\n{bold}Quick Stats{/bold}\n";
         const chains = this.store.listChains();
@@ -239,13 +184,61 @@ export class MemphisTUI {
         });
         return content;
     }
+    /**
+     * Navigate to menu by number
+     */
+    navigateToMenu(num) {
+        switch (num) {
+            case MENU.DASHBOARD:
+                this.renderDashboard();
+                break;
+            case MENU.JOURNAL:
+                this.renderJournal();
+                break;
+            case MENU.VAULT:
+                this.renderVault();
+                break;
+            case MENU.RECALL:
+                this.renderRecall();
+                break;
+            case MENU.ASK:
+                this.renderAsk();
+                break;
+            case MENU.OPENCLAW:
+                this.renderOpenClaw();
+                break;
+            case MENU.CLINE:
+                this.renderCline();
+                break;
+            case MENU.OFFLINE:
+                this.renderOffline();
+                break;
+            case MENU.SETTINGS:
+                this.renderSettings();
+                break;
+        }
+        renderScreen(this.screen);
+    }
+    /**
+     * Update content and sidebar
+     */
+    updateContent(content) {
+        setBoxContent(this.contentBox, content);
+        setBoxContent(this.sidebarBox, this.getSidebarContent());
+    }
+    // ============================================
+    // SCREEN RENDERERS
+    // ============================================
+    /**
+     * Render dashboard
+     */
     renderDashboard() {
         this.currentScreen = "dashboard";
         const chains = this.store.listChains();
         let content = `{bold}{cyan} Dashboard{/cyan}{/bold}\n\n`;
         content += `Welcome to Memphis! Your local-first AI brain.\n\n`;
         if (chains.length === 0) {
-            content += `{yellow}No memory chains yet. Start by adding a journal entry!{/yellow}\n`;
+            content += formatWarning(STATUS_MESSAGES.NO_CHAINS);
         }
         else {
             content += `{bold}Memory Chains:{/bold}\n\n`;
@@ -258,196 +251,157 @@ export class MemphisTUI {
             });
         }
         content += `\n{bold}Recent Activity:{/bold}\n`;
-        chains.slice(0, 3).forEach((chain) => {
+        chains.slice(0, LIMITS.RECENT_BLOCKS).forEach((chain) => {
             const blocks = this.store.readChain(chain);
             if (blocks.length > 0) {
                 const lastBlock = blocks[blocks.length - 1];
-                content += `  * ${chain}: ${lastBlock.data?.content?.substring(0, 50)}...\n`;
+                content += `  * ${chain}: ${truncateContent(lastBlock.data?.content, LIMITS.CONTENT_PREVIEW_SHORT)}...\n`;
             }
         });
-        this.contentBox.setContent(content);
-        this.sidebarBox.setContent(this.getSidebarContent());
+        this.updateContent(content);
     }
-    navigateToMenu(num) {
-        switch (num) {
-            case 1:
-                this.renderDashboard();
-                break;
-            case 2:
-                this.renderJournal();
-                break;
-            case 3:
-                this.renderVault();
-                break;
-            case 4:
-                this.renderRecall();
-                break;
-            case 5:
-                this.renderAsk();
-                break;
-            case 6:
-                this.renderOpenClaw();
-                break;
-            case 7:
-                this.renderCline();
-                break;
-            case 8:
-                this.renderOffline();
-                break;
-            case 9:
-                this.renderSettings();
-                break;
-        }
-        this.screen.render();
-    }
+    /**
+     * Render journal screen
+     */
     renderJournal() {
         this.currentScreen = "journal";
         let content = `{bold}{cyan} Journal Entry{/cyan}{/bold}\n\n`;
         content += `Add a new entry to your memory.\n\n`;
-        content += `{white}Press Enter to start typing your journal entry...{/white}\n`;
-        this.contentBox.setContent(content);
-        this.sidebarBox.setContent(this.getSidebarContent());
-        // Show input after a brief delay
-        setTimeout(() => {
+        content += `{white}${STATUS_MESSAGES.PRESS_ANY_KEY}{/white}\n`;
+        this.updateContent(content);
+        // Show input after delay
+        sleep(TIMING.INPUT_DELAY_MS).then(() => {
             this.inputMode = "journal";
-            this.inputBox.show();
-            this.inputField.options.placeholder = "What's on your mind?";
-            this.inputField.focus();
-            this.inputField.readInput((err, value) => {
-                if (value && value.trim()) {
-                    this.store.addBlock("journal", {
-                        type: "journal",
-                        content: value.trim(),
-                        tags: [],
-                    });
-                    this.contentBox.setContent(`{green} Entry added successfully!{/green}\n\nPress any key to return to dashboard...`);
+            setInputBoxVisible(this.inputBox, true);
+            setInputPlaceholder(this.inputField, "What's on your mind?");
+            focusInput(this.inputField);
+            readInput(this.inputField, (err, value) => {
+                if (err) {
+                    const errorMessage = err instanceof Error ? err.message : String(err);
+                    this.handleInputError(errorMessage);
+                    return;
+                }
+                const validation = validateInput(value);
+                if (!validation.valid) {
+                    this.handleInputError(validation.error || "Invalid input");
+                    return;
+                }
+                // Add block to store
+                const addResult = safeSync(() => this.store.addBlock("journal", {
+                    type: "journal",
+                    content: value.trim(),
+                    tags: [],
+                }), "Failed to add journal entry");
+                if (addResult.success) {
+                    this.updateContent(formatSuccess("Entry added successfully!") + "\n\n" + STATUS_MESSAGES.PRESS_ANY_KEY);
+                }
+                else {
+                    this.updateContent(formatError(addResult.error || "Failed to add entry") + "\n\n" + STATUS_MESSAGES.PRESS_ANY_KEY);
                 }
                 this.inputMode = "";
-                this.inputBox.hide();
-                this.screen.render();
+                setInputBoxVisible(this.inputBox, false);
+                renderScreen(this.screen);
             });
-        }, 100);
+        });
     }
+    /**
+     * Render recall/search screen
+     */
     renderRecall() {
         this.currentScreen = "recall";
         let content = `{bold}{cyan} Recall - Search Memory{/cyan}{/bold}\n\n`;
         content += `Search through your memory chains.\n\n`;
-        content += `{white}Press Enter to search...{/white}\n`;
-        this.contentBox.setContent(content);
-        this.sidebarBox.setContent(this.getSidebarContent());
-        setTimeout(() => {
+        content += `{white}${STATUS_MESSAGES.PRESS_ANY_KEY}{/white}\n`;
+        this.updateContent(content);
+        sleep(TIMING.INPUT_DELAY_MS).then(() => {
             this.inputMode = "recall";
-            this.inputBox.show();
-            this.inputField.options.placeholder = "Enter keyword to search...";
-            this.inputField.focus();
-            this.inputField.readInput((err, value) => {
-                if (value && value.trim()) {
-                    const results = queryBlocks(this.store, { keyword: value.trim() });
-                    let resultContent = `{bold}Search Results for "${value.trim()}":{/bold}\n\n`;
-                    if (results.length === 0) {
-                        resultContent += `{yellow}No results found.{/yellow}\n`;
-                    }
-                    else {
-                        results.forEach((block, index) => {
-                            resultContent += `{cyan}${index + 1}. ${block.chain}{/cyan}\n`;
-                            resultContent += `   ${block.data?.content?.substring(0, 100)}...\n`;
-                            resultContent += `   ${block.timestamp}\n\n`;
-                        });
-                    }
-                    resultContent += `\n{white}Press any key to continue...{/white}`;
-                    this.contentBox.setContent(resultContent);
+            setInputBoxVisible(this.inputBox, true);
+            setInputPlaceholder(this.inputField, "Enter keyword to search...");
+            focusInput(this.inputField);
+            readInput(this.inputField, (err, value) => {
+                if (err) {
+                    const errorMessage = err instanceof Error ? err.message : String(err);
+                    this.handleInputError(errorMessage);
+                    return;
                 }
+                const validation = validateInput(value);
+                if (!validation.valid) {
+                    this.handleInputError(validation.error || "Invalid input");
+                    return;
+                }
+                // Search blocks
+                const results = queryBlocks(this.store, { keyword: value.trim() });
+                let resultContent = formatSearchResults(results, value.trim());
+                resultContent += `\n\n{white}${STATUS_MESSAGES.PRESS_ANY_KEY}{/white}`;
+                this.updateContent(resultContent);
                 this.inputMode = "";
-                this.inputBox.hide();
-                this.screen.render();
+                setInputBoxVisible(this.inputBox, false);
+                renderScreen(this.screen);
             });
-        }, 100);
+        });
     }
+    /**
+     * Render ask screen
+     */
     renderAsk() {
         this.currentScreen = "ask";
         let content = `{bold}{cyan} Ask Memphis{/cyan}{/bold}\n\n`;
         content += `Ask a question about your memory.\n\n`;
-        content += `{white}Press Enter to ask...{/white}\n`;
-        this.contentBox.setContent(content);
-        this.sidebarBox.setContent(this.getSidebarContent());
-        setTimeout(() => {
+        content += `{white}${STATUS_MESSAGES.PRESS_ANY_KEY}{/white}\n`;
+        this.updateContent(content);
+        sleep(TIMING.INPUT_DELAY_MS).then(() => {
             this.inputMode = "ask";
-            this.inputBox.show();
-            this.inputField.options.placeholder = "What would you like to know?";
-            this.inputField.focus();
-            this.inputField.readInput(async (err, value) => {
-                if (value && value.trim()) {
-                    this.contentBox.setContent(`{bold}Thinking...{/bold}\n`);
-                    this.screen.render();
-                    const answer = await this.askLLM(value.trim());
-                    let responseContent = `{bold}Question: "${value.trim()}"{/bold}\n\n`;
-                    responseContent += `{white}Answer:{/white}\n\n${answer}\n\n`;
-                    responseContent += `{gray}Provider: ${this.llmProviderName}{/gray}\n\n`;
-                    responseContent += `{white}Press any key to continue...{/white}`;
-                    this.contentBox.setContent(responseContent);
+            setInputBoxVisible(this.inputBox, true);
+            setInputPlaceholder(this.inputField, "What would you like to know?");
+            focusInput(this.inputField);
+            readInput(this.inputField, async (err, value) => {
+                if (err) {
+                    this.handleInputError(err instanceof Error ? err.message : "Unknown error");
+                    return;
                 }
+                const validation = validateInput(value || "");
+                if (!validation.valid) {
+                    this.handleInputError(validation.error || "Invalid input");
+                    return;
+                }
+                this.updateContent(`{bold}${STATUS_MESSAGES.THINKING}{/bold}\n`);
+                renderScreen(this.screen);
+                const answer = await this.askLLM(value.trim());
+                let responseContent = `{bold}Question: "${value.trim()}"{/bold}\n\n`;
+                responseContent += `{white}Answer:{/white}\n\n${answer}\n\n`;
+                responseContent += `{gray}Provider: ${this.llmProviderName}{/gray}\n\n`;
+                responseContent += `{white}${STATUS_MESSAGES.PRESS_ANY_KEY}{/white}`;
+                this.updateContent(responseContent);
                 this.inputMode = "";
-                this.inputBox.hide();
-                this.screen.render();
+                setInputBoxVisible(this.inputBox, false);
+                renderScreen(this.screen);
             });
-        }, 100);
+        });
     }
-    initLLM() {
-        // Try Ollama first (local, free)
-        const ollamaConfig = this.config.providers?.ollama;
-        if (ollamaConfig) {
-            this.llmProvider = new OllamaProvider();
-            this.llmProviderName = "Ollama";
-            if (this.llmProvider.isConfigured()) {
-                console.log("🤖 TUI: Using Ollama for LLM");
-                return;
-            }
-        }
-        // Try OpenAI
-        const openaiConfig = this.config.providers?.openai;
-        if (openaiConfig?.api_key || process.env.OPENAI_API_KEY) {
-            this.llmProvider = new OpenAIProvider();
-            this.llmProviderName = "OpenAI";
-            if (this.llmProvider.isConfigured()) {
-                console.log("🤖 TUI: Using OpenAI for LLM");
-                return;
-            }
-        }
-        console.log("⚠️ TUI: No LLM provider configured");
-    }
+    /**
+     * Ask LLM with memory context
+     */
     async askLLM(question) {
         if (!this.llmProvider || !this.llmProvider.isConfigured()) {
-            return "No LLM provider configured. Please set up Ollama or OpenAI.";
+            return formatError(STATUS_MESSAGES.NO_LLM);
         }
         // Get memory context
-        const results = queryBlocks(this.store, { keyword: question, limit: 5 });
+        const results = queryBlocks(this.store, { keyword: question, limit: LIMITS.SEARCH_RESULTS_LIMIT });
         const context = results.map((b) => b.data?.content).join("\n");
-        const messages = [
-            {
-                role: "system",
-                content: "You are Memphis, a helpful AI assistant. Be concise and friendly.",
-            },
-        ];
-        if (context) {
-            messages.push({
-                role: "system",
-                content: `Relevant memory:\n${context}`,
-            });
+        const messages = buildLLMMessages(question, context);
+        const result = await safeAsync(() => this.llmProvider.chat(messages, {
+            model: this.config.providers?.ollama?.model ||
+                this.config.providers?.openai?.model ||
+                DEFAULT_MODELS.PRIMARY,
+        }), "LLM request failed");
+        if (!result.success) {
+            return formatError(result.error || "Failed to get response");
         }
-        messages.push({
-            role: "user",
-            content: question,
-        });
-        try {
-            const response = await this.llmProvider.chat(messages, {
-                model: this.config.providers?.ollama?.model || this.config.providers?.openai?.model || "llama3.2:1b",
-            });
-            return response.content;
-        }
-        catch (err) {
-            return `Error: ${err}`;
-        }
+        return result.data?.content || "No response";
     }
+    /**
+     * Render settings screen
+     */
     renderSettings() {
         this.currentScreen = "settings";
         let content = `{bold}{cyan} Settings{/cyan}{/bold}\n\n`;
@@ -455,75 +409,84 @@ export class MemphisTUI {
         content += `Storage Path: ${this.config.memory?.path || "~/.memphis/chains"}\n`;
         content += `Providers: ${Object.keys(this.config.providers || {}).length}\n\n`;
         content += `{yellow}Settings editor coming soon!{/yellow}\n`;
-        this.contentBox.setContent(content);
-        this.sidebarBox.setContent(this.getSidebarContent());
+        this.updateContent(content);
     }
+    /**
+     * Render vault screen
+     */
     renderVault() {
         this.currentScreen = "vault";
         let content = `{bold}{cyan} Vault - Encrypted Secrets{/cyan}{/bold}\n\n`;
         content += `Secure storage for API keys and secrets.\n\n`;
-        content += `{white}Press Enter to add a new secret...{/white}\n`;
-        this.contentBox.setContent(content);
-        this.sidebarBox.setContent(this.getSidebarContent());
-        setTimeout(() => {
+        content += `{white}${STATUS_MESSAGES.PRESS_ANY_KEY}{/white}\n`;
+        this.updateContent(content);
+        // Multi-step input: key -> value -> password
+        this.promptVaultInput();
+    }
+    /**
+     * Multi-step vault input
+     */
+    promptVaultInput() {
+        sleep(TIMING.INPUT_DELAY_MS).then(() => {
             this.inputMode = "vault_add";
-            this.inputBox.show();
-            this.inputField.options.placeholder = "Secret name (e.g. openrouter):";
-            this.inputField.focus();
-            this.inputField.readInput((err, keyName) => {
-                if (keyName && keyName.trim()) {
-                    // Now ask for value
-                    this.inputField.setValue("");
-                    this.inputField.options.placeholder = "Secret value:";
-                    this.inputField.readInput((err2, secretValue) => {
-                        if (secretValue && secretValue.trim()) {
-                            // Now ask for password
-                            this.inputField.setValue("");
-                            this.inputField.options.placeholder = "Master password:";
-                            this.inputField.readInput((err3, password) => {
-                                if (password && password.trim()) {
-                                    const encrypted = encrypt(secretValue.trim(), password.trim());
-                                    this.store.addBlock("vault", {
-                                        type: "vault",
-                                        content: keyName.trim(),
-                                        tags: ["secret", keyName.trim()],
-                                        encrypted,
-                                        iv: encrypted.substring(0, 24),
-                                        key_id: keyName.trim(),
-                                    });
-                                    this.contentBox.setContent(`{green} Secret "${keyName.trim()}" added successfully!{/green}\n\nPress any key to return...`);
-                                }
-                                this.inputMode = "";
-                                this.inputBox.hide();
-                                this.screen.render();
-                            });
+            setInputBoxVisible(this.inputBox, true);
+            setInputPlaceholder(this.inputField, "Secret name (e.g. openrouter):");
+            focusInput(this.inputField);
+            readInput(this.inputField, (err, keyName) => {
+                if (err || !keyName?.trim()) {
+                    this.finishInput();
+                    return;
+                }
+                // Step 2: get value
+                clearInput(this.inputField);
+                setInputPlaceholder(this.inputField, "Secret value:");
+                readInput(this.inputField, (err2, secretValue) => {
+                    if (err2 || !secretValue?.trim()) {
+                        this.finishInput();
+                        return;
+                    }
+                    // Step 3: get password
+                    clearInput(this.inputField);
+                    setInputPlaceholder(this.inputField, "Master password:");
+                    readInput(this.inputField, (err3, password) => {
+                        if (err3 || !password?.trim()) {
+                            this.finishInput();
+                            return;
+                        }
+                        // Encrypt and store
+                        const encrypted = encrypt(secretValue.trim(), password.trim());
+                        const addResult = safeSync(() => this.store.addBlock("vault", {
+                            type: "vault",
+                            content: keyName.trim(),
+                            tags: ["secret", keyName.trim()],
+                            encrypted,
+                            iv: encrypted.substring(0, 24),
+                            key_id: keyName.trim(),
+                        }), "Failed to store secret");
+                        if (addResult.success) {
+                            this.updateContent(formatSuccess(`Secret "${keyName.trim()}" added successfully!`) + "\n\n" + STATUS_MESSAGES.PRESS_ANY_KEY);
                         }
                         else {
-                            this.inputMode = "";
-                            this.inputBox.hide();
-                            this.screen.render();
+                            this.updateContent(formatError(addResult.error || "Failed to store secret") + "\n\n" + STATUS_MESSAGES.PRESS_ANY_KEY);
                         }
+                        this.finishInput();
+                        renderScreen(this.screen);
                     });
-                }
-                else {
-                    this.inputMode = "";
-                    this.inputBox.hide();
-                    this.screen.render();
-                }
+                });
             });
-        }, 100);
+        });
     }
+    /**
+     * Render OpenClaw screen
+     */
     renderOpenClaw() {
         this.currentScreen = "openclaw";
-        // Get real bridge data
         const agents = this.openclawBridge.getAgents();
         const messages = this.openclawBridge.getMessages();
-        const status = this.openclawBridge.getStatus();
         let content = `{bold}{cyan} 🦞 OpenClaw - Agent Collaboration{/cyan}{/bold}\n\n`;
         content += `{white}Bridge Status:{/white}\n`;
         content += `  Connected Agents: ${agents.length}\n`;
         content += `  Messages Exchanged: ${messages.length}\n\n`;
-        // List agents
         content += `{bold}Connected Agents:{/bold}\n`;
         if (agents.length === 0) {
             content += `  {yellow}No agents connected.{/yellow}\n`;
@@ -534,91 +497,113 @@ export class MemphisTUI {
                 content += `    Status: ${agent.status}\n`;
                 content += `    Compute Share: ${agent.computeShare}%\n`;
                 content += `    Capabilities: ${agent.capabilities.join(", ")}\n`;
-                content += `    DID: ${agent.did.substring(0, 30)}...\n\n`;
+                content += `    DID: ${agent.did.substring(0, LIMITS.HASH_PREVIEW_LENGTH)}...\n\n`;
             });
         }
-        // Recent messages
         if (messages.length > 0) {
             content += `{bold}Recent Messages:{/bold}\n`;
             messages.slice(-3).forEach(msg => {
-                content += `  ${msg.from} → ${msg.to}: ${msg.content.substring(0, 40)}...\n`;
+                content += `  ${msg.from} → ${msg.to}: ${truncateContent(msg.content, LIMITS.CONTENT_PREVIEW_MEDIUM)}...\n`;
             });
         }
-        content += `\n{white}Press Enter to send a message to agents...{/white}\n`;
-        content += `{gray}(Or press 'n' to negotiate compute share){/gray}\n`;
-        content += `{gray}(Or press 'r' to read journal logs){/gray}\n`;
-        this.contentBox.setContent(content);
-        this.sidebarBox.setContent(this.getSidebarContent());
-        setTimeout(() => {
+        content += `\n{white}Press Enter=message, 'n'=negotiate, 'r'=read logs{/white}\n`;
+        this.updateContent(content);
+        this.handleOpenClawInput();
+    }
+    /**
+     * Handle OpenClaw input
+     */
+    handleOpenClawInput() {
+        sleep(TIMING.INPUT_DELAY_MS).then(() => {
             this.inputMode = "openclaw_menu";
-            this.inputBox.show();
-            this.inputField.options.placeholder = "Press Enter=message, 'n'=negotiate, 'r'=read logs:";
-            this.inputField.focus();
-            this.inputField.readInput((err, value) => {
-                if (value && value.trim()) {
-                    const input = value.trim().toLowerCase();
-                    if (input === 'n') {
-                        // Negotiate compute share
-                        this.inputField.setValue("");
-                        this.inputField.options.placeholder = "Enter compute share % (e.g. 40):";
-                        this.inputField.readInput((err2, shareValue) => {
-                            if (shareValue && shareValue.trim()) {
-                                const share = parseInt(shareValue.trim());
-                                const success = this.openclawBridge.negotiateComputeShare("openclaw-001", share);
-                                const updatedAgents = this.openclawBridge.getAgents();
-                                const agent = updatedAgents.find(a => a.id === "openclaw-001");
-                                this.contentBox.setContent(success
-                                    ? `{green}✅ Compute share negotiated!{/green}\n\nNew share: ${agent?.computeShare}%\n\n{white}Press any key to continue...{/white}`
-                                    : `{red}❌ Negotiation failed{/red}\n\n{white}Press any key to continue...{/white}`);
-                            }
-                            this.inputMode = "";
-                            this.inputBox.hide();
-                            this.screen.render();
-                        });
-                    }
-                    else if (input === 'r') {
-                        // Read journal logs
-                        const logs = this.store.readChain("journal");
-                        const recentLogs = logs.slice(-20).reverse();
-                        let logContent = `{bold}{cyan}📜 Journal Logs (ostatnie 20){/cyan}{/bold}\n\n`;
-                        if (recentLogs.length === 0) {
-                            logContent += `{yellow}Brak wpisów w dzienniku.{/yellow}\n`;
-                        }
-                        else {
-                            recentLogs.forEach((block, index) => {
-                                logContent += `{cyan}[${block.index}]{/cyan} ${block.timestamp}\n`;
-                                logContent += `   ${block.data?.content?.substring(0, 80)}...\n\n`;
-                            });
-                        }
-                        logContent += `\n{white}Press any key to wrócić...{/white}`;
-                        this.contentBox.setContent(logContent);
-                        this.inputMode = "";
-                        this.inputBox.hide();
-                        this.screen.render();
-                    }
-                    else {
-                        // Send message via bridge
-                        this.openclawBridge.sendMessage("openclaw-001", value.trim()).then(response => {
-                            this.contentBox.setContent(`{bold}Sent: "${value.trim()}"{/bold}\n\n{cyan}Agent Response:{/cyan}\n\n${response.content}\n\n{white}Press any key to continue...{/white}`);
-                            this.inputMode = "";
-                            this.inputBox.hide();
-                            this.screen.render();
-                        });
-                    }
+            setInputBoxVisible(this.inputBox, true);
+            setInputPlaceholder(this.inputField, "Message, 'n'=negotiate, 'r'=logs:");
+            focusInput(this.inputField);
+            readInput(this.inputField, async (err, value) => {
+                if (err || !value?.trim()) {
+                    this.finishInput();
+                    return;
+                }
+                const input = value.trim().toLowerCase();
+                if (input === 'n') {
+                    await this.handleComputeNegotiation();
+                }
+                else if (input === 'r') {
+                    this.renderJournalLogs();
                 }
                 else {
-                    this.inputMode = "";
-                    this.inputBox.hide();
-                    this.screen.render();
+                    await this.handleOpenClawMessage(value.trim());
                 }
+                this.finishInput();
+                renderScreen(this.screen);
             });
-        }, 100);
+        });
     }
+    /**
+     * Handle compute share negotiation
+     */
+    async handleComputeNegotiation() {
+        clearInput(this.inputField);
+        setInputPlaceholder(this.inputField, "Enter compute share % (e.g. 40):");
+        readInput(this.inputField, (err, shareValue) => {
+            if (err || !shareValue?.trim()) {
+                this.finishInput();
+                return;
+            }
+            const share = parseInt(shareValue.trim(), 10);
+            if (isNaN(share)) {
+                this.updateContent(formatError("Invalid number") + "\n\n" + STATUS_MESSAGES.PRESS_ANY_KEY);
+                return;
+            }
+            const success = this.openclawBridge.negotiateComputeShare("openclaw-001", share);
+            const updatedAgents = this.openclawBridge.getAgents();
+            const agent = updatedAgents.find(a => a.id === "openclaw-001");
+            if (success && agent) {
+                this.updateContent(formatSuccess("Compute share negotiated!") + `\n\nNew share: ${agent.computeShare}%\n\n` + STATUS_MESSAGES.PRESS_ANY_KEY);
+            }
+            else {
+                this.updateContent(formatError("Negotiation failed") + "\n\n" + STATUS_MESSAGES.PRESS_ANY_KEY);
+            }
+        });
+    }
+    /**
+     * Handle sending message to OpenClaw
+     */
+    async handleOpenClawMessage(message) {
+        const result = await safeAsync(() => this.openclawBridge.sendMessage("openclaw-001", message), "Failed to send message");
+        if (result.success && result.data) {
+            this.updateContent(`{bold}Sent: "${message}"{/bold}\n\n{cyan}Agent Response:{/cyan}\n\n${result.data.content}\n\n{white}${STATUS_MESSAGES.PRESS_ANY_KEY}{/white}`);
+        }
+        else {
+            this.updateContent(formatError(result.error || "Failed to send message") + "\n\n" + STATUS_MESSAGES.PRESS_ANY_KEY);
+        }
+    }
+    /**
+     * Render journal logs
+     */
+    renderJournalLogs() {
+        const logs = this.store.readChain("journal");
+        const recentLogs = logs.slice(-LIMITS.MAX_LOG_ENTRIES).reverse();
+        let logContent = `{bold}{cyan}📜 Journal Logs (ostatnie ${LIMITS.MAX_LOG_ENTRIES}){/cyan}{/bold}\n\n`;
+        if (recentLogs.length === 0) {
+            logContent += `{yellow}Brak wpisów w dzienniku.{/yellow}\n`;
+        }
+        else {
+            recentLogs.forEach((block, index) => {
+                logContent += `{cyan}[${block.index}]{/cyan} ${block.timestamp}\n`;
+                logContent += `   ${truncateContent(block.data?.content, LIMITS.CONTENT_PREVIEW_LONG)}...\n\n`;
+            });
+        }
+        logContent += `\n{white}${STATUS_MESSAGES.PRESS_ANY_KEY}{/white}`;
+        this.updateContent(logContent);
+    }
+    /**
+     * Render Cline screen
+     */
     renderCline() {
         this.currentScreen = "cline";
         let content = `{bold}{cyan} 🤖 Cline - AI Coding Assistant{/cyan}{/bold}\n\n`;
         content += `{white}Cline is an AI coding assistant integrated with Memphis.{/white}\n\n`;
-        // Get recent Cline logs from journal
         const logs = this.store.readChain("journal");
         const clineLogs = logs.filter((b) => b.data?.content?.includes("[cline]")).slice(-10).reverse();
         content += `{bold}Recent Cline Activity:{/bold}\n`;
@@ -627,118 +612,124 @@ export class MemphisTUI {
         }
         else {
             clineLogs.forEach((block) => {
-                content += `  {cyan}•{/cyan} ${block.data?.content?.substring(0, 60)}...\n`;
+                content += `  {cyan}•{/cyan} ${truncateContent(block.data?.content, LIMITS.CONTENT_PREVIEW_MEDIUM)}...\n`;
             });
         }
         content += `\n{bold}Available Commands:{/bold}\n`;
         content += `  {cyan}cline --help{/cyan}     - Show Cline help\n`;
-        content += `  {cyan}cline <prompt>{/cyan}   - Run Cline task\n`;
-        content += `  {cyan}cline -a{/cyan}         - Act mode\n\n`;
-        content += `{white}Press Enter to run a Cline command...{/white}\n`;
-        content += `{gray}(Enter a prompt for Cline){/gray}\n`;
-        this.contentBox.setContent(content);
-        this.sidebarBox.setContent(this.getSidebarContent());
-        setTimeout(() => {
-            this.inputMode = "cline_cmd";
-            this.inputBox.show();
-            this.inputField.options.placeholder = "Enter Cline prompt:";
-            this.inputField.focus();
-            this.inputField.readInput((err, value) => {
-                if (value && value.trim()) {
-                    // Log the command
-                    const { cline } = require("../agents/logger.js");
-                    cline.cmd(value.trim(), "pending");
-                    content += `\n{white}Command:{/white} ${value.trim()}\n`;
-                    content += `{yellow}Note: Cline integration is planned.{/yellow}\n`;
-                    content += `\n{white}Press any key to continue...{/white}`;
-                    this.contentBox.setContent(content);
-                }
-                this.inputMode = "";
-                this.inputBox.hide();
-                this.screen.render();
-            });
-        }, 100);
+        content += `  {cyan}cline <prompt>{/cyan}   - Run Cline task\n\n`;
+        content += `{white}${STATUS_MESSAGES.PRESS_ANY_KEY}{/white}\n`;
+        this.updateContent(content);
     }
+    /**
+     * Render offline screen
+     */
     renderOffline() {
         this.currentScreen = "offline";
-        // Get system info
         const chains = this.store.listChains();
         const journalBlocks = this.store.getChainStats("journal");
         const vaultBlocks = this.store.getChainStats("vault");
         let content = `{bold}{cyan} 📡 Memphis Offline Control Panel{/cyan}{/bold}\n\n`;
-        // Status section
         content += `{bold}{yellow}╔══════════════════════════════════════╗{/yellow}\n`;
-        content += `{bold}{yellow}║     🟢 OFFLINE MODE ACTIVE         ║{/yellow}\n`;
+        content += `{bold}{yellow}║     🟢 OFFLINE MODE ACTIVE         ║{/bold}{yellow}\n`;
         content += `{bold}{yellow}╚══════════════════════════════════════╝{/yellow}\n\n`;
-        // Model info
         content += `{bold}🤖 LLM Configuration:{/bold}\n`;
-        content += `   Model: {cyan}llama3.2:1b{/cyan} (primary)\n`;
-        content += `   Fallback: {gray}llama3.2:3b → gemma3:4b{/gray}\n\n`;
-        // System stats
+        content += `   Model: {cyan}${DEFAULT_MODELS.PRIMARY}{/cyan} (primary)\n`;
+        content += `   Fallback: {gray}${DEFAULT_MODELS.FALLBACK.join(" → ")}{/gray}\n\n`;
         content += `{bold}📊 System Stats:{/bold}\n`;
         content += `   Journal: {green}${journalBlocks.blocks} blocks{/green}\n`;
         content += `   Vault: {green}${vaultBlocks.blocks} secrets{/green}\n`;
         content += `   Memory: ${chains.length} chains\n\n`;
-        // Quick actions
         content += `{bold}⚡ Quick Actions:{/bold}\n`;
         content += `   [1] Ask Memphis    - Query the AI brain\n`;
         content += `   [2] Add Journal    - Record a thought\n`;
         content += `   [3] Search         - Find in memory\n`;
         content += `   [4] Agents         - View connected agents\n\n`;
-        // Network status
         content += `{bold}🌐 Network Status:{/bold}\n`;
         content += `   {green}●{/green} Local: Connected (Ollama running)\n`;
         content += `   {red}○{/red} Cloud: Disconnected\n\n`;
-        content += `{white}Press Enter for more options...{/white}\n`;
-        content += `{gray}(Or press 'm' to switch model){/gray}\n`;
-        this.contentBox.setContent(content);
-        this.sidebarBox.setContent(this.getSidebarContent());
-        setTimeout(() => {
-            this.inputMode = "offline_menu";
-            this.inputBox.show();
-            this.inputField.options.placeholder = "Press number or Enter:";
-            this.inputField.focus();
-            this.inputField.readInput((err, value) => {
-                if (value && value.trim()) {
-                    const input = value.trim().toLowerCase();
-                    if (input === 'm') {
-                        // Switch model
-                        this.inputField.setValue("");
-                        this.inputField.options.placeholder = "Enter model name (llama3.2:1b, llama3.2:3b, gemma3:4b):";
-                        this.inputField.readInput((err2, modelValue) => {
-                            if (modelValue && modelValue.trim()) {
-                                process.env.OLLAMA_MODEL = modelValue.trim();
-                                this.contentBox.setContent(`{green}Model switched to: ${modelValue.trim()}{/green}\n\nPress any key to continue...`);
-                            }
-                            this.inputMode = "";
-                            this.inputBox.hide();
-                            this.screen.render();
-                        });
-                    }
-                    else if (input === '1') {
-                        this.navigateToMenu(5); // Ask
-                    }
-                    else if (input === '2') {
-                        this.navigateToMenu(2); // Journal
-                    }
-                    else if (input === '3') {
-                        this.navigateToMenu(4); // Recall
-                    }
-                    else if (input === '4') {
-                        this.navigateToMenu(6); // OpenClaw
-                    }
-                    else {
-                        this.contentBox.setContent(`{yellow}Unknown command: ${input}{/yellow}\n\nPress any key to continue...`);
-                    }
-                }
-                this.inputMode = "";
-                this.inputBox.hide();
-                this.screen.render();
-            });
-        }, 100);
+        content += `{white}Press 'm' to switch model{/white}\n`;
+        this.updateContent(content);
+        this.handleOfflineInput();
     }
+    /**
+     * Handle offline input
+     */
+    handleOfflineInput() {
+        sleep(TIMING.INPUT_DELAY_MS).then(() => {
+            this.inputMode = "offline_menu";
+            setInputBoxVisible(this.inputBox, true);
+            setInputPlaceholder(this.inputField, "Press number or 'm' for model:");
+            focusInput(this.inputField);
+            readInput(this.inputField, (err, value) => {
+                if (err || !value?.trim()) {
+                    this.finishInput();
+                    return;
+                }
+                const input = value.trim().toLowerCase();
+                if (input === 'm') {
+                    this.handleModelSwitch();
+                }
+                else if (input === '1') {
+                    this.navigateToMenu(MENU.ASK);
+                }
+                else if (input === '2') {
+                    this.navigateToMenu(MENU.JOURNAL);
+                }
+                else if (input === '3') {
+                    this.navigateToMenu(MENU.RECALL);
+                }
+                else if (input === '4') {
+                    this.navigateToMenu(MENU.OPENCLAW);
+                }
+                else {
+                    this.updateContent(formatWarning(`Unknown command: ${input}`) + "\n\n" + STATUS_MESSAGES.PRESS_ANY_KEY);
+                }
+                this.finishInput();
+                renderScreen(this.screen);
+            });
+        });
+    }
+    /**
+     * Handle model switch
+     */
+    handleModelSwitch() {
+        clearInput(this.inputField);
+        setInputPlaceholder(this.inputField, `Enter model name (${DEFAULT_MODELS.PRIMARY}, ${DEFAULT_MODELS.FALLBACK.join(", ")}):`);
+        readInput(this.inputField, (err, modelValue) => {
+            if (err || !modelValue?.trim()) {
+                this.finishInput();
+                return;
+            }
+            const validModels = [DEFAULT_MODELS.PRIMARY, ...DEFAULT_MODELS.FALLBACK];
+            if (!validModels.includes(modelValue.trim())) {
+                this.updateContent(formatError("Invalid model name") + "\n\n" + STATUS_MESSAGES.PRESS_ANY_KEY);
+                return;
+            }
+            process.env.OLLAMA_MODEL = modelValue.trim();
+            this.updateContent(formatSuccess(`Model switched to: ${modelValue.trim()}`) + "\n\n" + STATUS_MESSAGES.PRESS_ANY_KEY);
+        });
+    }
+    /**
+     * Handle input error
+     */
+    handleInputError(error) {
+        this.updateContent(formatError(error) + "\n\n" + STATUS_MESSAGES.PRESS_ANY_KEY);
+        this.finishInput();
+        renderScreen(this.screen);
+    }
+    /**
+     * Finish input mode
+     */
+    finishInput() {
+        this.inputMode = "";
+        setInputBoxVisible(this.inputBox, false);
+    }
+    /**
+     * Run the TUI
+     */
     run() {
-        this.screen.render();
+        renderScreen(this.screen);
     }
 }
 // Run the TUI
