@@ -4,6 +4,8 @@ export declare class MemphisTUI {
     private store;
     private config;
     private openclawBridge;
+    private llmProvider;
+    private llmProviderName;
     private currentScreen;
     private inputMode;
     private headerBox;
@@ -22,6 +24,8 @@ export declare class MemphisTUI {
     private renderJournal;
     private renderRecall;
     private renderAsk;
+    private initLLM;
+    private askLLM;
     private renderSettings;
     private renderVault;
     private renderOpenClaw;

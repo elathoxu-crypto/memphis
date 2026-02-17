@@ -5,6 +5,11 @@ import { loadConfig } from "../config/loader.js";
 import { queryBlocks } from "../memory/query.js";
 import { encrypt, decrypt } from "../utils/crypto.js";
 import { OpenClawBridge } from "../bridges/openclaw.js";
+import { OllamaProvider } from "../providers/ollama.js";
+import type { LLMMessage } from "../providers/index.js";
+import { OllamaProvider } from "../providers/ollama.js";
+import { OpenAIProvider } from "../providers/openai.js";
+import type { LLMMessage } from "../providers/index.js";
 
 // Colors
 const COLORS = {
@@ -23,6 +28,8 @@ export class MemphisTUI {
   private store: Store;
   private config: ReturnType<typeof loadConfig>;
   private openclawBridge: OpenClawBridge;
+  private llmProvider: any = null;
+  private llmProviderName: string = "";
   private currentScreen: string = "dashboard";
   private inputMode: string = "";
 
@@ -42,6 +49,9 @@ export class MemphisTUI {
     
     // Initialize OpenClaw bridge
     this.openclawBridge = new OpenClawBridge();
+    
+    // Initialize LLM provider (Ollama first, then OpenAI)
+    this.initLLM();
 
     // Create screen
     this.screen = blessed.screen({
@@ -372,21 +382,17 @@ export class MemphisTUI {
       this.inputBox.show();
       (this.inputField.options as any).placeholder = "What would you like to know?";
       this.inputField.focus();
-      this.inputField.readInput((err: any, value: any) => {
+      this.inputField.readInput(async (err: any, value: any) => {
         if (value && value.trim()) {
-          const results = queryBlocks(this.store, { keyword: value.trim() });
-          let responseContent = `{bold}Question: "${value.trim()}"{/bold}\n\n`;
+          this.contentBox.setContent(`{bold}Thinking...{/bold}\n`);
+          this.screen.render();
           
-          if (results.length === 0) {
-            responseContent += `{yellow}I don't have any relevant memories about that.{/yellow}\n`;
-            responseContent += `\n{yellow}Note: LLM integration coming soon!{/yellow}\n`;
-          } else {
-            responseContent += `{green}Based on your memory:{/green}\n\n`;
-            results.slice(0, 3).forEach((block: any) => {
-              responseContent += `* ${block.data?.content}\n\n`;
-            });
-          }
-          responseContent += `\n{white}Press any key to continue...{/white}`;
+          const answer = await this.askLLM(value.trim());
+          
+          let responseContent = `{bold}Question: "${value.trim()}"{/bold}\n\n`;
+          responseContent += `{white}Answer:{/white}\n\n${answer}\n\n`;
+          responseContent += `{gray}Provider: ${this.llmProviderName}{/gray}\n\n`;
+          responseContent += `{white}Press any key to continue...{/white}`;
           this.contentBox.setContent(responseContent);
         }
         this.inputMode = "";
@@ -394,6 +400,70 @@ export class MemphisTUI {
         this.screen.render();
       });
     }, 100);
+  }
+
+  private initLLM(): void {
+    // Try Ollama first (local, free)
+    const ollamaConfig = this.config.providers?.ollama;
+    if (ollamaConfig) {
+      this.llmProvider = new OllamaProvider();
+      this.llmProviderName = "Ollama";
+      if (this.llmProvider.isConfigured()) {
+        console.log("🤖 TUI: Using Ollama for LLM");
+        return;
+      }
+    }
+    
+    // Try OpenAI
+    const openaiConfig = this.config.providers?.openai;
+    if (openaiConfig?.api_key || process.env.OPENAI_API_KEY) {
+      this.llmProvider = new OpenAIProvider();
+      this.llmProviderName = "OpenAI";
+      if (this.llmProvider.isConfigured()) {
+        console.log("🤖 TUI: Using OpenAI for LLM");
+        return;
+      }
+    }
+    
+    console.log("⚠️ TUI: No LLM provider configured");
+  }
+  
+  private async askLLM(question: string): Promise<string> {
+    if (!this.llmProvider || !this.llmProvider.isConfigured()) {
+      return "No LLM provider configured. Please set up Ollama or OpenAI.";
+    }
+    
+    // Get memory context
+    const results = queryBlocks(this.store, { keyword: question, limit: 5 });
+    const context = results.map((b: any) => b.data?.content).join("\n");
+    
+    const messages: LLMMessage[] = [
+      {
+        role: "system",
+        content: "You are Memphis, a helpful AI assistant. Be concise and friendly.",
+      },
+    ];
+    
+    if (context) {
+      messages.push({
+        role: "system",
+        content: `Relevant memory:\n${context}`,
+      });
+    }
+    
+    messages.push({
+      role: "user",
+      content: question,
+    });
+    
+    try {
+      const response = await this.llmProvider.chat(messages, {
+        model: this.config.providers?.ollama?.model || this.config.providers?.openai?.model || "llama3.2:1b",
+      });
+      return response.content;
+    } catch (err) {
+      return `Error: ${err}`;
+    }
   }
 
   private renderSettings(): void {
