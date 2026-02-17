@@ -180,8 +180,13 @@ export class MemphisTUI {
     });
 
     // Number key navigation
-    this.screen.key(["1", "2", "3", "4", "5", "6", "7"], (ch: string) => {
+    this.screen.key(["1", "2", "3", "4", "5", "6", "7", "8"], (ch: string) => {
       this.navigateToMenu(parseInt(ch));
+    });
+    
+    // Also allow 'c' for Cline
+    this.screen.key(["c"], () => {
+      this.navigateToMenu(8);
     });
 
     // Also allow j/k for vim-style navigation
@@ -196,7 +201,7 @@ export class MemphisTUI {
   }
 
   private handleNavigation(direction: string): void {
-    const menuItems = ["dashboard", "journal", "vault", "recall", "ask", "openclaw", "settings"];
+    const menuItems = ["dashboard", "journal", "vault", "recall", "ask", "openclaw", "cline", "settings"];
     const currentIndex = menuItems.indexOf(this.currentScreen);
     
     let newIndex = currentIndex;
@@ -221,7 +226,8 @@ export class MemphisTUI {
       recall: 4,
       ask: 5,
       openclaw: 6,
-      settings: 7
+      cline: 7,
+      settings: 8
     };
     return menuMap[this.currentScreen] || 1;
   }
@@ -234,6 +240,7 @@ export class MemphisTUI {
       " Recall",
       " Ask",
       " OpenClaw",
+      " Cline",
       " Settings",
     ];
 
@@ -310,6 +317,9 @@ export class MemphisTUI {
         this.renderOpenClaw();
         break;
       case 7:
+        this.renderCline();
+        break;
+      case 8:
         this.renderSettings();
         break;
     }
@@ -649,6 +659,59 @@ export class MemphisTUI {
           this.inputBox.hide();
           this.screen.render();
         }
+      });
+    }, 100);
+  }
+
+  private renderCline(): void {
+    this.currentScreen = "cline";
+    
+    let content = `{bold}{cyan} 🤖 Cline - AI Coding Assistant{/cyan}{/bold}\n\n`;
+    content += `{white}Cline is an AI coding assistant integrated with Memphis.{/white}\n\n`;
+    
+    // Get recent Cline logs from journal
+    const logs = this.store.readChain("journal");
+    const clineLogs = logs.filter((b: any) => b.data?.content?.includes("[cline]")).slice(-10).reverse();
+    
+    content += `{bold}Recent Cline Activity:{/bold}\n`;
+    if (clineLogs.length === 0) {
+      content += `  {yellow}No Cline activity yet.{/yellow}\n`;
+    } else {
+      clineLogs.forEach((block: any) => {
+        content += `  {cyan}•{/cyan} ${block.data?.content?.substring(0, 60)}...\n`;
+      });
+    }
+    
+    content += `\n{bold}Available Commands:{/bold}\n`;
+    content += `  {cyan}cline --help{/cyan}     - Show Cline help\n`;
+    content += `  {cyan}cline <prompt>{/cyan}   - Run Cline task\n`;
+    content += `  {cyan}cline -a{/cyan}         - Act mode\n\n`;
+    
+    content += `{white}Press Enter to run a Cline command...{/white}\n`;
+    content += `{gray}(Enter a prompt for Cline){/gray}\n`;
+    
+    this.contentBox.setContent(content);
+    this.sidebarBox.setContent(this.getSidebarContent());
+
+    setTimeout(() => {
+      this.inputMode = "cline_cmd";
+      this.inputBox.show();
+      (this.inputField.options as any).placeholder = "Enter Cline prompt:";
+      this.inputField.focus();
+      this.inputField.readInput((err: any, value: any) => {
+        if (value && value.trim()) {
+          // Log the command
+          const { cline } = require("../agents/logger.js");
+          cline.cmd(value.trim(), "pending");
+          
+          content += `\n{white}Command:{/white} ${value.trim()}\n`;
+          content += `{yellow}Note: Cline integration is planned.{/yellow}\n`;
+          content += `\n{white}Press any key to continue...{/white}`;
+          this.contentBox.setContent(content);
+        }
+        this.inputMode = "";
+        this.inputBox.hide();
+        this.screen.render();
       });
     }, 100);
   }
