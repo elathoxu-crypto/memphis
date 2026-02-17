@@ -13,10 +13,11 @@ export declare class MemphisTUI {
     private inputField;
     private statusBar;
     constructor();
-    private getSidebarContent;
-    private renderDashboard;
     private handleNavigation;
     private handleEnter;
+    private getCurrentMenuIndex;
+    private getSidebarContent;
+    private renderDashboard;
     private navigateToMenu;
     private renderJournal;
     private renderRecall;

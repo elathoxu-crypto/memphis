@@ -147,6 +147,7 @@ export class MemphisTUI {
       process.exit(0);
     });
 
+    // Arrow key navigation
     this.screen.key(["up", "down"], (ch: string, key: { name: string }) => {
       this.handleNavigation(key.name);
     });
@@ -155,13 +156,51 @@ export class MemphisTUI {
       this.handleEnter();
     });
 
+    // Number key navigation
     this.screen.key(["1", "2", "3", "4", "5", "6", "7"], (ch: string) => {
       this.navigateToMenu(parseInt(ch));
+    });
+
+    // Also allow j/k for vim-style navigation
+    this.screen.key(["j", "k"], (ch: string) => {
+      if (ch === "j") this.handleNavigation("down");
+      else this.handleNavigation("up");
     });
 
     // Render initial screen
     this.renderDashboard();
     this.screen.render();
+  }
+
+  private handleNavigation(direction: string): void {
+    const menuItems = ["dashboard", "journal", "vault", "recall", "ask", "openclaw", "settings"];
+    const currentIndex = menuItems.indexOf(this.currentScreen);
+    
+    let newIndex = currentIndex;
+    if (direction === "down") newIndex = Math.min(currentIndex + 1, menuItems.length - 1);
+    if (direction === "up") newIndex = Math.max(currentIndex - 1, 0);
+    
+    if (newIndex !== currentIndex) {
+      this.navigateToMenu(newIndex + 1);
+    }
+  }
+
+  private handleEnter(): void {
+    // Handle enter - just re-render current screen to activate input
+    this.navigateToMenu(this.getCurrentMenuIndex());
+  }
+  
+  private getCurrentMenuIndex(): number {
+    const menuMap: Record<string, number> = {
+      dashboard: 1,
+      journal: 2,
+      vault: 3,
+      recall: 4,
+      ask: 5,
+      openclaw: 6,
+      settings: 7
+    };
+    return menuMap[this.currentScreen] || 1;
   }
 
   private getSidebarContent(): string {
@@ -225,14 +264,6 @@ export class MemphisTUI {
 
     this.contentBox.setContent(content);
     this.sidebarBox.setContent(this.getSidebarContent());
-  }
-
-  private handleNavigation(direction: string): void {
-    this.screen.render();
-  }
-
-  private handleEnter(): void {
-    // Handle enter based on input mode
   }
 
   private navigateToMenu(num: number): void {
@@ -468,6 +499,7 @@ export class MemphisTUI {
     
     content += `\n{white}Press Enter to send a message to agents...{/white}\n`;
     content += `{gray}(Or press 'n' to negotiate compute share){/gray}\n`;
+    content += `{gray}(Or press 'r' to read journal logs){/gray}\n`;
     
     this.contentBox.setContent(content);
     this.sidebarBox.setContent(this.getSidebarContent());
@@ -475,11 +507,13 @@ export class MemphisTUI {
     setTimeout(() => {
       this.inputMode = "openclaw_menu";
       this.inputBox.show();
-      (this.inputField.options as any).placeholder = "Press Enter to message, 'n' to negotiate:";
+      (this.inputField.options as any).placeholder = "Press Enter=message, 'n'=negotiate, 'r'=read logs:";
       this.inputField.focus();
       this.inputField.readInput((err: any, value: any) => {
         if (value && value.trim()) {
-          if (value.trim().toLowerCase() === 'n') {
+          const input = value.trim().toLowerCase();
+          
+          if (input === 'n') {
             // Negotiate compute share
             this.inputField.setValue("");
             (this.inputField.options as any).placeholder = "Enter compute share % (e.g. 40):";
@@ -497,6 +531,27 @@ export class MemphisTUI {
               this.inputBox.hide();
               this.screen.render();
             });
+          } else if (input === 'r') {
+            // Read journal logs
+            const logs = this.store.readChain("journal");
+            const recentLogs = logs.slice(-20).reverse();
+            
+            let logContent = `{bold}{cyan}📜 Journal Logs (ostatnie 20){/cyan}{/bold}\n\n`;
+            
+            if (recentLogs.length === 0) {
+              logContent += `{yellow}Brak wpisów w dzienniku.{/yellow}\n`;
+            } else {
+              recentLogs.forEach((block: any, index: number) => {
+                logContent += `{cyan}[${block.index}]{/cyan} ${block.timestamp}\n`;
+                logContent += `   ${block.data?.content?.substring(0, 80)}...\n\n`;
+              });
+            }
+            
+            logContent += `\n{white}Press any key to wrócić...{/white}`;
+            this.contentBox.setContent(logContent);
+            this.inputMode = "";
+            this.inputBox.hide();
+            this.screen.render();
           } else {
             // Send message via bridge
             this.openclawBridge.sendMessage("openclaw-001", value.trim()).then(response => {
