@@ -4,6 +4,7 @@ import { Store } from "../memory/store.js";
 import { loadConfig } from "../config/loader.js";
 import { queryBlocks } from "../memory/query.js";
 import { encrypt, decrypt } from "../utils/crypto.js";
+import { OpenClawBridge } from "../bridges/openclaw.js";
 
 // Colors
 const COLORS = {
@@ -21,6 +22,7 @@ export class MemphisTUI {
   private screen: blessed.Widgets.Screen;
   private store: Store;
   private config: ReturnType<typeof loadConfig>;
+  private openclawBridge: OpenClawBridge;
   private currentScreen: string = "dashboard";
   private inputMode: string = "";
 
@@ -37,6 +39,9 @@ export class MemphisTUI {
     const config = loadConfig();
     this.config = config;
     this.store = new Store(config.memory?.path || `${process.env.HOME}/.memphis/chains`);
+    
+    // Initialize OpenClaw bridge
+    this.openclawBridge = new OpenClawBridge();
 
     // Create screen
     this.screen = blessed.screen({
@@ -428,31 +433,84 @@ export class MemphisTUI {
 
   private renderOpenClaw(): void {
     this.currentScreen = "openclaw";
+    
+    // Get real bridge data
+    const agents = this.openclawBridge.getAgents();
+    const messages = this.openclawBridge.getMessages();
+    const status = this.openclawBridge.getStatus();
+    
     let content = `{bold}{cyan} 🦞 OpenClaw - Agent Collaboration{/cyan}{/bold}\n\n`;
-    content += `Share 53% of your LLM compute with external agents.\n\n`;
-    content += `{white}Press Enter to send an invite...{/white}\n`;
+    content += `{white}Bridge Status:{/white}\n`;
+    content += `  Connected Agents: ${agents.length}\n`;
+    content += `  Messages Exchanged: ${messages.length}\n\n`;
+    
+    // List agents
+    content += `{bold}Connected Agents:{/bold}\n`;
+    if (agents.length === 0) {
+      content += `  {yellow}No agents connected.{/yellow}\n`;
+    } else {
+      agents.forEach(agent => {
+        content += `  {cyan}• ${agent.name}{/cyan}\n`;
+        content += `    Status: ${agent.status}\n`;
+        content += `    Compute Share: ${agent.computeShare}%\n`;
+        content += `    Capabilities: ${agent.capabilities.join(", ")}\n`;
+        content += `    DID: ${agent.did.substring(0, 30)}...\n\n`;
+      });
+    }
+    
+    // Recent messages
+    if (messages.length > 0) {
+      content += `{bold}Recent Messages:{/bold}\n`;
+      messages.slice(-3).forEach(msg => {
+        content += `  ${msg.from} → ${msg.to}: ${msg.content.substring(0, 40)}...\n`;
+      });
+    }
+    
+    content += `\n{white}Press Enter to send a message to agents...{/white}\n`;
+    content += `{gray}(Or press 'n' to negotiate compute share){/gray}\n`;
+    
     this.contentBox.setContent(content);
     this.sidebarBox.setContent(this.getSidebarContent());
 
     setTimeout(() => {
-      this.inputMode = "openclaw_invite";
+      this.inputMode = "openclaw_menu";
       this.inputBox.show();
-      (this.inputField.options as any).placeholder = "Message to OpenClaw agent:";
+      (this.inputField.options as any).placeholder = "Press Enter to message, 'n' to negotiate:";
       this.inputField.focus();
       this.inputField.readInput((err: any, value: any) => {
         if (value && value.trim()) {
-          // Simulate agent response
-          const responses = [
-            `🤝 Received: "${value.substring(0, 20)}..."\n\nI'm analyzing this with my 53% compute allocation. Interesting patterns detected!`,
-            `🔍 Processing your request...\n\nThe agent is running parallel analysis on your data.`,
-            `💡 Collaboration active!\n\nLet's share insights across our memory chains.`,
-          ];
-          const randomResponse = responses[Math.floor(Math.random() * responses.length)];
-          this.contentBox.setContent(`{bold}Sent: "${value.trim()}"{/bold}\n\n${randomResponse}\n\n{white}Press any key to continue...{/white}`);
+          if (value.trim().toLowerCase() === 'n') {
+            // Negotiate compute share
+            this.inputField.setValue("");
+            (this.inputField.options as any).placeholder = "Enter compute share % (e.g. 40):";
+            this.inputField.readInput((err2: any, shareValue: any) => {
+              if (shareValue && shareValue.trim()) {
+                const share = parseInt(shareValue.trim());
+                const success = this.openclawBridge.negotiateComputeShare("openclaw-001", share);
+                const updatedAgents = this.openclawBridge.getAgents();
+                const agent = updatedAgents.find(a => a.id === "openclaw-001");
+                this.contentBox.setContent(success 
+                  ? `{green}✅ Compute share negotiated!{/green}\n\nNew share: ${agent?.computeShare}%\n\n{white}Press any key to continue...{/white}`
+                  : `{red}❌ Negotiation failed{/red}\n\n{white}Press any key to continue...{/white}`);
+              }
+              this.inputMode = "";
+              this.inputBox.hide();
+              this.screen.render();
+            });
+          } else {
+            // Send message via bridge
+            this.openclawBridge.sendMessage("openclaw-001", value.trim()).then(response => {
+              this.contentBox.setContent(`{bold}Sent: "${value.trim()}"{/bold}\n\n{cyan}Agent Response:{/cyan}\n\n${response.content}\n\n{white}Press any key to continue...{/white}`);
+              this.inputMode = "";
+              this.inputBox.hide();
+              this.screen.render();
+            });
+          }
+        } else {
+          this.inputMode = "";
+          this.inputBox.hide();
+          this.screen.render();
         }
-        this.inputMode = "";
-        this.inputBox.hide();
-        this.screen.render();
       });
     }, 100);
   }

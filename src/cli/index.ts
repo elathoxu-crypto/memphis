@@ -8,6 +8,7 @@ import { initCommand } from "./commands/init.js";
 import { vaultCommand } from "./commands/vault.js";
 import { agentCommand } from "./commands/agent.js";
 import { runOpenClawCommands } from "../bridges/openclaw.js";
+import { MemphisTUI } from "../tui/index.js";
 
 const program = new Command();
 
@@ -74,6 +75,34 @@ program
     } else {
       await agentCommand(action, { interval: opts.interval });
     }
+  });
+
+program
+  .command("tui")
+  .description("Launch the terminal UI")
+  .option("-s, --screen <screen>", "Open specific screen (dashboard, journal, vault, recall, ask, openclaw, settings)")
+  .action((opts) => {
+    const tui = new MemphisTUI();
+    // If screen specified, navigate to it after a brief delay
+    if (opts.screen) {
+      setTimeout(() => {
+        const screenMap: Record<string, number> = {
+          dashboard: 1,
+          journal: 2,
+          vault: 3,
+          recall: 4,
+          ask: 5,
+          openclaw: 6,
+          settings: 7,
+        };
+        const screenNum = screenMap[opts.screen.toLowerCase()];
+        if (screenNum) {
+          // Access the navigateToMenu method via the instance
+          (tui as any).navigateToMenu(screenNum);
+        }
+      }, 500);
+    }
+    tui.run();
   });
 
 program.parse();

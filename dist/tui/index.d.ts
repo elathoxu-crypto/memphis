@@ -3,6 +3,7 @@ export declare class MemphisTUI {
     private screen;
     private store;
     private config;
+    private openclawBridge;
     private currentScreen;
     private inputMode;
     private headerBox;
