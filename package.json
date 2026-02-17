@@ -1,6 +1,6 @@
 {
   "name": "@elathoxu-crypto/memphis",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "Local-first AI brain with persistent memory chains + Vault (SSI)",
   "type": "module",
   "bin": {
