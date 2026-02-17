@@ -1,5 +1,0 @@
-# Example .npmrc for GitHub Packages
-# Copy this to .npmrc and add your GitHub token
-
-@elathoxu-crypto:registry=https://npm.pkg.github.com
-//npm.pkg.github.com/:_authToken=YOUR_GITHUB_TOKEN_HERE

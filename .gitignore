@@ -1,7 +1,4 @@
 node_modules/
+dist/
 *.js.map
 .memphis/
-
-# Keep dist for npm package (but don't commit build artifacts locally)
-# dist/ is generated during npm publish
-# .npmrc.example is tracked for users to copy
