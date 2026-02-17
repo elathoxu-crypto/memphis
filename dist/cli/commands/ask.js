@@ -4,6 +4,8 @@ import { loadConfig } from "../../config/loader.js";
 import { queryBlocks } from "../../memory/query.js";
 import { log } from "../../utils/logger.js";
 import { OpenRouterProvider } from "../../providers/openrouter.js";
+import { OllamaProvider } from "../../providers/ollama.js";
+import { OpenAIProvider } from "../../providers/openai.js";
 export async function askCommand(question) {
     const config = loadConfig();
     const store = new Store(config.memory.path);
@@ -29,12 +31,37 @@ export async function askCommand(question) {
     const context = contextBlocks
         .map(b => `[${b.chain}#${b.index}] ${b.data.content}`)
         .join("\n\n");
-    // Check for configured provider
-    const providerConfig = config.providers?.openrouter;
-    const hasProvider = providerConfig?.api_key || process.env.OPENROUTER_API_KEY;
-    if (hasProvider) {
+    // Find first configured provider (Ollama > OpenAI > OpenRouter)
+    let provider = null;
+    let providerName = "";
+    let model = "";
+    // Try Ollama first (local, free)
+    const ollamaConfig = config.providers?.ollama;
+    if (ollamaConfig) {
+        provider = new OllamaProvider();
+        providerName = "Ollama";
+        model = ollamaConfig?.model || "llama3.1";
+    }
+    // Try OpenAI
+    if (!provider) {
+        const openaiConfig = config.providers?.openai;
+        if (openaiConfig?.api_key || process.env.OPENAI_API_KEY) {
+            provider = new OpenAIProvider();
+            providerName = "OpenAI";
+            model = openaiConfig?.model || "gpt-4o";
+        }
+    }
+    // Try OpenRouter as fallback
+    if (!provider) {
+        const openrouterConfig = config.providers?.openrouter;
+        if (openrouterConfig?.api_key || process.env.OPENROUTER_API_KEY) {
+            provider = new OpenRouterProvider(openrouterConfig?.api_key);
+            providerName = "OpenRouter";
+            model = openrouterConfig?.model || "anthropic/claude-sonnet-4";
+        }
+    }
+    if (provider && provider.isConfigured()) {
         try {
-            const provider = new OpenRouterProvider(providerConfig?.api_key);
             const messages = [
                 {
                     role: "system",
@@ -53,9 +80,9 @@ relevant information, say so honestly. Be concise and helpful.`,
                 role: "user",
                 content: question,
             });
-            console.log(chalk.gray("🤔 Consulting memory...\n"));
+            console.log(chalk.gray(`🤔 Consulting ${providerName} (${model})...\n`));
             const response = await provider.chat(messages, {
-                model: providerConfig?.model,
+                model: model,
                 temperature: 0.7,
             });
             console.log(chalk.white(response.content));
@@ -65,7 +92,7 @@ relevant information, say so honestly. Be concise and helpful.`,
             return;
         }
         catch (err) {
-            console.log(chalk.yellow(`⚠ LLM error: ${err}. Falling back to memory search.\n`));
+            console.log(chalk.yellow(`⚠ ${providerName} error: ${err}. Falling back to memory search.\n`));
         }
     }
     // Fallback: display memory results without LLM

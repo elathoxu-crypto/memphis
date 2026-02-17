@@ -1,25 +1,7 @@
 // Provider abstraction for LLM integrations
 // Allows easy addition of new providers (OpenRouter, MiniMax, Ollama, etc.)
-// Base provider class
-export class BaseProvider {
-    isConfigured() {
-        return !!this.apiKey && this.apiKey.length > 0;
-    }
-    async fetch(endpoint, body) {
-        const response = await fetch(`${this.baseUrl}${endpoint}`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${this.apiKey}`,
-            },
-            body: JSON.stringify(body),
-        });
-        if (!response.ok) {
-            throw new Error(`Provider error: ${response.status} ${response.statusText}`);
-        }
-        return response.json();
-    }
-}
+// Base provider class - imported from separate file to avoid circular deps
+export { BaseProvider } from "./base.js";
 // Provider registry
 const providers = new Map();
 export function registerProvider(name, provider) {
@@ -31,7 +13,7 @@ export function getProvider(name) {
 export function listProviders() {
     return Array.from(providers.keys());
 }
-// Built-in providers (to be implemented)
+// Built-in providers
 export { OpenRouterProvider } from "./openrouter.js";
 export { MiniMaxProvider } from "./minimax.js";
 export { OllamaProvider } from "./ollama.js";

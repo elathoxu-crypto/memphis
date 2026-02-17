@@ -1,4 +1,4 @@
-import { BaseProvider } from "./index.js";
+import { BaseProvider } from "./base.js";
 export class OllamaProvider extends BaseProvider {
     name = "ollama";
     baseUrl = "http://localhost:11434/v1";

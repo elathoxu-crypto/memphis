@@ -1,4 +1,4 @@
-import { BaseProvider } from "./index.js";
+import { BaseProvider } from "./base.js";
 export class OpenAIProvider extends BaseProvider {
     name = "openai";
     baseUrl = "https://api.openai.com/v1";

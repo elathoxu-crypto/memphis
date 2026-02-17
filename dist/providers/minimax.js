@@ -1,4 +1,4 @@
-import { BaseProvider } from "./index.js";
+import { BaseProvider } from "./base.js";
 export class MiniMaxProvider extends BaseProvider {
     name = "minimax";
     baseUrl = "https://api.minimax.chat/v1";

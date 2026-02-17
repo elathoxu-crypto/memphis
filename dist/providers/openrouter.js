@@ -1,4 +1,4 @@
-import { BaseProvider } from "./index.js";
+import { BaseProvider } from "./base.js";
 export class OpenRouterProvider extends BaseProvider {
     name = "openrouter";
     baseUrl = "https://openrouter.ai/api/v1";

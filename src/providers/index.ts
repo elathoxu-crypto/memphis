@@ -30,40 +30,8 @@ export interface Provider {
   isConfigured(): boolean;
 }
 
-// Base provider class
-export abstract class BaseProvider implements Provider {
-  abstract name: string;
-  abstract models: string[];
-  abstract apiKey: string;
-  abstract baseUrl: string;
-  
-  isConfigured(): boolean {
-    return !!this.apiKey && this.apiKey.length > 0;
-  }
-  
-  abstract chat(messages: LLMMessage[], options?: {
-    model?: string;
-    temperature?: number;
-    max_tokens?: number;
-  }): Promise<LLMResponse>;
-  
-  protected async fetch<T>(endpoint: string, body: object): Promise<T> {
-    const response = await fetch(`${this.baseUrl}${endpoint}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${this.apiKey}`,
-      },
-      body: JSON.stringify(body),
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Provider error: ${response.status} ${response.statusText}`);
-    }
-    
-    return response.json();
-  }
-}
+// Base provider class - imported from separate file to avoid circular deps
+export { BaseProvider } from "./base.js";
 
 // Provider registry
 const providers = new Map<string, Provider>();
@@ -80,7 +48,7 @@ export function listProviders(): string[] {
   return Array.from(providers.keys());
 }
 
-// Built-in providers (to be implemented)
+// Built-in providers
 export { OpenRouterProvider } from "./openrouter.js";
 export { MiniMaxProvider } from "./minimax.js";
 export { OllamaProvider } from "./ollama.js";

@@ -35,8 +35,12 @@ export async function statusCommand() {
     else {
         console.log(chalk.bold("  Providers:"));
         for (const [name, p] of providers) {
+            // Ollama doesn't need a key - always configured if server is running
+            const isOllama = name === "ollama";
             const hasKey = p.api_key && p.api_key.length > 0;
-            const status = hasKey ? chalk.green("✓ key set") : chalk.red("✗ no key");
+            const status = isOllama || hasKey
+                ? chalk.green("✓ ready")
+                : chalk.red("✗ no key");
             console.log(`    ${name} — ${p.model || "?"} — ${p.role || "?"} — ${status}`);
         }
     }

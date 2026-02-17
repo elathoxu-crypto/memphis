@@ -20,19 +20,7 @@ export interface Provider {
     }): Promise<LLMResponse>;
     isConfigured(): boolean;
 }
-export declare abstract class BaseProvider implements Provider {
-    abstract name: string;
-    abstract models: string[];
-    abstract apiKey: string;
-    abstract baseUrl: string;
-    isConfigured(): boolean;
-    abstract chat(messages: LLMMessage[], options?: {
-        model?: string;
-        temperature?: number;
-        max_tokens?: number;
-    }): Promise<LLMResponse>;
-    protected fetch<T>(endpoint: string, body: object): Promise<T>;
-}
+export { BaseProvider } from "./base.js";
 export declare function registerProvider(name: string, provider: Provider): void;
 export declare function getProvider(name: string): Provider | undefined;
 export declare function listProviders(): string[];

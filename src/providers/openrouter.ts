@@ -1,4 +1,5 @@
-import { BaseProvider, type LLMMessage, type LLMResponse } from "./index.js";
+import { BaseProvider } from "./base.js";
+import type { LLMMessage, LLMResponse } from "./index.js";
 
 export class OpenRouterProvider extends BaseProvider {
   name = "openrouter";
