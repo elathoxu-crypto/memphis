@@ -35,4 +35,5 @@ export function listProviders() {
 export { OpenRouterProvider } from "./openrouter.js";
 export { MiniMaxProvider } from "./minimax.js";
 export { OllamaProvider } from "./ollama.js";
+export { OpenAIProvider } from "./openai.js";
 //# sourceMappingURL=index.js.map

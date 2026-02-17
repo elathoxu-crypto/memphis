@@ -39,3 +39,4 @@ export declare function listProviders(): string[];
 export { OpenRouterProvider } from "./openrouter.js";
 export { MiniMaxProvider } from "./minimax.js";
 export { OllamaProvider } from "./ollama.js";
+export { OpenAIProvider } from "./openai.js";
