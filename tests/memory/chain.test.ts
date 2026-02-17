@@ -38,6 +38,8 @@ describe("chain", () => {
     // Tamper
     b1.data.content = "HACKED";
 
-    expect(verifyChain([b0, b1])).toEqual({ valid: false, broken_at: 1 });
+    const result = verifyChain([b0, b1]);
+    expect(result.valid).toBe(false);
+    expect(result.broken_at).toBe(1);
   });
 });

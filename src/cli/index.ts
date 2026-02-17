@@ -5,6 +5,7 @@ import { askCommand } from "./commands/ask.js";
 import { recallCommand } from "./commands/recall.js";
 import { statusCommand } from "./commands/status.js";
 import { initCommand } from "./commands/init.js";
+import { vaultCommand } from "./commands/vault.js";
 
 const program = new Command();
 
@@ -41,5 +42,21 @@ program
   .command("status")
   .description("Show Memphis status")
   .action(statusCommand);
+
+program
+  .command("vault")
+  .description("Manage encrypted secrets (SSI Vault)")
+  .argument("<action>", "init | add | list | get | delete")
+  .argument("[key]", "Secret key name")
+  .argument("[value]", "Secret value")
+  .option("-p, --password <password>", "Master password for encryption")
+  .action(async (action, key, value, opts) => {
+    await vaultCommand({
+      action,
+      key,
+      value,
+      password: opts.password,
+    });
+  });
 
 program.parse();
