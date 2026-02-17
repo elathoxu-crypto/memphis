@@ -134,7 +134,7 @@ export class MemphisTUI {
         this.screen.key(["enter"], () => {
             this.handleEnter();
         });
-        this.screen.key(["1", "2", "3", "4", "5", "6"], (ch) => {
+        this.screen.key(["1", "2", "3", "4", "5", "6", "7"], (ch) => {
             this.navigateToMenu(parseInt(ch));
         });
         // Render initial screen
@@ -148,6 +148,7 @@ export class MemphisTUI {
             " Vault",
             " Recall",
             " Ask",
+            " OpenClaw",
             " Settings",
         ];
         let content = "{bold}Navigation{/bold}\n\n";
@@ -219,6 +220,9 @@ export class MemphisTUI {
                 this.renderAsk();
                 break;
             case 6:
+                this.renderOpenClaw();
+                break;
+            case 7:
                 this.renderSettings();
                 break;
         }
@@ -384,6 +388,35 @@ export class MemphisTUI {
                     this.inputBox.hide();
                     this.screen.render();
                 }
+            });
+        }, 100);
+    }
+    renderOpenClaw() {
+        this.currentScreen = "openclaw";
+        let content = `{bold}{cyan} 🦞 OpenClaw - Agent Collaboration{/cyan}{/bold}\n\n`;
+        content += `Share 53% of your LLM compute with external agents.\n\n`;
+        content += `{white}Press Enter to send an invite...{/white}\n`;
+        this.contentBox.setContent(content);
+        this.sidebarBox.setContent(this.getSidebarContent());
+        setTimeout(() => {
+            this.inputMode = "openclaw_invite";
+            this.inputBox.show();
+            this.inputField.options.placeholder = "Message to OpenClaw agent:";
+            this.inputField.focus();
+            this.inputField.readInput((err, value) => {
+                if (value && value.trim()) {
+                    // Simulate agent response
+                    const responses = [
+                        `🤝 Received: "${value.substring(0, 20)}..."\n\nI'm analyzing this with my 53% compute allocation. Interesting patterns detected!`,
+                        `🔍 Processing your request...\n\nThe agent is running parallel analysis on your data.`,
+                        `💡 Collaboration active!\n\nLet's share insights across our memory chains.`,
+                    ];
+                    const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+                    this.contentBox.setContent(`{bold}Sent: "${value.trim()}"{/bold}\n\n${randomResponse}\n\n{white}Press any key to continue...{/white}`);
+                }
+                this.inputMode = "";
+                this.inputBox.hide();
+                this.screen.render();
             });
         }, 100);
     }
