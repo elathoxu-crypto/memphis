@@ -1,0 +1,27 @@
+# Memphis Configuration Example
+# Copy to ~/.memphis/config.yaml
+
+providers:
+  ollama:
+    url: http://localhost:11434
+    model: llama2
+    role: primary
+
+memory:
+  path: ~/.memphis/chains
+  auto_git: false
+  auto_git_push: false
+
+agents:
+  journal:
+    chain: journal
+    context_window: 20
+  builder:
+    chain: build
+    context_window: 30
+  architect:
+    chain: adr
+    context_window: 15
+  ops:
+    chain: ops
+    context_window: 10

@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "memphis": {
+      "command": "npx",
+      "args": ["tsx", "src/bridges/cline.ts"]
+    }
+  }
+}
