@@ -18,4 +18,6 @@ export { OpenRouterProvider } from "./openrouter.js";
 export { MiniMaxProvider } from "./minimax.js";
 export { OllamaProvider } from "./ollama.js";
 export { OpenAIProvider } from "./openai.js";
+// Offline mode support
+export { OfflineDetector, FallbackChain, ContextCache, getRecommendedOfflineModel, getOfflineModels } from "./offline.js";
 //# sourceMappingURL=index.js.map

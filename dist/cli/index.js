@@ -57,12 +57,12 @@ program
     .command("agent")
     .description("Manage agents (autosave, openclaw)")
     .argument("<action>", "start | stop | status | openclaw | collab")
-    .argument("[subaction]", "status, list, invite, negotiate", "")
-    .argument("[value]", "Value for subaction", "")
+    .argument("[subaction...]", "Optional subcommand and arguments")
     .option("-i, --interval <time>", "Interval for autosave (e.g., 5m)")
-    .action(async (action, subaction, value, opts) => {
+    .action(async (action, subactionArgs, opts) => {
     if (action === "openclaw" || action === "collab") {
-        runOpenClawCommands([subaction, value].filter(Boolean));
+        // subactionArgs is now an array of strings
+        runOpenClawCommands(subactionArgs || []);
     }
     else {
         await agentCommand(action, { interval: opts.interval });

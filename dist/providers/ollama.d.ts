@@ -4,9 +4,11 @@ export declare class OllamaProvider extends BaseProvider {
     name: string;
     baseUrl: string;
     models: string[];
+    defaultModel: string;
     apiKey: string;
     constructor();
     isConfigured(): boolean;
+    getDefaultModel(): string;
     chat(messages: LLMMessage[], options?: {
         model?: string;
         temperature?: number;
