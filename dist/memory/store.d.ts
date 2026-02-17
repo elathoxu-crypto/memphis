@@ -1,4 +1,8 @@
 import type { Block, BlockData } from "./chain.js";
+export declare class StoreError extends Error {
+    readonly code: string;
+    constructor(message: string, code: string);
+}
 export declare class Store {
     private basePath;
     constructor(basePath: string);

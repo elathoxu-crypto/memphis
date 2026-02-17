@@ -5,6 +5,15 @@ export class MiniMaxProvider extends BaseProvider {
   baseUrl = "https://api.minimax.chat/v1";
   models = [
     "minimax-text-01",
+    // M2.5 series models
+    "abab6.5s-chat",
+    "abab6.5g-chat",
+    "abab6.5s-chat-200k",
+    "abab6.5g-chat-200k",
+    // M2 series models
+    "abab6-chat",
+    "abab5.5s-chat",
+    "abab5.5g-chat",
   ];
   
   apiKey = "";
@@ -14,6 +23,10 @@ export class MiniMaxProvider extends BaseProvider {
     super();
     this.apiKey = apiKey || process.env.MINIMAX_API_KEY || "";
     this.groupId = groupId || process.env.MINIMAX_GROUP_ID || "";
+  }
+  
+  isConfigured(): boolean {
+    return !!this.apiKey && !!this.groupId && this.apiKey.length > 0 && this.groupId.length > 0;
   }
   
   async chat(

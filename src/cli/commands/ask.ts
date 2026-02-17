@@ -1,14 +1,16 @@
+import chalk from "chalk";
 import { Store } from "../../memory/store.js";
 import { loadConfig } from "../../config/loader.js";
 import { queryBlocks } from "../../memory/query.js";
 import { log } from "../../utils/logger.js";
+import { OpenRouterProvider } from "../../providers/openrouter.js";
+import type { LLMMessage } from "../../providers/index.js";
 
 export async function askCommand(question: string) {
   const config = loadConfig();
   const store = new Store(config.memory.path);
 
-  // For now: search memory and display results
-  // Later: send to LLM with context
+  // Search memory for relevant context
   const keywords = question.toLowerCase().split(/\s+/);
   let results: any[] = [];
 
@@ -26,6 +28,59 @@ export async function askCommand(question: string) {
     return true;
   });
 
+  // Build context from memory
+  const contextBlocks = results.slice(0, 10);
+  const context = contextBlocks
+    .map(b => `[${b.chain}#${b.index}] ${b.data.content}`)
+    .join("\n\n");
+
+  // Check for configured provider
+  const providerConfig = config.providers?.openrouter;
+  const hasProvider = providerConfig?.api_key || process.env.OPENROUTER_API_KEY;
+
+  if (hasProvider) {
+    try {
+      const provider = new OpenRouterProvider(providerConfig?.api_key);
+      
+      const messages: LLMMessage[] = [
+        {
+          role: "system",
+          content: `You are Memphis, an AI assistant with access to the user's memory chains. 
+Use the provided context from memory to answer the question. If the context doesn't contain 
+relevant information, say so honestly. Be concise and helpful.`,
+        },
+      ];
+
+      if (context) {
+        messages.push({
+          role: "system",
+          content: `Relevant memory context:\n${context}`,
+        });
+      }
+
+      messages.push({
+        role: "user",
+        content: question,
+      });
+
+      console.log(chalk.gray("🤔 Consulting memory...\n"));
+      const response = await provider.chat(messages, {
+        model: providerConfig?.model,
+        temperature: 0.7,
+      });
+
+      console.log(chalk.white(response.content));
+      
+      if (response.usage) {
+        console.log(chalk.gray(`\nTokens used: ${response.usage.total_tokens}`));
+      }
+      return;
+    } catch (err) {
+      console.log(chalk.yellow(`⚠ LLM error: ${err}. Falling back to memory search.\n`));
+    }
+  }
+
+  // Fallback: display memory results without LLM
   if (results.length === 0) {
     log.warn("No relevant blocks found in memory.");
     log.info("Tip: add context with 'memphis journal \"...\"'");

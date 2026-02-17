@@ -18,7 +18,15 @@ export declare class OpenClawBridge {
     private config;
     private knownAgents;
     private messages;
+    private llm;
+    private useLLM;
     constructor();
+    private initLLM;
+    getLLMStatus(): {
+        available: boolean;
+        provider: string;
+        model?: string;
+    };
     registerAgent(agent: Agent): void;
     getAgents(): Agent[];
     getAgent(id: string): Agent | undefined;

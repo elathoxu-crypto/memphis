@@ -6,6 +6,7 @@ export declare class MiniMaxProvider extends BaseProvider {
     apiKey: string;
     groupId: string;
     constructor(apiKey?: string, groupId?: string);
+    isConfigured(): boolean;
     chat(messages: LLMMessage[], options?: {
         model?: string;
         temperature?: number;

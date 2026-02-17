@@ -1,15 +1,41 @@
 import { readFileSync, existsSync } from "node:fs";
 import { parse } from "yaml";
+import { z } from "zod";
 import { DEFAULT_CONFIG, CONFIG_PATH } from "./defaults.js";
 
-export type MemphisConfig = typeof DEFAULT_CONFIG & {
-  providers: Record<string, {
-    url: string;
-    model: string;
-    api_key: string;
-    role?: "primary" | "fallback" | "offline";
-  }>;
-};
+// Config schema validation
+const ProviderSchema = z.object({
+  url: z.string().url().optional(),
+  model: z.string().optional(),
+  api_key: z.string().optional(),
+  role: z.enum(["primary", "fallback", "offline"]).optional(),
+});
+
+const MemoryConfigSchema = z.object({
+  path: z.string().optional(),
+  auto_git: z.boolean().optional(),
+  auto_git_push: z.boolean().optional(),
+});
+
+const AgentConfigSchema = z.object({
+  chain: z.string().optional(),
+  context_window: z.number().int().positive().optional(),
+});
+
+const MemphisConfigSchema = z.object({
+  providers: z.record(z.string(), ProviderSchema).optional(),
+  memory: MemoryConfigSchema.optional(),
+  agents: z.record(z.string(), AgentConfigSchema).optional(),
+});
+
+export type MemphisConfig = z.infer<typeof MemphisConfigSchema> & typeof DEFAULT_CONFIG;
+
+export class ConfigError extends Error {
+  constructor(message: string, public readonly issues?: z.ZodIssue[]) {
+    super(message);
+    this.name = "ConfigError";
+  }
+}
 
 export function loadConfig(): MemphisConfig {
   let fileConfig = {};
@@ -30,11 +56,23 @@ export function loadConfig(): MemphisConfig {
 
   // Resolve env vars in api_key
   const merged = deepMerge(DEFAULT_CONFIG, fileConfig) as MemphisConfig;
-  for (const [, provider] of Object.entries(merged.providers || {})) {
-    if (provider.api_key?.startsWith("${") && provider.api_key?.endsWith("}")) {
-      const envVar = provider.api_key.slice(2, -1);
-      provider.api_key = process.env[envVar] || "";
+  if (merged.providers) {
+    for (const key of Object.keys(merged.providers)) {
+      const provider = merged.providers[key];
+      if (provider?.api_key?.startsWith("${") && provider.api_key.endsWith("}")) {
+        const envVar = provider.api_key.slice(2, -1);
+        provider.api_key = process.env[envVar] || "";
+      }
     }
+  }
+
+  // Validate config
+  const result = MemphisConfigSchema.safeParse(merged);
+  if (!result.success) {
+    throw new ConfigError(
+      `Invalid config: ${result.error.issues.map((e: z.ZodIssue) => `${e.path.join(".")}: ${e.message}`).join(", ")}`,
+      result.error.issues
+    );
   }
 
   return merged;

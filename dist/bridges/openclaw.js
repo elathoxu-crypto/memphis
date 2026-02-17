@@ -2,14 +2,19 @@
 // Simulates collaboration with external AI agents
 import { Store } from "../memory/store.js";
 import { loadConfig } from "../config/loader.js";
+import { MiniMaxProvider } from "../providers/minimax.js";
 export class OpenClawBridge {
     store;
     config;
     knownAgents = new Map();
     messages = [];
+    llm = null;
+    useLLM = false;
     constructor() {
         this.config = loadConfig();
         this.store = new Store(this.config.memory?.path || `${process.env.HOME}/.memphis/chains`);
+        // Initialize MiniMax as the main LLM for OpenClaw
+        this.initLLM();
         // Register known agents
         this.registerAgent({
             id: "openclaw-001",
@@ -19,6 +24,31 @@ export class OpenClawBridge {
             status: "active",
             capabilities: ["code-analysis", "file-operations", "web-search"],
         });
+    }
+    initLLM() {
+        // Try to initialize MiniMax as the main LLM
+        try {
+            this.llm = new MiniMaxProvider();
+            if (this.llm.isConfigured()) {
+                this.useLLM = true;
+                console.log("🤖 OpenClaw: MiniMax LLM initialized as main provider");
+            }
+            else {
+                console.log("⚠️  OpenClaw: MiniMax not configured (set MINIMAX_API_KEY and MINIMAX_GROUP_ID)");
+                this.llm = null;
+            }
+        }
+        catch (error) {
+            console.log("⚠️  OpenClaw: Failed to initialize LLM:", error);
+            this.llm = null;
+        }
+    }
+    getLLMStatus() {
+        return {
+            available: this.useLLM && this.llm !== null,
+            provider: this.llm?.name || "none",
+            model: this.llm?.models[0],
+        };
     }
     registerAgent(agent) {
         this.knownAgents.set(agent.id, agent);
@@ -96,6 +126,7 @@ export class OpenClawBridge {
     getStatus() {
         const agents = this.getAgents();
         const active = agents.filter(a => a.status === "active").length;
+        const llmStatus = this.getLLMStatus();
         return `
 ╔══════════════════════════════════════════╗
 ║      🦞 OpenClaw Bridge Status           ║
@@ -104,6 +135,7 @@ export class OpenClawBridge {
 ║  Active: ${active}                            
 ║  Messages: ${this.messages.length}                       
 ╠══════════════════════════════════════════╣
+║  LLM Provider: ${llmStatus.provider.padEnd(22)}║  Model: ${(llmStatus.model || "n/a").padEnd(26)}║  Status: ${llmStatus.available ? "✅ Active" : "⚠️  Not configured".padEnd(20)}╠══════════════════════════════════════════╣
 ║  Known Agents:                             
 ${agents.map(a => `║    • ${a.name.padEnd(20)} ${a.computeShare}% CPU`).join("\n")}
 ╚══════════════════════════════════════════╝
