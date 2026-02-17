@@ -6,6 +6,8 @@ import { recallCommand } from "./commands/recall.js";
 import { statusCommand } from "./commands/status.js";
 import { initCommand } from "./commands/init.js";
 import { vaultCommand } from "./commands/vault.js";
+import { agentCommand } from "./commands/agent.js";
+import { runOpenClawCommands } from "../bridges/openclaw.js";
 
 const program = new Command();
 
@@ -57,6 +59,21 @@ program
       value,
       password: opts.password,
     });
+  });
+
+program
+  .command("agent")
+  .description("Manage agents (autosave, openclaw)")
+  .argument("<action>", "start | stop | status | openclaw | collab")
+  .argument("[subaction]", "status, list, invite, negotiate", "")
+  .argument("[value]", "Value for subaction", "")
+  .option("-i, --interval <time>", "Interval for autosave (e.g., 5m)")
+  .action(async (action, subaction, value, opts) => {
+    if (action === "openclaw" || action === "collab") {
+      runOpenClawCommands([subaction, value].filter(Boolean));
+    } else {
+      await agentCommand(action, { interval: opts.interval });
+    }
   });
 
 program.parse();
