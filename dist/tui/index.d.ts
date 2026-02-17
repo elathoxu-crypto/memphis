@@ -21,5 +21,6 @@ export declare class MemphisTUI {
     private renderRecall;
     private renderAsk;
     private renderSettings;
+    private renderVault;
     run(): void;
 }

@@ -3,6 +3,7 @@ import blessed from "blessed";
 import { Store } from "../memory/store.js";
 import { loadConfig } from "../config/loader.js";
 import { queryBlocks } from "../memory/query.js";
+import { encrypt, decrypt } from "../utils/crypto.js";
 
 // Colors
 const COLORS = {
@@ -149,7 +150,7 @@ export class MemphisTUI {
       this.handleEnter();
     });
 
-    this.screen.key(["1", "2", "3", "4", "5"], (ch: string) => {
+    this.screen.key(["1", "2", "3", "4", "5", "6"], (ch: string) => {
       this.navigateToMenu(parseInt(ch));
     });
 
@@ -162,6 +163,7 @@ export class MemphisTUI {
     const menuItems = [
       " Dashboard",
       " Journal",
+      " Vault",
       " Recall",
       " Ask",
       " Settings",
@@ -236,12 +238,15 @@ export class MemphisTUI {
         this.renderJournal();
         break;
       case 3:
-        this.renderRecall();
+        this.renderVault();
         break;
       case 4:
-        this.renderAsk();
+        this.renderRecall();
         break;
       case 5:
+        this.renderAsk();
+        break;
+      case 6:
         this.renderSettings();
         break;
     }
@@ -360,6 +365,61 @@ export class MemphisTUI {
     content += `{yellow}Settings editor coming soon!{/yellow}\n`;
     this.contentBox.setContent(content);
     this.sidebarBox.setContent(this.getSidebarContent());
+  }
+
+  private renderVault(): void {
+    this.currentScreen = "vault";
+    let content = `{bold}{cyan} Vault - Encrypted Secrets{/cyan}{/bold}\n\n`;
+    content += `Secure storage for API keys and secrets.\n\n`;
+    content += `{white}Press Enter to add a new secret...{/white}\n`;
+    this.contentBox.setContent(content);
+    this.sidebarBox.setContent(this.getSidebarContent());
+
+    setTimeout(() => {
+      this.inputMode = "vault_add";
+      this.inputBox.show();
+      (this.inputField.options as any).placeholder = "Secret name (e.g. openrouter):";
+      this.inputField.focus();
+      this.inputField.readInput((err: any, keyName: any) => {
+        if (keyName && keyName.trim()) {
+          // Now ask for value
+          this.inputField.setValue("");
+          (this.inputField.options as any).placeholder = "Secret value:";
+          this.inputField.readInput((err2: any, secretValue: any) => {
+            if (secretValue && secretValue.trim()) {
+              // Now ask for password
+              this.inputField.setValue("");
+              (this.inputField.options as any).placeholder = "Master password:";
+              this.inputField.readInput((err3: any, password: any) => {
+                if (password && password.trim()) {
+                  const encrypted = encrypt(secretValue.trim(), password.trim());
+                  this.store.addBlock("vault", {
+                    type: "vault",
+                    content: keyName.trim(),
+                    tags: ["secret", keyName.trim()],
+                    encrypted,
+                    iv: encrypted.substring(0, 24),
+                    key_id: keyName.trim(),
+                  });
+                  this.contentBox.setContent(`{green} Secret "${keyName.trim()}" added successfully!{/green}\n\nPress any key to return...`);
+                }
+                this.inputMode = "";
+                this.inputBox.hide();
+                this.screen.render();
+              });
+            } else {
+              this.inputMode = "";
+              this.inputBox.hide();
+              this.screen.render();
+            }
+          });
+        } else {
+          this.inputMode = "";
+          this.inputBox.hide();
+          this.screen.render();
+        }
+      });
+    }, 100);
   }
 
   public run(): void {
