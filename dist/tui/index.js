@@ -7,7 +7,7 @@ import { encrypt } from "../utils/crypto.js";
 import { OpenClawBridge } from "../bridges/openclaw.js";
 import { OllamaProvider } from "../providers/ollama.js";
 import { OpenAIProvider } from "../providers/openai.js";
-// Colors
+// Enhanced Colors with better contrast
 const COLORS = {
     primary: "cyan",
     secondary: "magenta",
@@ -17,7 +17,21 @@ const COLORS = {
     text: "white",
     muted: "gray",
     bg: "black",
+    highlight: "blue",
+    accent: "bright cyan",
 };
+// Helper for boxed content with frames
+function box(title, content) {
+    const width = 60;
+    const line = "─".repeat(width - 2);
+    return `
+╔${line}╗
+║ ${title.padEnd(width - 4)}║
+╠${line}╣
+${content.split('\n').map(l => `║ ${l.padEnd(width - 4)}║`).join('\n')}
+╚${line}╝
+`;
+}
 export class MemphisTUI {
     screen;
     store;

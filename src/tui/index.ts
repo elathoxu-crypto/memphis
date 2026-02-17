@@ -9,17 +9,32 @@ import { OllamaProvider } from "../providers/ollama.js";
 import { OpenAIProvider } from "../providers/openai.js";
 import type { LLMMessage } from "../providers/index.js";
 
-// Colors
+// Enhanced Colors with better contrast
 const COLORS = {
   primary: "cyan",
-  secondary: "magenta",
+  secondary: "magenta", 
   success: "green",
   warning: "yellow",
   error: "red",
   text: "white",
   muted: "gray",
   bg: "black",
+  highlight: "blue",
+  accent: "bright cyan",
 };
+
+// Helper for boxed content with frames
+function box(title: string, content: string): string {
+  const width = 60;
+  const line = "─".repeat(width - 2);
+  return `
+╔${line}╗
+║ ${title.padEnd(width - 4)}║
+╠${line}╣
+${content.split('\n').map(l => `║ ${l.padEnd(width - 4)}║`).join('\n')}
+╚${line}╝
+`;
+}
 
 export class MemphisTUI {
   private screen: blessed.Widgets.Screen;
