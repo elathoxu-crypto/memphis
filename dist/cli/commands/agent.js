@@ -1,6 +1,12 @@
 import { startAutosave, stopAutosave, getAutosaveStatus } from "../../agents/autosave.js";
+import { runOpenClawCommands } from "../../bridges/openclaw.js";
 import { log } from "../../utils/logger.js";
 export async function agentCommand(action, options) {
+    // Handle OpenClaw agent commands
+    if (action === "openclaw" || action === "collab") {
+        runOpenClawCommands(options);
+        return;
+    }
     let intervalMs;
     if (options.interval) {
         const match = options.interval.match(/^(\d+)(s|m|h)$/);

@@ -5,12 +5,15 @@
  * 
  * Available bridges:
  * - cline.ts: Direct programmatic access + CLI
+ * - openclaw.ts: Agent collaboration (53% compute share)
  * 
  * Future bridges:
- * - openclaw.ts: Automation bridge
  * - vscode.ts: VS Code extension
  * - git.ts: Git hook integration
  */
 
 export { MemphisBridge } from "./cline.js";
 export type { JournalEntry, RecallResult, StatusResult } from "./cline.js";
+
+export { OpenClawBridge, runOpenClawCommands } from "./openclaw.js";
+export type { Agent, AgentMessage } from "./openclaw.js";
