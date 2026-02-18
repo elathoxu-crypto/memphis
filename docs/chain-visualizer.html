@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Memphis — Blockchain Log</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Syne:wght@400;700;800&display=swap');
+:root { --bg: #0a0b0f; --panel: #0f1117; --border: #1e2130; --accent: #00e5a0; --accent2: #0077ff; --warn: #ff6b35; --text: #c8cdd8; --dim: #4a5168; --bright: #eef0f5; --chain-color: #00e5a0; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: var(--bg); color: var(--text); font-family: 'JetBrains Mono', monospace; min-height: 100vh; overflow-x: hidden; }
+.desktop-chrome { background: #13151f; border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 20px; height: 36px; gap: 12px; position: sticky; top: 0; z-index: 100; }
+.traffic-lights { display: flex; gap: 7px; align-items: center; }
+.tl { width: 12px; height: 12px; border-radius: 50%; cursor: pointer; transition: opacity .2s; }
+.tl:hover { opacity: .7; }
+.tl-red { background: #ff5f57; }
+.tl-yellow { background: #febc2e; }
+.tl-green { background: #28c840; }
+.window-title { flex: 1; text-align: center; font-size: 11px; color: var(--dim); letter-spacing: .08em; }
+.window-status { font-size: 10px; color: var(--accent); display: flex; align-items: center; gap: 6px; }
+.pulse-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); animation: pulse 2s ease-in-out infinite; }
+@keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .4; transform: scale(.7); } }
+.layout { display: grid; grid-template-columns: 240px 1fr; height: calc(100vh - 36px); }
+.sidebar { background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+.sidebar-header { padding: 20px 16px 12px; border-bottom: 1px solid var(--border); }
+.brand { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 18px; color: var(--bright); letter-spacing: -.02em; }
+.brand span { color: var(--accent); }
+.brand-sub { font-size: 9px; color: var(--dim); letter-spacing: .15em; text-transform: uppercase; margin-top: 3px; }
+.sidebar-section { padding: 14px 16px 8px; }
+.sidebar-label { font-size: 9px; letter-spacing: .2em; text-transform: uppercase; color: var(--dim); margin-bottom: 8px; }
+.chain-item { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 6px; cursor: pointer; font-size: 11px; color: var(--dim); transition: all .15s; margin-bottom: 2px; }
+.chain-item:hover { background: #1a1d2a; color: var(--text); }
+.chain-item.active { background: #0f2a1e; color: var(--accent); }
+.chain-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+.chain-count { margin-left: auto; background: #1e2130; padding: 1px 6px; border-radius: 10px; font-size: 9px; }
+.stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 14px 16px; }
+.stat-box { background: #0a0c14; border: 1px solid var(--border); border-radius: 8px; padding: 10px; }
+.stat-val { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 18px; color: var(--bright); line-height: 1; }
+.stat-label { font-size: 8px; color: var(--dim); text-transform: uppercase; letter-spacing: .1em; margin-top: 4px; }
+.sidebar-footer { margin-top: auto; padding: 16px; border-top: 1px solid var(--border); font-size: 9px; color: var(--dim); line-height: 1.6; }
+.main { overflow-y: auto; background: var(--bg); }
+.main-header { padding: 24px 32px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: flex-end; justify-content: space-between; }
+.main-title { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; color: var(--dim); text-transform: uppercase; letter-spacing: .15em; }
+.integrity-badge { display: flex; align-items: center; gap: 6px; font-size: 10px; color: var(--accent); background: #0f2a1e; border: 1px solid #1a4a30; padding: 5px 12px; border-radius: 20px; }
+.integrity-badge::before { content: '✓'; font-weight: 700; }
+.chain-container { padding: 32px; display: flex; flex-direction: column; gap: 0; }
+.block { position: relative; animation: slideIn .4s ease both; }
+.block:nth-child(1) { animation-delay: .05s; }
+.block:nth-child(2) { animation-delay: .15s; }
+.block:nth-child(3) { animation-delay: .25s; }
+.block:nth-child(4) { animation-delay: .35s; }
+.block:nth-child(5) { animation-delay: .45s; }
+@keyframes slideIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+.block-connector { display: flex; align-items: center; gap: 12px; padding: 0 0 0 24px; height: 40px; }
+.connector-line { width: 2px; height: 100%; background: linear-gradient(to bottom, var(--accent), var(--border)); margin-left: 15px; opacity: .4; }
+.connector-hash { font-size: 9px; color: var(--dim); font-family: 'JetBrains Mono', monospace; letter-spacing: .05em; }
+.block-card { border: 1px solid var(--border); border-radius: 12px; background: var(--panel); overflow: hidden; transition: border-color .2s; cursor: pointer; }
+.block-card:hover { border-color: #2a3050; }
+.block-card.genesis { border-color: #1a4a30; }
+.block-header { display: flex; align-items: center; gap: 12px; padding: 14px 20px; border-bottom: 1px solid var(--border); background: #0c0e18; }
+.block-index { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 22px; color: var(--border); min-width: 36px; line-height: 1; }
+.block-card.genesis .block-index { color: #1a4a30; }
+.block-meta { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+.block-source { font-size: 12px; font-weight: 500; color: var(--bright); font-family: 'Syne', sans-serif; }
+.block-timestamp { font-size: 9px; color: var(--dim); letter-spacing: .05em; }
+.block-hash-display { font-size: 9px; color: var(--accent); font-family: 'JetBrains Mono', monospace; background: #0a0c14; padding: 4px 10px; border-radius: 4px; border: 1px solid #1a3030; letter-spacing: .03em; }
+.genesis-badge { font-size: 8px; text-transform: uppercase; letter-spacing: .15em; color: var(--accent); background: #0f2a1e; border: 1px solid #1a4a30; padding: 3px 8px; border-radius: 4px; }
+.block-body { padding: 20px; }
+.block-content { font-size: 11px; line-height: 1.75; color: var(--text); display: none; }
+.block-content.expanded { display: block; }
+.block-preview { font-size: 11px; color: var(--dim); line-height: 1.6; }
+.block-preview.hidden { display: none; }
+.block-footer { display: flex; align-items: center; justify-content: space-between; padding: 10px 20px 14px; gap: 12px; }
+.block-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+.tag { font-size: 9px; padding: 2px 8px; border-radius: 4px; border: 1px solid var(--border); color: var(--dim); letter-spacing: .08em; text-transform: uppercase; }
+.tag.ai { border-color: #2a1a4a; color: #9070cc; }
+.tag.review { border-color: #1a2a4a; color: #4a8aff; }
+.tag.memphis { border-color: #1a3a2a; color: #40cc80; }
+.tag.genesis { border-color: #1a4a30; color: var(--accent); }
+.expand-btn { background: none; border: 1px solid var(--border); color: var(--dim); font-family: 'JetBrains Mono', monospace; font-size: 9px; padding: 4px 10px; border-radius: 4px; cursor: pointer; transition: all .15s; text-transform: uppercase; letter-spacing: .08em; white-space: nowrap; }
+.expand-btn:hover { border-color: var(--accent); color: var(--accent); background: #0f2a1e; }
+.prev-hash-row { display: flex; align-items: center; gap: 8px; padding: 8px 20px; background: #080a10; border-top: 1px solid var(--border); font-size: 9px; }
+.prev-hash-label { color: var(--dim); letter-spacing: .1em; text-transform: uppercase; white-space: nowrap; }
+.prev-hash-val { color: #334466; font-family: 'JetBrains Mono', monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.prev-hash-val.link { color: var(--accent2); opacity: .7; }
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+.genesis-line { width: 2px; background: var(--accent); margin-left: 39px; height: 20px; opacity: .3; }
+</style>
+</head>
+<body>
+<div class="desktop-chrome">
+<div class="traffic-lights"><div class="tl tl-red"></div><div class="tl tl-yellow"></div><div class="tl tl-green"></div></div>
+<div class="window-title">memphis — chain: journal — 455 blocks — verified</div>
+<div class="window-status"><div class="pulse-dot"></div>CHAIN INTACT</div>
+</div>
+<div class="layout">
+<div class="sidebar">
+<div class="sidebar-header"><div class="brand">mem<span>phis</span></div><div class="brand-sub">local-first AI brain</div></div>
+<div class="sidebar-section"><div class="sidebar-label">Chains</div>
+<div class="chain-item active"><div class="chain-dot"></div>journal<span class="chain-count">455</span></div>
+<div class="chain-item"><div class="chain-dot" style="color:var(--accent2)"></div>ai-review<span class="chain-count">4</span></div>
+<div class="chain-item"><div class="chain-dot" style="color:#ff6b35"></div>ops<span class="chain-count">0</span></div>
+<div class="chain-item"><div class="chain-dot" style="color:#9070cc"></div>adr<span class="chain-count">0</span></div>
+</div>
+<div class="stats-grid">
+<div class="stat-box"><div class="stat-val">459</div><div class="stat-label">Total Blocks</div></div>
+<div class="stat-box"><div class="stat-val" style="color:var(--accent)">OK</div><div class="stat-label">Integrity</div></div>
+<div class="stat-box"><div class="stat-val" style="font-size:13px">SHA256</div><div class="stat-label">Hash algo</div></div>
+<div class="stat-box"><div class="stat-val" style="font-size:13px">AES</div><div class="stat-label">Vault enc.</div></div>
+</div>
+<div class="sidebar-footer"><div>memphis v1.1.2</div><div>MIT license</div><div style="margin-top:6px;color:#334;font-size:8px">Oswobodzeni community</div><div style="font-size:8px;color:#223;">local · offline-first · tamper-proof</div></div>
+</div>
+<div class="main">
+<div class="main-header"><div class="main-title">chain / journal</div><div class="integrity-badge">All 455 blocks verified</div></div>
+<div class="chain-container" id="chain"></div>
+</div>
+</div>
+<script>
+const blocks = [
+{index:0,source:"Genesis Block",timestamp:"2026-02-17T00:00:00.000Z",type:"genesis",prevHash:"0000000000000000000000000000000000000000000000000000000000000000",hash:"a3f9b2c1d4e5f6789012abcdef345678901234567890abcdef1234567890abcd",content:"Repository: elathoxu-crypto/memphis\nDescription: Local-first AI brain with persistent memory chains.\nVersion: v1.1.2\nLicense: MIT\nChain initialized for journal.",preview:"Memphis v1.1.2 initialized — local-first AI brain.",tags:["genesis","memphis","init"]},
+{index:1,source:"memphis",timestamp:"2026-02-17T21:03:09.000Z",type:"journal",prevHash:"a3f9b2c1d4e5f6789012abcdef345678901234567890abcdef1234567890abcd",hash:"b7e3a901cdef2345678901234567890abcdef1234567890abcdef1234567890ef",content:"[memphis] api:call ollama → ok 10.92s",preview:"API call to Ollama completed in 10.92s",tags:["memphis","api","ollama"]},
+{index:2,source:"memphis",timestamp:"2026-02-17T21:03:10.000Z",type:"journal",prevHash:"b7e3a901cdef2345678901234567890abcdef1234567890abcdef1234567890ef",hash:"c4d8f2e7a1b9034567890abcdef12345678901234567890abcdef234567890abc",content:"[OpenClaw] Agent registered: CodeMaster (25% compute)",preview:"OpenClaw agent CodeMaster registered",tags:["openclaw","agent","codemaster"]},
+{index:3,source:"memphis",timestamp:"2026-02-17T21:03:11.000Z",type:"journal",prevHash:"c4d8f2e7a1b9034567890abcdef12345678901234567890abcdef234567890abc",hash:"d1c5e9f3b2a708901234567890abcdef1234567890abcdef345678901234567ab",content:"[OpenClaw] Agent registered: DataSage (15% compute)",preview:"OpenClaw agent DataSage registered",tags:["openclaw","agent","datasage"]},
+{index:4,source:"memphis",timestamp:"2026-02-17T21:03:12.000Z",type:"journal",prevHash:"d1c5e9f3b2a708901234567890abcdef1234567890abcdef345678901234567ab",hash:"e8b6f0a4c3d219012345678901234567890abcdef1234567890abcdef45678901",content:"[OpenClaw] Agent registered: ResearchBot (7% compute)",preview:"OpenClaw agent ResearchBot registered",tags:["openclaw","agent","researchbot"]}
+];
+function shortHash(hash) { return hash.substring(0,8)+'...'+hash.substring(hash.length-8); }
+function formatDate(ts) { const d = new Date(ts); return d.toISOString().replace('T',' ').substring(0,19)+' UTC'; }
+function renderChain() {
+const container = document.getElementById('chain');
+blocks.forEach((block,i) => {
+if(i>0){const conn=document.createElement('div');conn.className='block-connector';conn.innerHTML='<div class="connector-line"></div><div class="connector-hash">← '+shortHash(block.prevHash)+'</div>';container.appendChild(conn);}
+else{const gl=document.createElement('div');gl.className='genesis-line';container.appendChild(gl);}
+const blockEl=document.createElement('div');blockEl.className='block';blockEl.innerHTML='<div class="block-card '+(block.type==='genesis'?'genesis':'')+'" onclick="toggleBlock('+i+')"><div class="block-header"><div class="block-index">'+String(block.index).padStart(2,'0')+'</div><div class="block-meta"><div class="block-source">'+block.source+'</div><div class="block-timestamp">'+formatDate(block.timestamp)+'</div></div>'+(block.type==='genesis'?'<div class="genesis-badge">genesis</div>':'<div class="block-hash-display">'+shortHash(block.hash)+'</div>')+'</div><div class="block-body"><div class="block-preview" id="preview-'+i+'">'+block.preview+'</div><div class="block-content" id="content-'+i+'" style="white-space:pre-wrap">'+block.content+'</div></div><div class="block-footer"><div class="block-tags">'+block.tags.map(t=>'<span class="tag '+t+'">'+t+'</span>').join('')+'</div><button class="expand-btn" id="btn-'+i+'" onclick="event.stopPropagation(); toggleBlock('+i+')">expand</button></div><div class="prev-hash-row"><span class="prev-hash-label">prev hash</span><span class="prev-hash-val '+(block.index>0?'link':'')+'">'+block.prevHash+'</span></div></div>';container.appendChild(blockEl);});}
+function toggleBlock(i){const preview=document.getElementById('preview-'+i);const content=document.getElementById('content-'+i);const btn=document.getElementById('btn-'+i);const expanded=content.classList.toggle('expanded');preview.classList.toggle('hidden',expanded);btn.textContent=expanded?'collapse':'expand';}
+renderChain();
+</script>
+</body>
+</html>

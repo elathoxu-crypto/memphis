@@ -1,12 +1,14 @@
 /**
  * Memphis TUI - UI Components
  * Factory functions for creating blessed UI elements
+ * Nawal E Theme 🦅
  */
 import blessed from "blessed";
 /**
  * Box element options
  */
 export interface BoxOptions {
+    parent?: blessed.Widgets.BoxElement | blessed.Widgets.Screen;
     top?: number | string;
     left?: number | string;
     width?: number | string;
@@ -16,27 +18,28 @@ export interface BoxOptions {
     scrollable?: boolean;
     border?: unknown;
     content?: string;
+    visible?: boolean;
 }
 /**
  * Create a standard box element
  */
 export declare function createBox(options: BoxOptions): blessed.Widgets.BoxElement;
 /**
- * Create the header box
+ * Create the header box - Nawal E Style 🦅
  */
-export declare function createHeaderBox(): blessed.Widgets.BoxElement;
+export declare function createHeaderBox(screen: blessed.Widgets.Screen): blessed.Widgets.BoxElement;
 /**
  * Create the sidebar box
  */
-export declare function createSidebarBox(content?: string): blessed.Widgets.BoxElement;
+export declare function createSidebarBox(screen: blessed.Widgets.Screen, content?: string): blessed.Widgets.BoxElement;
 /**
  * Create the content box
  */
-export declare function createContentBox(content?: string): blessed.Widgets.BoxElement;
+export declare function createContentBox(screen: blessed.Widgets.Screen, content?: string): blessed.Widgets.BoxElement;
 /**
  * Create the input box (hidden by default)
  */
-export declare function createInputBox(): blessed.Widgets.BoxElement;
+export declare function createInputBox(screen: blessed.Widgets.Screen): blessed.Widgets.BoxElement;
 /**
  * Create the input field
  */
@@ -44,7 +47,7 @@ export declare function createInputField(parent: blessed.Widgets.BoxElement): bl
 /**
  * Create the status bar
  */
-export declare function createStatusBar(content?: string): blessed.Widgets.BoxElement;
+export declare function createStatusBar(screen: blessed.Widgets.Screen, content?: string): blessed.Widgets.BoxElement;
 /**
  * Create the main screen
  */

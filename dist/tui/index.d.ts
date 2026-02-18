@@ -54,7 +54,7 @@ export declare class MemphisTUI {
      */
     private getCurrentMenuIndex;
     /**
-     * Get sidebar content
+     * Get sidebar content - Nawal E Style 🦅
      */
     private getSidebarContent;
     /**
@@ -66,7 +66,7 @@ export declare class MemphisTUI {
      */
     private updateContent;
     /**
-     * Render dashboard
+     * Render dashboard - Nawal E Style 🦅
      */
     private renderDashboard;
     /**

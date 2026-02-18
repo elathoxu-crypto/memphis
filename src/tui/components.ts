@@ -1,6 +1,7 @@
 /**
  * Memphis TUI - UI Components
  * Factory functions for creating blessed UI elements
+ * Nawal E Theme 🦅
  */
 
 import blessed from "blessed";
@@ -10,6 +11,7 @@ import { COLORS, LAYOUT } from "./constants.js";
  * Box element options
  */
 export interface BoxOptions {
+  parent?: blessed.Widgets.BoxElement | blessed.Widgets.Screen;
   top?: number | string;
   left?: number | string;
   width?: number | string;
@@ -19,6 +21,7 @@ export interface BoxOptions {
   scrollable?: boolean;
   border?: unknown;
   content?: string;
+  visible?: boolean;
 }
 
 /**
@@ -30,37 +33,39 @@ export function createBox(options: BoxOptions): blessed.Widgets.BoxElement {
 }
 
 /**
- * Create the header box
+ * Create the header box - Nawal E Style 🦅
  */
-export function createHeaderBox(): blessed.Widgets.BoxElement {
+export function createHeaderBox(screen: blessed.Widgets.Screen): blessed.Widgets.BoxElement {
   return createBox({
+    parent: screen,
     top: 0,
     left: 0,
     width: "100%",
     height: LAYOUT.HEADER_HEIGHT,
     style: {
-      fg: COLORS.text,
-      bg: COLORS.primary,
+      fg: "black",
+      bg: "yellow",
       bold: true,
     },
     border: undefined,
-    content: `{center}{bold} Memphis - Local-first AI Brain{/bold}{/center}`,
+    content: `{center}{bold}{black}🦅 MEMPHIS 🦅{/black}{/bold}{/center}\n{center}{black}Przewodnik i Katalizator{/black}{/center}`,
   });
 }
 
 /**
  * Create the sidebar box
  */
-export function createSidebarBox(content: string = ""): blessed.Widgets.BoxElement {
+export function createSidebarBox(screen: blessed.Widgets.Screen, content: string = ""): blessed.Widgets.BoxElement {
   return createBox({
+    parent: screen,
     top: LAYOUT.HEADER_HEIGHT,
     left: 0,
     width: LAYOUT.SIDEBAR_WIDTH,
     height: LAYOUT.SIDEBAR_HEIGHT,
     style: {
-      fg: COLORS.text,
-      bg: COLORS.bg,
-      border: { fg: COLORS.primary },
+      fg: "white",
+      bg: "black",
+      border: { fg: "yellow", type: "line" },
     },
     tags: true,
     content,
@@ -70,16 +75,17 @@ export function createSidebarBox(content: string = ""): blessed.Widgets.BoxEleme
 /**
  * Create the content box
  */
-export function createContentBox(content: string = ""): blessed.Widgets.BoxElement {
+export function createContentBox(screen: blessed.Widgets.Screen, content: string = ""): blessed.Widgets.BoxElement {
   return createBox({
+    parent: screen,
     top: LAYOUT.HEADER_HEIGHT,
     left: LAYOUT.SIDEBAR_WIDTH,
     width: LAYOUT.CONTENT_WIDTH,
     height: LAYOUT.SIDEBAR_HEIGHT,
     style: {
-      fg: COLORS.text,
-      bg: COLORS.bg,
-      border: { fg: COLORS.primary },
+      fg: "white",
+      bg: "black",
+      border: { fg: "cyan", type: "line" },
     },
     tags: true,
     scrollable: true,
@@ -90,17 +96,19 @@ export function createContentBox(content: string = ""): blessed.Widgets.BoxEleme
 /**
  * Create the input box (hidden by default)
  */
-export function createInputBox(): blessed.Widgets.BoxElement {
+export function createInputBox(screen: blessed.Widgets.Screen): blessed.Widgets.BoxElement {
   return createBox({
+    parent: screen,
     top: "100%",
     left: 0,
     width: "100%",
     height: LAYOUT.INPUT_HEIGHT,
     style: {
-      fg: COLORS.text,
-      bg: COLORS.bg,
-      border: { fg: COLORS.secondary },
+      fg: "white",
+      bg: "black",
+      border: { fg: "magenta", type: "line" },
     },
+    visible: false,
   });
 }
 
@@ -115,25 +123,28 @@ export function createInputField(parent: blessed.Widgets.BoxElement): blessed.Wi
     width: "98%",
     height: 1,
     style: {
-      fg: COLORS.text,
-      bg: COLORS.bg,
+      fg: "yellow",
+      bg: "black",
+      bold: true,
     },
-    placeholder: "Type your input...",
+    placeholder: "Wpisz coś...",
   });
 }
 
 /**
  * Create the status bar
  */
-export function createStatusBar(content: string = ""): blessed.Widgets.BoxElement {
+export function createStatusBar(screen: blessed.Widgets.Screen, content: string = ""): blessed.Widgets.BoxElement {
   return createBox({
+    parent: screen,
     top: "100%",
     left: 0,
     width: "100%",
     height: LAYOUT.STATUS_BAR_HEIGHT,
     style: {
-      fg: COLORS.text,
-      bg: COLORS.secondary,
+      fg: "black",
+      bg: "yellow",
+      bold: true,
     },
     border: undefined,
     content,
@@ -146,8 +157,9 @@ export function createStatusBar(content: string = ""): blessed.Widgets.BoxElemen
 export function createScreen(): blessed.Widgets.Screen {
   return blessed.screen({
     smartCSR: true,
-    title: "Memphis - AI Brain",
+    title: "🦅 Memphis - AI Brain",
     fullUnicode: true,
+    terminal: "xterm-256color",
   });
 }
 

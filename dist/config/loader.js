@@ -1,7 +1,15 @@
 import { readFileSync, existsSync } from "node:fs";
 import { parse } from "yaml";
 import { z } from "zod";
+import { homedir } from "node:os";
 import { DEFAULT_CONFIG, CONFIG_PATH } from "./defaults.js";
+// Helper to expand ~ in paths
+function resolvePath(path) {
+    if (path.startsWith("~/") || path === "~") {
+        return path.replace(/^~/, homedir());
+    }
+    return path;
+}
 // Config schema validation
 const ProviderSchema = z.object({
     url: z.string().url().optional(),
@@ -55,6 +63,10 @@ export function loadConfig() {
                 provider.api_key = process.env[envVar] || "";
             }
         }
+    }
+    // Expand ~ in memory.path
+    if (merged.memory?.path) {
+        merged.memory.path = resolvePath(merged.memory.path);
     }
     // Validate config
     const result = MemphisConfigSchema.safeParse(merged);

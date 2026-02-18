@@ -9,11 +9,12 @@ import { vaultCommand } from "./commands/vault.js";
 import { agentCommand } from "./commands/agent.js";
 import { runOpenClawCommands } from "../bridges/openclaw.js";
 import { MemphisTUI } from "../tui/index.js";
+import { CLI, TUI, CLI_ERRORS, AGENT_ACTIONS } from "./constants.js";
 const program = new Command();
 program
-    .name("memphis")
-    .description("Local-first AI brain with persistent memory")
-    .version("0.1.0");
+    .name(CLI.NAME)
+    .description(CLI.DESCRIPTION)
+    .version(CLI.VERSION);
 program
     .command("init")
     .description("Initialize Memphis in ~/.memphis")
@@ -60,7 +61,7 @@ program
     .argument("[subaction...]", "Optional subcommand and arguments")
     .option("-i, --interval <time>", "Interval for autosave (e.g., 5m)")
     .action(async (action, subactionArgs, opts) => {
-    if (action === "openclaw" || action === "collab") {
+    if (action === AGENT_ACTIONS.OPENCLAW || action === AGENT_ACTIONS.COLLAB) {
         // subactionArgs is now an array of strings
         runOpenClawCommands(subactionArgs || []);
     }
@@ -77,23 +78,21 @@ program
     // If screen specified, navigate to it after a brief delay
     if (opts.screen) {
         setTimeout(() => {
-            const screenMap = {
-                dashboard: 1,
-                journal: 2,
-                vault: 3,
-                recall: 4,
-                ask: 5,
-                openclaw: 6,
-                settings: 7,
-            };
-            const screenNum = screenMap[opts.screen.toLowerCase()];
+            const screenNum = TUI.SCREEN_MAP[opts.screen.toLowerCase()];
             if (screenNum) {
                 // Access the navigateToMenu method via the instance
                 tui.navigateToMenu(screenNum);
             }
-        }, 500);
+        }, TUI.NAVIGATION_DELAY_MS);
     }
     tui.run();
 });
-program.parse();
+// Parse and handle errors
+try {
+    program.parse();
+}
+catch (error) {
+    console.error(CLI_ERRORS.UNKNOWN_ERROR, error);
+    process.exit(1);
+}
 //# sourceMappingURL=index.js.map

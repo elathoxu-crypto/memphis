@@ -59,10 +59,12 @@ export function validateBlockAgainstSoul(block: Block, prevBlock?: Block): SoulV
     errors.push(`Invalid timestamp format: ${block.timestamp}`);
   }
 
-  // 4. Check timestamp order
+  // 4. Check timestamp order (allow same-second timestamps)
   if (prevBlock) {
     const prevTimestamp = new Date(prevBlock.timestamp);
-    if (timestamp < prevTimestamp) {
+    // Only error if timestamp is strictly before AND more than 1 second difference
+    const diff = timestamp.getTime() - prevTimestamp.getTime();
+    if (diff < -1000) {
       errors.push(`Timestamp ${block.timestamp} is before previous block ${prevBlock.timestamp}`);
     }
   }

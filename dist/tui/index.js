@@ -59,12 +59,12 @@ export class MemphisTUI {
         this.initLLM();
         // Create UI
         this.screen = createScreen();
-        this.headerBox = createHeaderBox();
-        this.sidebarBox = createSidebarBox(this.getSidebarContent());
-        this.contentBox = createContentBox();
-        this.inputBox = createInputBox();
+        this.headerBox = createHeaderBox(this.screen);
+        this.sidebarBox = createSidebarBox(this.screen, this.getSidebarContent());
+        this.contentBox = createContentBox(this.screen);
+        this.inputBox = createInputBox(this.screen);
         this.inputField = createInputField(this.inputBox);
-        this.statusBar = createStatusBar(STATUS_MESSAGES.QUIT_HINT);
+        this.statusBar = createStatusBar(this.screen, STATUS_MESSAGES.QUIT_HINT);
         // Setup key bindings
         this.setupKeyBindings();
         // Initial render
@@ -167,21 +167,43 @@ export class MemphisTUI {
         return menuMap[this.currentScreen] || MENU.DASHBOARD;
     }
     /**
-     * Get sidebar content
+     * Get sidebar content - Nawal E Style 🦅
      */
     getSidebarContent() {
-        let content = "{bold}Navigation{/bold}\n\n";
+        let content = `{bold}{yellow}⬡ NAWIGACJA{/yellow}{/bold}\n\n`;
         NAV_ITEMS.forEach((item) => {
-            const prefix = this.currentScreen === item.key ? "> " : "  ";
-            content += `${prefix}${item.label}\n`;
+            const prefix = this.currentScreen === item.key ? "{yellow}›{/yellow} " : "  ";
+            const icon = item.key === 'dashboard' ? '⌂' :
+                item.key === 'journal' ? '✎' :
+                    item.key === 'vault' ? '🔐' :
+                        item.key === 'recall' ? '🔍' :
+                            item.key === 'ask' ? '💭' :
+                                item.key === 'openclaw' ? '🦅' :
+                                    item.key === 'cline' ? '🤖' :
+                                        item.key === 'offline' ? '📴' : '⚙';
+            content += `${prefix}{white}${icon} ${item.label}{/white}\n`;
         });
-        content += "\n\n{bold}Quick Stats{/bold}\n";
+        // Quick Stats
         const chains = this.store.listChains();
-        content += `Chains: ${chains.length}\n`;
+        let totalBlocks = 0;
+        chains.forEach(chain => {
+            const stats = this.store.getChainStats(chain);
+            totalBlocks += stats.blocks;
+        });
+        content += `\n{bold}{cyan}⬡ STATYSTYKI{/cyan}{/bold}\n`;
+        content += `{yellow}────────────────────────────────{/yellow}\n`;
+        content += ` {cyan}Łańcuchy:{/cyan} ${chains.length}\n`;
+        content += ` {cyan}Bloki:{/cyan} ${totalBlocks}\n`;
         chains.forEach((chain) => {
             const stats = this.store.getChainStats(chain);
-            content += `  - ${chain}: ${stats.blocks} blocks\n`;
+            const icon = chain === 'vault' ? '🔐' : '📝';
+            content += `   ${icon} ${chain}: ${stats.blocks}\n`;
         });
+        // Memphis quote
+        content += `\n{bold}{yellow}⬡ MYŚĆ DNIA{/yellow}{/bold}\n`;
+        content += `{yellow}────────────────────────────────{/yellow}\n`;
+        content += `{white}"Łączę to co było{/white}\n`;
+        content += `{white}z tym co będzie."{/white}\n`;
         return content;
     }
     /**
@@ -230,34 +252,47 @@ export class MemphisTUI {
     // SCREEN RENDERERS
     // ============================================
     /**
-     * Render dashboard
+     * Render dashboard - Nawal E Style 🦅
      */
     renderDashboard() {
         this.currentScreen = "dashboard";
         const chains = this.store.listChains();
-        let content = `{bold}{cyan} Dashboard{/cyan}{/bold}\n\n`;
-        content += `Welcome to Memphis! Your local-first AI brain.\n\n`;
+        // Nawal E Header
+        let content = `{bold}{yellow}╔═══════════════════════════════════════════════╗{/yellow}{/bold}\n`;
+        content += `{bold}{yellow}║     🦅 MEMPHIS - Przewodnik i Katalizator    ║{/yellow}{/bold}\n`;
+        content += `{bold}{yellow}╚═══════════════════════════════════════════════╝{/yellow}{/bold}\n\n`;
         if (chains.length === 0) {
             content += formatWarning(STATUS_MESSAGES.NO_CHAINS);
         }
         else {
-            content += `{bold}Memory Chains:{/bold}\n\n`;
+            // Chain stats
+            content += `{bold}{cyan}📦 Łańcuchy Pamięci:{/cyan}{/bold}\n`;
+            content += `{yellow}────────────────────────────────────────────{/yellow}\n\n`;
             chains.forEach((chain) => {
                 const stats = this.store.getChainStats(chain);
-                content += `{cyan}> ${chain}{/cyan}\n`;
-                content += `    Blocks: ${stats.blocks}\n`;
-                content += `    First: ${stats.first || "N/A"}\n`;
-                content += `    Last: ${stats.last || "N/A"}\n\n`;
+                const icon = chain === 'vault' ? '🔐' : '📝';
+                content += `{bold}${icon} ${chain.toUpperCase()}{/bold}\n`;
+                content += `   {cyan}Bloki:{/cyan} ${stats.blocks}\n`;
+                content += `   {cyan}Od:{/cyan} ${stats.first ? stats.first.split('T')[0] : 'N/A'}\n`;
+                content += `   {cyan}Do:{/cyan} ${stats.last ? stats.last.split('T')[0] : 'N/A'}\n\n`;
+            });
+            // Recent activity
+            content += `{bold}{cyan}📜 Ostatnia Aktywność:{/cyan}{/bold}\n`;
+            content += `{yellow}────────────────────────────────────────────{/yellow}\n`;
+            chains.slice(0, LIMITS.RECENT_BLOCKS).forEach((chain) => {
+                const blocks = this.store.readChain(chain);
+                if (blocks.length > 0) {
+                    const lastBlock = blocks[blocks.length - 1];
+                    const preview = truncateContent(lastBlock.data?.content, LIMITS.CONTENT_PREVIEW_SHORT);
+                    content += `  {yellow}›{/yellow} ${chain}: ${preview}\n`;
+                }
             });
         }
-        content += `\n{bold}Recent Activity:{/bold}\n`;
-        chains.slice(0, LIMITS.RECENT_BLOCKS).forEach((chain) => {
-            const blocks = this.store.readChain(chain);
-            if (blocks.length > 0) {
-                const lastBlock = blocks[blocks.length - 1];
-                content += `  * ${chain}: ${truncateContent(lastBlock.data?.content, LIMITS.CONTENT_PREVIEW_SHORT)}...\n`;
-            }
-        });
+        // Quick actions
+        content += `\n{bold}{yellow}⚡ Szybkie Akcje:{/yellow}{/bold}\n`;
+        content += `{yellow}────────────────────────────────────────────{/yellow}\n`;
+        content += `  {cyan}[1]{/cyan} Dashboard   {cyan}[2]{/cyan} Journal   {cyan}[3]{/cyan} Vault\n`;
+        content += `  {cyan}[4]{/cyan} Recall     {cyan}[5]{/cyan} Ask       {cyan}[c]{/cyan} Cline\n`;
         this.updateContent(content);
     }
     /**

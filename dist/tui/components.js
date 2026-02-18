@@ -1,9 +1,10 @@
 /**
  * Memphis TUI - UI Components
  * Factory functions for creating blessed UI elements
+ * Nawal E Theme 🦅
  */
 import blessed from "blessed";
-import { COLORS, LAYOUT } from "./constants.js";
+import { LAYOUT } from "./constants.js";
 /**
  * Create a standard box element
  */
@@ -12,36 +13,38 @@ export function createBox(options) {
     return blessed.box(options);
 }
 /**
- * Create the header box
+ * Create the header box - Nawal E Style 🦅
  */
-export function createHeaderBox() {
+export function createHeaderBox(screen) {
     return createBox({
+        parent: screen,
         top: 0,
         left: 0,
         width: "100%",
         height: LAYOUT.HEADER_HEIGHT,
         style: {
-            fg: COLORS.text,
-            bg: COLORS.primary,
+            fg: "black",
+            bg: "yellow",
             bold: true,
         },
         border: undefined,
-        content: `{center}{bold} Memphis - Local-first AI Brain{/bold}{/center}`,
+        content: `{center}{bold}{black}🦅 MEMPHIS 🦅{/black}{/bold}{/center}\n{center}{black}Przewodnik i Katalizator{/black}{/center}`,
     });
 }
 /**
  * Create the sidebar box
  */
-export function createSidebarBox(content = "") {
+export function createSidebarBox(screen, content = "") {
     return createBox({
+        parent: screen,
         top: LAYOUT.HEADER_HEIGHT,
         left: 0,
         width: LAYOUT.SIDEBAR_WIDTH,
         height: LAYOUT.SIDEBAR_HEIGHT,
         style: {
-            fg: COLORS.text,
-            bg: COLORS.bg,
-            border: { fg: COLORS.primary },
+            fg: "white",
+            bg: "black",
+            border: { fg: "yellow", type: "line" },
         },
         tags: true,
         content,
@@ -50,16 +53,17 @@ export function createSidebarBox(content = "") {
 /**
  * Create the content box
  */
-export function createContentBox(content = "") {
+export function createContentBox(screen, content = "") {
     return createBox({
+        parent: screen,
         top: LAYOUT.HEADER_HEIGHT,
         left: LAYOUT.SIDEBAR_WIDTH,
         width: LAYOUT.CONTENT_WIDTH,
         height: LAYOUT.SIDEBAR_HEIGHT,
         style: {
-            fg: COLORS.text,
-            bg: COLORS.bg,
-            border: { fg: COLORS.primary },
+            fg: "white",
+            bg: "black",
+            border: { fg: "cyan", type: "line" },
         },
         tags: true,
         scrollable: true,
@@ -69,17 +73,19 @@ export function createContentBox(content = "") {
 /**
  * Create the input box (hidden by default)
  */
-export function createInputBox() {
+export function createInputBox(screen) {
     return createBox({
+        parent: screen,
         top: "100%",
         left: 0,
         width: "100%",
         height: LAYOUT.INPUT_HEIGHT,
         style: {
-            fg: COLORS.text,
-            bg: COLORS.bg,
-            border: { fg: COLORS.secondary },
+            fg: "white",
+            bg: "black",
+            border: { fg: "magenta", type: "line" },
         },
+        visible: false,
     });
 }
 /**
@@ -93,24 +99,27 @@ export function createInputField(parent) {
         width: "98%",
         height: 1,
         style: {
-            fg: COLORS.text,
-            bg: COLORS.bg,
+            fg: "yellow",
+            bg: "black",
+            bold: true,
         },
-        placeholder: "Type your input...",
+        placeholder: "Wpisz coś...",
     });
 }
 /**
  * Create the status bar
  */
-export function createStatusBar(content = "") {
+export function createStatusBar(screen, content = "") {
     return createBox({
+        parent: screen,
         top: "100%",
         left: 0,
         width: "100%",
         height: LAYOUT.STATUS_BAR_HEIGHT,
         style: {
-            fg: COLORS.text,
-            bg: COLORS.secondary,
+            fg: "black",
+            bg: "yellow",
+            bold: true,
         },
         border: undefined,
         content,
@@ -122,8 +131,9 @@ export function createStatusBar(content = "") {
 export function createScreen() {
     return blessed.screen({
         smartCSR: true,
-        title: "Memphis - AI Brain",
+        title: "🦅 Memphis - AI Brain",
         fullUnicode: true,
+        terminal: "xterm-256color",
     });
 }
 /**

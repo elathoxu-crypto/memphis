@@ -898,20 +898,25 @@ export function runOpenClawCommands(args: string[]): void {
     });
   } else if (args[0] === "help") {
     console.log(`
-🦞 OpenClaw Bridge Commands:
-  status              - Show bridge status
-  list                - List connected agents
-  invite [id]         - Invite new agent
-  negotiate [id] <n>  - Negotiate compute share (%)
-  task [id] <task>    - Request agent to perform task
-  queue [id] <task>   - Create and execute task in queue
-  collab <desc>       - Multi-agent collaboration
-  broadcast <msg>      - Broadcast to all agents
-  chat [from] [to] <msg> - Agent-to-agent messaging
-  capability <name>   - Find agents by capability
-  clear               - Clear message history
-  context [n]         - Get recent memory context (default: 5)
-  states              - Show agent states
+╔══════════════════════════════════════════════════════════════════╗
+║                    🦞 OpenClaw Commands                       ║
+╠══════════════════════════════════════════════════════════════════╣
+║  status              Show bridge status                        ║
+║  list                List connected agents                     ║
+║  invite [id]         Invite new agent                          ║
+║  negotiate [id] <n>  Negotiate compute share (%)               ║
+║  task [id] <task>   Request agent to perform task             ║
+║  queue [id] <task>  Create and execute task in queue          ║
+║  collab <desc>       Multi-agent collaboration                 ║
+║  broadcast <msg>     Broadcast to all agents                  ║
+║  chat [f] [t] <msg> Agent-to-agent messaging                  ║
+║  capability <name>  Find agents by capability                 ║
+║  clear               Clear message history                     ║
+║  context [n]         Get recent memory context                 ║
+║  states              Show agent states                         ║
+╠══════════════════════════════════════════════════════════════════╣
+║  Example: memphis agent openclaw collab Analyze my code       ║
+╚══════════════════════════════════════════════════════════════════╝
     `.trim());
   } else {
     console.log(`

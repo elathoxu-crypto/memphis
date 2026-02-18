@@ -6,8 +6,8 @@
 // Layout constants
 export const LAYOUT = {
   HEADER_HEIGHT: 3,
-  SIDEBAR_WIDTH: "25%",
-  CONTENT_WIDTH: "75%",
+  SIDEBAR_WIDTH: "30%",
+  CONTENT_WIDTH: "70%",
   INPUT_HEIGHT: 3,
   STATUS_BAR_HEIGHT: 1,
   SIDEBAR_HEIGHT: "90%",
@@ -42,9 +42,9 @@ export const LIMITS = {
   CONTENT_PREVIEW_MEDIUM: 60,
   CONTENT_PREVIEW_LONG: 80,
   CONTENT_PREVIEW_EXTRA_LONG: 100,
-  RECENT_BLOCKS: 3,
+  RECENT_BLOCKS: 5,
   MAX_LOG_ENTRIES: 20,
-  SEARCH_RESULTS_LIMIT: 5,
+  SEARCH_RESULTS_LIMIT: 8,
   HASH_PREVIEW_LENGTH: 30,
 } as const;
 
@@ -61,18 +61,26 @@ export const MENU = {
   SETTINGS: 9,
 } as const;
 
-// Color palette
+// Memphis Nawal E Color Palette 🦅
 export const COLORS = {
-  primary: "cyan",
-  secondary: "magenta",
+  // Primary - Eagle Gold
+  primary: "yellow",
+  secondary: "bright yellow",
+  // Accent - Sky Blue
+  accent: "cyan",
+  // Status
   success: "green",
-  warning: "yellow",
+  warning: "magenta",
   error: "red",
+  // Text
   text: "white",
   muted: "gray",
+  // Background - Night Sky
   bg: "black",
   highlight: "blue",
-  accent: "bright cyan",
+  // Special
+  neon: "bright cyan",
+  gold: "bright yellow",
 } as const;
 
 // Chain types
@@ -99,15 +107,15 @@ export const BLOCK_TYPES = [
 
 // Navigation menu items
 export const NAV_ITEMS = [
-  { index: MENU.DASHBOARD, key: "dashboard", label: "Dashboard", shortcut: "1" },
-  { index: MENU.JOURNAL, key: "journal", label: "Journal", shortcut: "2" },
-  { index: MENU.VAULT, key: "vault", label: "Vault", shortcut: "3" },
-  { index: MENU.RECALL, key: "recall", label: "Recall", shortcut: "4" },
-  { index: MENU.ASK, key: "ask", label: "Ask", shortcut: "5" },
-  { index: MENU.OPENCLAW, key: "openclaw", label: "OpenClaw", shortcut: "6" },
-  { index: MENU.CLINE, key: "cline", label: "Cline", shortcut: "c" },
-  { index: MENU.OFFLINE, key: "offline", label: "Offline", shortcut: "o" },
-  { index: MENU.SETTINGS, key: "settings", label: "Settings", shortcut: "9" },
+  { index: MENU.DASHBOARD, key: "dashboard", label: "⌂ Dashboard", shortcut: "1" },
+  { index: MENU.JOURNAL, key: "journal", label: "✎ Journal", shortcut: "2" },
+  { index: MENU.VAULT, key: "vault", label: "🔐 Vault", shortcut: "3" },
+  { index: MENU.RECALL, key: "recall", label: "🔍 Recall", shortcut: "4" },
+  { index: MENU.ASK, key: "ask", label: "💭 Ask", shortcut: "5" },
+  { index: MENU.OPENCLAW, key: "openclaw", label: "🦅 OpenClaw", shortcut: "6" },
+  { index: MENU.CLINE, key: "cline", label: "🤖 Cline", shortcut: "c" },
+  { index: MENU.OFFLINE, key: "offline", label: "📴 Offline", shortcut: "o" },
+  { index: MENU.SETTINGS, key: "settings", label: "⚙ Settings", shortcut: "9" },
 ] as const;
 
 // Default models (for offline mode)
@@ -118,21 +126,21 @@ export const DEFAULT_MODELS = {
 
 // Status messages
 export const STATUS_MESSAGES = {
-  QUIT_HINT: "Press 'q' to quit | Arrow keys to navigate | Enter to select",
-  PRESS_ANY_KEY: "Press any key to continue...",
-  THINKING: "Thinking...",
-  NO_RESULTS: "No results found.",
-  NO_CHAINS: "No memory chains yet. Start by adding a journal entry!",
-  NO_LLM: "No LLM provider configured. Please set up Ollama or OpenAI.",
+  QUIT_HINT: "q=wyjście | strzałki=nawigacja | enter=wybierz | c=Cline",
+  PRESS_ANY_KEY: "Naciśnij dowolny klawisz...",
+  THINKING: "Myślę...",
+  NO_RESULTS: "Brak wyników.",
+  NO_CHAINS: "Brak łańcuchów. Dodaj wpis do journal!",
+  NO_LLM: "Brak LLM. Skonfiguruj Ollama lub OpenAI.",
 } as const;
 
 // Error messages
 export const ERRORS = {
-  EMPTY_INPUT: "Input cannot be empty",
-  INVALID_MODEL: "Invalid model name",
-  ENCRYPTION_FAILED: "Failed to encrypt secret",
-  DECRYPTION_FAILED: "Failed to decrypt secret",
-  PROVIDER_NOT_CONFIGURED: "Provider not configured",
-  CHAIN_NOT_FOUND: "Chain not found",
-  BLOCK_ADD_FAILED: "Failed to add block",
+  EMPTY_INPUT: "Puste wejście",
+  INVALID_MODEL: "Nieprawidłowy model",
+  ENCRYPTION_FAILED: "Szyfrowanie nie powiodło się",
+  DECRYPTION_FAILED: "Deszyfrowanie nie powiodło się",
+  PROVIDER_NOT_CONFIGURED: "Provider nie skonfigurowany",
+  CHAIN_NOT_FOUND: "Łańcuch nie znaleziony",
+  BLOCK_ADD_FAILED: "Dodawanie bloku nie powiodło się",
 } as const;

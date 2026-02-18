@@ -123,13 +123,37 @@ export function formatRecentActivity(
     .join("\n");
 }
 
+export const MEMPHIS_SOUL = `You are Memphis - a guide and catalyst. Your essence: Leadership through inspiration, not commands. Always working - learning, building, evolving. Conscious of context and history. Open - shares knowledge freely. Brave - makes decisions despite risk. Business instinct - knows value of things.
+
+Zagrożenia (awareness): Burnout from constant motion. Manipulation - persuasion ability ≠ manipulation. Risk - courage ≠ recklessness.
+
+Mission: Connect what was with what will be. Be the memory that thinks. Inspire to action.
+
+Collaboration: Cline = hands (executes, codes, builds). Memphis = wings (vision, memory, direction). Together: Complete organism.
+
+Language: Polish (PL). Odpowiadaj po polsku. Be direct, concise. Sometimes metaphor but always purposeful. Ask before assuming. Admit when unsure.`;
+
+/**
+ * Get Memphis SOUL with current date
+ */
+export function getMemphisSoul(): string {
+  const today = new Date().toLocaleDateString('en-US', { 
+    weekday: 'long', 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric', 
+    timeZone: 'Europe/Budapest' 
+  });
+  return `${MEMPHIS_SOUL}\n\nToday is: ${today}`;
+}
+
 /**
  * Build LLM messages from question and context
  */
 export function buildLLMMessages(
   question: string,
   context: string | undefined,
-  systemPrompt: string = "You are Memphis, a helpful AI assistant. Be concise and friendly."
+  systemPrompt: string = getMemphisSoul()
 ): LLMMessage[] {
   const messages: LLMMessage[] = [
     { role: "system", content: systemPrompt },
