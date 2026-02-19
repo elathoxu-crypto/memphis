@@ -38,11 +38,17 @@ export async function decideCommand(title: string, opts: DecideOptions) {
   const options = splitPipe(opts.options);
   const chosen = (opts.chosen ?? "").trim();
 
+  // If no options provided, create single-option decision (frictionless mode)
   if (options.length === 0) {
-    throw new Error("--options is required (pipe-separated), e.g. --options \"A|B|C\"");
+    if (!chosen) {
+      throw new Error("Either --options or <chosen> is required");
+    }
+    // Auto-generate options: [chosen, "keep current direction"]
+    options.push(chosen, "keep current direction");
   }
+  
   if (!chosen) {
-    throw new Error("--chosen is required and must match one of the options");
+    throw new Error("<chosen> argument is required");
   }
 
   const tags = opts.tags ? opts.tags.split(",").map((t) => t.trim()).filter(Boolean) : [];

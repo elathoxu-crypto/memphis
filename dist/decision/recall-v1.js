@@ -68,7 +68,7 @@ function includesInsensitive(haystack, needle) {
 function scoreDecision(d, q, projectHint) {
     let score = 0;
     // Query matching
-    if (q && q.trim().length > 0) {
+    if (q && typeof q === 'string' && q.trim().length > 0) {
         const query = q.trim();
         if (includesInsensitive(d.title, query))
             score += 3;

@@ -91,7 +91,7 @@ function scoreDecision(d: DecisionV1, q?: string, projectHint?: { cwd: string; g
   let score = 0;
 
   // Query matching
-  if (q && q.trim().length > 0) {
+  if (q && typeof q === 'string' && q.trim().length > 0) {
     const query = q.trim();
     if (includesInsensitive(d.title, query)) score += 3;
     if (d.reasoning && includesInsensitive(d.reasoning, query)) score += 2;

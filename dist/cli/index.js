@@ -8,6 +8,8 @@ import { initCommand } from "./commands/init.js";
 import { vaultCommand } from "./commands/vault.js";
 import { agentCommand } from "./commands/agent.js";
 import { decideCommand } from "./commands/decide.js";
+import { showCommand } from "./commands/show.js";
+import { reviseCommand } from "./commands/revise.js";
 import { runOpenClawCommands } from "../bridges/openclaw.js";
 import { MemphisTUI } from "../tui/index.js";
 const program = new Command();
@@ -62,6 +64,22 @@ program
         links: opts.links,
         evidenceRefs: opts.evidence,
     });
+});
+program
+    .command("show")
+    .description("Show a decision by ID")
+    .argument("<kind>", "decision")
+    .argument("<id>", "Decision ID or record ID")
+    .action((kind, id) => {
+    showCommand(kind, id);
+});
+program
+    .command("revise")
+    .description("Revise a decision (creates new block)")
+    .argument("<decisionId>", "Decision ID to revise")
+    .option("-r, --reasoning <reasoning>", "New reasoning")
+    .action((decisionId, opts) => {
+    reviseCommand(decisionId, { reason: opts.reasoning || "" });
 });
 program
     .command("vault")
