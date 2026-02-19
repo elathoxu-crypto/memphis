@@ -9,6 +9,7 @@ export interface BlockData {
   tokens_used?: number;
   // Vault & Credential fields
   encrypted?: string;
+  revoked?: boolean;
   iv?: string;
   key_id?: string;
   schema?: string;
@@ -59,12 +60,10 @@ export function validateBlockAgainstSoul(block: Block, prevBlock?: Block): SoulV
     errors.push(`Invalid timestamp format: ${block.timestamp}`);
   }
 
-  // 4. Check timestamp order (allow same-second timestamps)
+  // 4. Check timestamp order
   if (prevBlock) {
     const prevTimestamp = new Date(prevBlock.timestamp);
-    // Only error if timestamp is strictly before AND more than 1 second difference
-    const diff = timestamp.getTime() - prevTimestamp.getTime();
-    if (diff < -1000) {
+    if (timestamp < prevTimestamp) {
       errors.push(`Timestamp ${block.timestamp} is before previous block ${prevBlock.timestamp}`);
     }
   }
@@ -92,10 +91,13 @@ export function validateBlockAgainstSoul(block: Block, prevBlock?: Block): SoulV
     errors.push(`Genesis block must have index 0, got ${block.index}`);
   }
 
-  // 9. Vault type validation (allow empty encrypted for genesis)
+  // 9. Vault type validation (allow empty encrypted for genesis and for revocation blocks)
   if (block.data.type === "vault") {
-    if (block.index > 0 && !block.data.encrypted) errors.push("Vault block must have encrypted data");
-    if (!block.data.iv) errors.push("Vault block must have iv (Initialization Vector)");
+    const isRevocation = (block.data as any).revoked === true || (block.data.tags || []).includes("revoked");
+    if (block.index > 0 && !isRevocation && !block.data.encrypted) {
+      errors.push("Vault block must have encrypted data (or be a revocation)");
+    }
+    // NOTE: IV is embedded in the encrypted payload format; we do not require a separate iv field.
   }
 
   // 10. Credential type validation (SSI)

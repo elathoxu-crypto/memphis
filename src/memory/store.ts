@@ -16,7 +16,7 @@ export class Store {
   constructor(basePath: string) {
     this.basePath = basePath;
     try {
-      mkdirSync(basePath, { recursive: true });
+      mkdirSync(basePath, { recursive: true, mode: 0o700 });
     } catch (err) {
       throw new StoreError(`Failed to create store directory: ${err}`, "DIR_CREATE_FAILED");
     }
@@ -26,7 +26,7 @@ export class Store {
     const dir = join(this.basePath, chain);
     try {
       if (!existsSync(dir)) {
-        mkdirSync(dir, { recursive: true });
+        mkdirSync(dir, { recursive: true, mode: 0o700 });
       }
     } catch (err) {
       throw new StoreError(`Failed to create chain directory: ${err}`, "CHAIN_DIR_FAILED");
@@ -56,7 +56,8 @@ export class Store {
       const prev = this.getLastBlock(chain);
       const block = createBlock(chain, data, prev);
       const file = this.blockFile(chain, block.index);
-      writeFileSync(file, JSON.stringify(block, null, 2), "utf-8");
+      const mode = (chain === "vault" || chain === "credential") ? 0o600 : 0o644;
+      writeFileSync(file, JSON.stringify(block, null, 2), { encoding: "utf-8", mode });
       return block;
     } catch (err) {
       if (err instanceof StoreError) throw err;

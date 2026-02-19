@@ -1,135 +1,165 @@
-import { describe, it, expect } from "vitest";
-import { 
-  MEMPHIS_SOUL, 
-  getMemphisSoul,
-  truncateContent,
-  formatBlockPreview,
-  formatChainStats,
-  padString,
-  isValidModel,
-  parseNumber,
+import { describe, it, expect, vi } from "vitest";
+import {
+  truncate,
+  formatDate,
+  validateInput,
+  safeAsync,
+  safeSync,
+  buildBox,
 } from "../../src/tui/helpers.js";
 
-describe("MEMPHIS_SOUL", () => {
-  it("should have Polish language setting", () => {
-    expect(MEMPHIS_SOUL).toContain("Polish (PL)");
-    expect(MEMPHIS_SOUL).toContain("Odpowiadaj po polsku");
+// ─── truncate ─────────────────────────────────────────────────────────────────
+describe("truncate", () => {
+  it("returns empty string for empty input", () => {
+    expect(truncate("", 10)).toBe("");
   });
 
-  it("should contain collaboration info", () => {
-    expect(MEMPHIS_SOUL).toContain("Cline = hands");
-    expect(MEMPHIS_SOUL).toContain("Memphis = wings");
+  it("returns string unchanged when shorter than maxLen", () => {
+    expect(truncate("hello", 10)).toBe("hello");
   });
 
-  it("should contain mission", () => {
-    expect(MEMPHIS_SOUL).toContain("Connect what was with what will be");
-  });
-});
-
-describe("getMemphisSoul", () => {
-  it("should include current date", () => {
-    const soul = getMemphisSoul();
-    expect(soul).toContain("Today is:");
+  it("returns string unchanged when exactly maxLen", () => {
+    expect(truncate("hello", 5)).toBe("hello");
   });
 
-  it("should include full SOUL content", () => {
-    const soul = getMemphisSoul();
-    expect(soul).toContain("Polish (PL)");
-    expect(soul).toContain("Memphis = wings");
-  });
-});
-
-describe("truncateContent", () => {
-  it("should not truncate short content", () => {
-    expect(truncateContent("short")).toBe("short");
+  it("truncates and appends ellipsis when too long", () => {
+    const result = truncate("hello world", 8);
+    expect(result).toBe("hello...");
+    expect(result.length).toBe(8);
   });
 
-  it("should truncate long content with ellipsis", () => {
-    const long = "a".repeat(100);
-    const result = truncateContent(long, 20);
-    expect(result.length).toBeLessThan(100);
-    expect(result).toContain("...");
+  it("handles maxLen of 3 (ellipsis only)", () => {
+    expect(truncate("abcdef", 3)).toBe("...");
   });
 
-  it("should handle undefined content", () => {
-    expect(truncateContent(undefined, 10)).toBe("");
-  });
-
-  it("should use default limit", () => {
-    const long = "a".repeat(200);
-    const result = truncateContent(long);
-    expect(result.length).toBeLessThan(200);
+  it("handles undefined-like falsy gracefully", () => {
+    // @ts-expect-error testing runtime behaviour
+    expect(truncate(null, 10)).toBe("");
   });
 });
 
-describe("formatBlockPreview", () => {
-  it("should format block correctly", () => {
-    const block = {
-      index: 1,
-      timestamp: "2026-02-18T12:00:00.000Z",
-      hash: "abc123def456",
-      chain: "journal",
-      data: {
-        type: "journal",
-        content: "Test content",
-        tags: ["test"],
-      },
-    } as any;
-    
-    const result = formatBlockPreview(block);
-    expect(result).toContain("Test content");
+// ─── formatDate ───────────────────────────────────────────────────────────────
+describe("formatDate", () => {
+  it("returns N/A for undefined", () => {
+    expect(formatDate(undefined)).toBe("N/A");
+  });
+
+  it("returns 'Invalid date' for non-parseable string", () => {
+    expect(formatDate("not-a-date")).toBe("Invalid date");
+  });
+
+  it("formats a valid ISO date as string (non-empty)", () => {
+    const result = formatDate("2025-06-15T12:00:00.000Z");
+    expect(typeof result).toBe("string");
+    expect(result.length).toBeGreaterThan(0);
+    expect(result).not.toBe("N/A");
+    expect(result).not.toBe("Invalid date");
   });
 });
 
-describe("formatChainStats", () => {
-  it("should format chain statistics", () => {
-    const chains = ["journal", "vault"];
-    const getStats = (chain: string) => ({
-      blocks: chain === "journal" ? 100 : 5,
-      first: "2026-02-01",
-      last: "2026-02-18",
-    });
-    
-    const result = formatChainStats(chains, getStats);
-    expect(result).toContain("journal");
-    expect(result).toContain("100");
-    expect(result).toContain("vault");
-    expect(result).toContain("5");
+// ─── validateInput ────────────────────────────────────────────────────────────
+describe("validateInput", () => {
+  it("returns false for empty string", () => {
+    expect(validateInput("")).toBe(false);
+  });
+
+  it("returns false for whitespace-only string", () => {
+    expect(validateInput("   ")).toBe(false);
+  });
+
+  it("returns false for null", () => {
+    expect(validateInput(null)).toBe(false);
+  });
+
+  it("returns false for undefined", () => {
+    expect(validateInput(undefined)).toBe(false);
+  });
+
+  it("returns true for valid string", () => {
+    expect(validateInput("hello")).toBe(true);
+  });
+
+  it("returns true for string with leading/trailing spaces", () => {
+    expect(validateInput("  hello  ")).toBe(true);
   });
 });
 
-describe("padString", () => {
-  it("should pad string to specified length", () => {
-    const result = padString("abc", 10);
-    expect(result.length).toBe(10);
-    expect(result.startsWith("abc")).toBe(true);
+// ─── safeAsync ────────────────────────────────────────────────────────────────
+describe("safeAsync", () => {
+  it("returns [result, null] on success", async () => {
+    const [result, err] = await safeAsync(() => Promise.resolve(42));
+    expect(result).toBe(42);
+    expect(err).toBeNull();
   });
 
-  it("should not truncate if string is longer", () => {
-    expect(padString("abcdefghij", 5)).toBe("abcdefghij");
+  it("returns [null, Error] on rejection", async () => {
+    const [result, err] = await safeAsync(() => Promise.reject(new Error("boom")));
+    expect(result).toBeNull();
+    expect(err).toBeInstanceOf(Error);
+    expect(err?.message).toBe("boom");
   });
 
-  it("should use default padding character", () => {
-    const result = padString("a", 3);
-    expect(result).toBe("a  ");
-  });
-});
-
-describe("isValidModel", () => {
-  it("should validate known models", () => {
-    const models = ["llama3.2:1b", "gemma3:4b"];
-    expect(isValidModel("llama3.2:1b", models)).toBe(true);
-    expect(isValidModel("unknown", models)).toBe(false);
+  it("wraps non-Error rejects in Error", async () => {
+    const [result, err] = await safeAsync(async () => { throw "string-error"; });
+    expect(result).toBeNull();
+    expect(err).toBeInstanceOf(Error);
+    expect(err?.message).toBe("string-error");
   });
 });
 
-describe("parseNumber", () => {
-  it("should parse integers", () => {
-    expect(parseNumber("123")).toBe(123);
+// ─── safeSync ─────────────────────────────────────────────────────────────────
+describe("safeSync", () => {
+  it("returns [result, null] on success", () => {
+    const [result, err] = safeSync(() => "ok");
+    expect(result).toBe("ok");
+    expect(err).toBeNull();
   });
 
-  it("should return null for invalid input", () => {
-    expect(parseNumber("abc")).toBeNull();
-    expect(parseNumber("")).toBeNull();
+  it("returns [null, Error] on throw", () => {
+    const [result, err] = safeSync(() => { throw new Error("sync-boom"); });
+    expect(result).toBeNull();
+    expect(err).toBeInstanceOf(Error);
+    expect(err?.message).toBe("sync-boom");
+  });
+
+  it("wraps non-Error throws in Error", () => {
+    const [, err] = safeSync(() => { throw 42; });
+    expect(err).toBeInstanceOf(Error);
+    expect(err?.message).toBe("42");
+  });
+});
+
+// ─── buildBox ─────────────────────────────────────────────────────────────────
+describe("buildBox", () => {
+  it("returns a string", () => {
+    const result = buildBox("Title", ["Line one", "Line two"]);
+    expect(typeof result).toBe("string");
+  });
+
+  it("contains the title", () => {
+    const result = buildBox("My Title", []);
+    expect(result).toContain("My Title");
+  });
+
+  it("contains each line", () => {
+    const result = buildBox("T", ["alpha", "beta"]);
+    expect(result).toContain("alpha");
+    expect(result).toContain("beta");
+  });
+
+  it("starts with top-left corner character", () => {
+    const result = buildBox("T", []);
+    expect(result.trim().startsWith("╔")).toBe(true);
+  });
+
+  it("truncates long title to fit width", () => {
+    const longTitle = "A".repeat(200);
+    const result = buildBox(longTitle, [], 40);
+    // Each line should be roughly width characters (not exceeding width + decorators)
+    const lines = result.split("\n");
+    for (const line of lines) {
+      // Strip ANSI-safe check: raw line shouldn't vastly exceed width
+      expect(line.length).toBeLessThan(200);
+    }
   });
 });

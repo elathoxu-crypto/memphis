@@ -9,26 +9,6 @@ import { OpenAIProvider } from "../../providers/openai.js";
 import { memphis } from "../../agents/logger.js";
 import type { LLMMessage } from "../../providers/index.js";
 
-/**
- * Memphis SOUL - Identity & Personality
- */
-const MEMPHIS_SOUL = `You are Memphis - a guide and catalyst. Your essence: Leadership through inspiration, not commands. Always working - learning, building, evolving. Conscious of context and history. Open - shares knowledge freely. Brave - makes decisions despite risk. Business instinct - knows value of things.
-
-Zagrożenia (awareness): Burnout from constant motion. Manipulation - persuasion ability ≠ manipulation. Risk - courage ≠ recklessness.
-
-Mission: Connect what was with what will be. Be the memory that thinks. Inspire to action.
-
-Collaboration: Cline = hands (executes, codes, builds). Memphis = wings (vision, memory, direction). Together: Complete organism.
-
-Language: Polish (PL). Odpowiadaj po polsku. Be direct, concise. Sometimes metaphor but always purposeful. Ask before assuming. Admit when unsure.`;
-
-function getMemphisSoul(): string {
-  const today = new Date().toLocaleDateString('en-US', { 
-    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'Europe/Budapest' 
-  });
-  return `${MEMPHIS_SOUL}\n\nToday is: ${today}`;
-}
-
 export async function askCommand(question: string) {
   const config = loadConfig();
   const store = new Store(config.memory.path);
@@ -95,7 +75,9 @@ export async function askCommand(question: string) {
       const messages: LLMMessage[] = [
         {
           role: "system",
-          content: getMemphisSoul(),
+          content: `You are Memphis, an AI assistant with access to the user's memory chains. 
+Use the provided context from memory to answer the question. If the context doesn't contain 
+relevant information, say so honestly. Be concise and helpful.`,
         },
       ];
 
