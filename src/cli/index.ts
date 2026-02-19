@@ -7,6 +7,7 @@ import { statusCommand } from "./commands/status.js";
 import { initCommand } from "./commands/init.js";
 import { vaultCommand } from "./commands/vault.js";
 import { agentCommand } from "./commands/agent.js";
+import { decideCommand } from "./commands/decide.js";
 import { runOpenClawCommands } from "../bridges/openclaw.js";
 import { MemphisTUI } from "../tui/index.js";
 
@@ -45,6 +46,31 @@ program
   .command("status")
   .description("Show Memphis status")
   .action(statusCommand);
+
+program
+  .command("decide")
+  .description("Record a decision (conscious or inferred)")
+  .argument("<title>", "Decision title (what did you decide?)")
+  .argument("<chosen>", "What did you choose?")
+  .option("-o, --options <options>", "Options considered (pipe-separated, e.g. A|B|C)", "")
+  .option("-r, --reasoning <reasoning>", "Why did you choose this?", "")
+  .option("-s, --scope <scope>", "Impact scope: personal|project|life", "project")
+  .option("-m, --mode <mode>", "Mode: conscious|inferred", "conscious")
+  .option("-c, --confidence <n>", "Confidence 0-1", "1")
+  .option("-l, --links <links>", "Related decision IDs (pipe-separated)", "")
+  .option("-e, --evidence <evidence>", "Evidence refs for inferred (pipe-separated)", "")
+  .action((title: string, chosen: string, opts: any) => {
+    decideCommand(title, {
+      options: opts.options,
+      chosen,
+      why: opts.reasoning,
+      scope: opts.scope,
+      mode: opts.mode,
+      confidence: opts.confidence,
+      links: opts.links,
+      evidenceRefs: opts.evidence,
+    });
+  });
 
 program
   .command("vault")

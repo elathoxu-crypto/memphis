@@ -1,5 +1,5 @@
 export interface BlockData {
-    type: "journal" | "build" | "adr" | "ops" | "ask" | "system" | "vault" | "credential";
+    type: "journal" | "build" | "adr" | "ops" | "ask" | "system" | "vault" | "credential" | "decision";
     content: string;
     tags: string[];
     agent?: string;
