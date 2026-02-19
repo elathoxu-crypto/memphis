@@ -160,6 +160,91 @@ interface CognitiveBlock {
 
 ---
 
+## 🧠 Model A + B (Docelowy)
+
+### A) Conscious Decisions
+Ty mówisz: `memphis decide: "Idziemy w personal brain"`
+- Pełny reasoning
+- Opcje rozważane
+- Typ: strategic
+
+### B) Inferred Decisions
+Agent wykrywa:
+- Commit kierunku
+- Porzucony branch  
+- Zmianę strategii
+- Powtarzalne wybory
+
+Zapisuje:
+```
+type: inferred_decision
+confidence: 0.62
+evidence: commits / actions / patterns
+```
+To NIE jest twarda decyzja - to hipoteza poznawcza.
+
+---
+
+## 🧱 Decision Schema v1 (propozycja)
+
+```typescript
+interface DecisionBlock {
+  id: string;
+  timestamp: string;
+  mode: "conscious" | "inferred";
+  title: string;
+  context: string;
+  options: string[];
+  chosen: string;
+  reasoning: string;
+  confidence: number;
+  evidence_links: string[];
+  impact_scope: "personal" | "project" | "life";
+  status: "active" | "revised" | "deprecated" | "contradicted";
+}
+```
+
+---
+
+## 🧬 Decision Lifecycle
+
+Decyzja żyje:
+- **revised** - zaktualizowana
+- **contradicted** - obalona
+- **deprecated** - nieaktualna
+- **reinforced** - wzmocniona
+
+---
+
+## 🧭 Zasada projektowa
+
+**Agent: proponuje, nie decyduje**  
+**Człowiek: zatwierdza, nadaje znaczenie**
+
+---
+
+## 🔥 Minimalna wersja B (realna)
+
+```
+possible_decision detected: "Project direction shifted from X to Y"
+confidence: 0.48
+save? [y/n]
+```
+
+Ty potwierdzasz → staje się conscious.
+
+---
+
+## ❓ Pierwszy krok do realizacji
+
+Co budujemy jako pierwsze?
+1. Decision schema (fundament)
+2. CLI "memphis decide" (świadome decyzje)
+3. Agent detector v0 (sygnały z repo/terminala)
+4. Reflection (LLM analizuje)
+
+---
+
 ## 🪓 Ryzyka
 
 - Zbyt dużo naraz (4 ciężkie systemy)
