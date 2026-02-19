@@ -189,7 +189,11 @@ Decision A (original)
 
 ---
 
-## 📌 Decyzje do podjęcia
+## 📌 Decyzje do przemyślenia (TYMCZASOWO = BEZ AKCJI)
+
+*Sekcja oczekuje na kolejne sesje dyskusji. Nie implementujemy póki nie ustalimy odpowiedzi.*
+
+> Pytania, które Memphis będzie zadawał podczas sesji "co nam zostało do przemyślenia?"
 
 1. **Czy `confidence` ma limit dla inferred?**  
    Propozycja: max 0.85 (zawsze jest hipotezą)
