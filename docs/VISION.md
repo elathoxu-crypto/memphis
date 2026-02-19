@@ -121,6 +121,45 @@ Bardziej: **git / ledger / event sourcing** niż Ethereum
 
 ---
 
+## 🧠 Serce Memphis: PAMIĘĆ DECYZJI (Opcja C)
+
+**Wybór:** C) pamięć decyzji = cognitive engine
+
+**Dlaczego:**
+- Najbliższa oryginalnej wizji
+- "co powinienem sobie przypomnieć teraz?"
+- "czy już kiedyś miałem taki problem?"
+- reflective memory
+- Nie "ładniejszy notatnik" - to przegrywa
+
+### Jednostka systemu: cognitive event
+
+```typescript
+interface CognitiveBlock {
+  timestamp: string;
+  type: "decision" | "insight" | "problem" | "observation";
+  context: string;
+  emotional_weight?: number;  // opcjonalnie
+  links: string[];           // powiązane bloki
+  source: string;
+}
+```
+
+---
+
+### Co staje się priorytetem:
+1. Frictionless capture - zapisywanie myśli w 2 sekundy
+2. Recall w momentach decyzji - nie manual search
+3. Reflection AI - pyta Ciebie, nie odwrotnie
+
+### Co przestaje być ważne:
+- TUI jako UI showcase
+- CLI jako produkt
+- Multi-agent integracje
+- Enterprise
+
+---
+
 ## 🪓 Ryzyka
 
 - Zbyt dużo naraz (4 ciężkie systemy)
