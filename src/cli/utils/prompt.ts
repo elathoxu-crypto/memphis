@@ -13,7 +13,7 @@ export async function promptHidden(prompt: string): Promise<string> {
     input: process.stdin,
     output: process.stdout,
     terminal: true,
-  }) as readline.Interface & { stdoutMuted?: boolean; _writeToOutput?: (s: string) => void };
+  }) as readline.Interface & { stdoutMuted?: boolean; _writeToOutput?: (s: string) => void; output: any };
 
   // Mask typed characters
   rl.stdoutMuted = true;

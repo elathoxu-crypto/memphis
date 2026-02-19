@@ -6,6 +6,22 @@ import { loadConfig } from "../../config/loader.js";
 import { sha256 } from "../../utils/hash.js";
 import { writeFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
+import { promptHidden, readStdinTrimmed } from "../utils/prompt.js";
+async function resolveVaultPassword(opts) {
+    if (opts.passwordEnv) {
+        const v = process.env[opts.passwordEnv];
+        if (!v)
+            throw new Error(`Environment variable '${opts.passwordEnv}' is not set`);
+        return v;
+    }
+    if (opts.passwordStdin) {
+        const v = await readStdinTrimmed();
+        if (!v)
+            throw new Error("No password provided on stdin");
+        return v;
+    }
+    return await promptHidden("Vault password: ");
+}
 export async function vaultCommand(opts) {
     const config = loadConfig();
     const store = new Store(config.memory?.path || `${process.env.HOME}/.memphis/chains`);
@@ -26,7 +42,6 @@ export async function vaultCommand(opts) {
                 content: "Vault genesis block",
                 tags: ["genesis", did],
                 encrypted: "",
-                iv: "0".repeat(24),
                 key_id: did,
             };
             const genesisBlock = createBlock(chain, genesisData);
@@ -41,57 +56,73 @@ export async function vaultCommand(opts) {
             const finalGenesis = { ...rest, hash: recomputedHash };
             // Write directly to file
             const vaultDir = join(basePath, chain);
-            mkdirSync(vaultDir, { recursive: true });
-            writeFileSync(join(vaultDir, "000000.json"), JSON.stringify(finalGenesis, null, 2));
+            mkdirSync(vaultDir, { recursive: true, mode: 0o700 });
+            writeFileSync(join(vaultDir, "000000.json"), JSON.stringify(finalGenesis, null, 2), { mode: 0o600 });
             console.log(chalk.green("✓ Vault initialized!"));
             console.log(chalk.cyan("Your DID: " + did));
             console.log(chalk.gray("Store this securely - it's your identity!"));
             break;
         }
         case "add": {
-            if (!opts.key || !opts.value || !opts.password) {
-                console.log(chalk.red("Usage: memphis vault add <key> <value> --password <pass>"));
+            if (!opts.key || !opts.value) {
+                console.log(chalk.red("Usage: memphis vault add <key> <value> (prompts) | --password-env VAR | --password-stdin"));
                 return;
             }
-            const encrypted = encrypt(opts.value, opts.password);
-            const iv = encrypted.substring(0, 24); // IV is in the encrypted data
+            const password = await resolveVaultPassword(opts);
+            const encrypted = encrypt(opts.value, password);
             store.addBlock(chain, {
                 type: "vault",
                 content: opts.key,
                 tags: ["secret", opts.key],
                 encrypted,
-                iv,
                 key_id: opts.key,
             });
             console.log(chalk.green(`✓ Added secret: ${opts.key}`));
             break;
         }
         case "list": {
-            const blocks = store.readChain(chain).filter(b => b.data.type === "vault" && b.data.encrypted);
-            if (blocks.length === 0) {
-                console.log(chalk.yellow("No secrets found. Run 'memphis vault init' first."));
+            const chainBlocks = store.readChain(chain).filter(b => b.data.type === "vault" && b.data.content);
+            // Determine latest state per key (append-only)
+            const latestByKey = new Map();
+            for (const b of chainBlocks) {
+                latestByKey.set(b.data.content, b);
+            }
+            const activeKeys = [...latestByKey.entries()]
+                .filter(([_, b]) => !b.data.revoked)
+                .map(([k]) => k)
+                .sort();
+            if (activeKeys.length === 0) {
+                console.log(chalk.yellow("No active secrets found. Run 'memphis vault init' first."));
                 return;
             }
-            console.log(chalk.bold("\n🔐 Stored Secrets:\n"));
-            blocks.forEach(block => {
-                console.log(chalk.cyan(`  • ${block.data.content}`));
-            });
+            console.log(chalk.bold("\n🔐 Stored Secrets (active):\n"));
+            activeKeys.forEach(key => console.log(chalk.cyan(`  • ${key}`)));
             console.log("");
             break;
         }
         case "get": {
-            if (!opts.key || !opts.password) {
-                console.log(chalk.red("Usage: memphis vault get <key> --password <pass>"));
+            if (!opts.key) {
+                console.log(chalk.red("Usage: memphis vault get <key> (prompts) | --password-env VAR | --password-stdin"));
                 return;
             }
             const blocks = store.readChain(chain)
-                .filter(b => b.data.type === "vault" && b.data.content === opts.key && b.data.encrypted);
+                .filter(b => b.data.type === "vault" && b.data.content === opts.key);
             if (blocks.length === 0) {
                 console.log(chalk.red(`Secret '${opts.key}' not found!`));
                 return;
             }
+            const latest = blocks[blocks.length - 1];
+            if (latest.data.revoked) {
+                console.log(chalk.yellow(`Secret '${opts.key}' is revoked.`));
+                return;
+            }
+            if (!latest.data.encrypted) {
+                console.log(chalk.red(`Secret '${opts.key}' has no encrypted payload.`));
+                return;
+            }
             try {
-                const secret = decrypt(blocks[0].data.encrypted, opts.password);
+                const password = await resolveVaultPassword(opts);
+                const secret = decrypt(latest.data.encrypted, password);
                 console.log(chalk.green(`\n🔑 ${opts.key}:\n`));
                 console.log(chalk.white(secret));
                 console.log("");
@@ -106,8 +137,16 @@ export async function vaultCommand(opts) {
                 console.log(chalk.red("Usage: memphis vault delete <key>"));
                 return;
             }
-            console.log(chalk.yellow("⚠ Deleting secrets is not implemented yet (append-only chain)."));
-            console.log(chalk.gray("In future: mark as revoked in next vault block."));
+            // Append-only revocation block (does not erase history)
+            store.addBlock(chain, {
+                type: "vault",
+                content: opts.key,
+                tags: ["revoked", opts.key],
+                revoked: true,
+                key_id: opts.key,
+            });
+            console.log(chalk.yellow(`⚠ Revoked secret: ${opts.key}`));
+            console.log(chalk.gray("Note: append-only chain; historical encrypted blocks remain on disk."));
             break;
         }
         default:

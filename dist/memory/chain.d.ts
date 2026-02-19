@@ -6,6 +6,7 @@ export interface BlockData {
     provider?: string;
     tokens_used?: number;
     encrypted?: string;
+    revoked?: boolean;
     iv?: string;
     key_id?: string;
     schema?: string;
