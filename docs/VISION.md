@@ -253,3 +253,56 @@ Co budujemy jako pierwsze?
 ---
 
 *Wizja zaakceptowana - stanowi kierunek rozwoju projektu.*
+
+---
+
+## 🎯 Core Memphis v1 - Ostateczna definicja
+
+Jedyna funkcja: `memphis decide`
+
+### UX Spec v1
+
+**1️⃣ Najkrótsza forma:**
+```
+memphis decide "Offline zamiast cloud"
+```
+
+**2️⃣ Pełna forma:**
+```
+memphis decide "Offline zamiast cloud" -r "privacy + sovereignty"
+```
+
+---
+
+## 🏗️ Zasady v1 (twarde)
+
+### 1) projectPath jako hint, nie prawda
+- `projectPath = cwd`
+- Opcjonalnie `gitRoot` (jeśli wykryty)
+
+### 2) Minimalny payload, bogate metadane
+- title, reasoning, mode, confidence, createdAt, decisionId/recordId
+- Metadata: projectPath, gitRoot, hostname, source
+
+### 3) Zero LLM w decide
+- LLM tylko w reflection, osobno
+- decide <100ms
+
+### 4) Jedna komenda = jeden block (append-only)
+- Rewizje = nowy block z supersedes
+
+---
+
+## ⚡ Auto-detect v1
+```
+projectPath = process.cwd()
+gitRoot = git rev-parse --show-toplevel || null
+```
+
+---
+
+## 🗂️ Architektura: Global ledger + auto-tag
+```
+~/.memphis (global ledger)
+  └── decisions/
+```
