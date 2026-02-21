@@ -2,34 +2,90 @@
  * Memphis TUI – Dashboard Screen
  */
 import type { Store } from "../../memory/store.js";
+import type { MemphisConfig } from "../../config/loader.js";
 import { truncate, formatDate } from "../helpers.js";
+import { buildStatusReport, type StatusReport } from "../../core/status.js";
 
-export function renderDashboard(store: Store): string {
-  const chains = store.listChains();
+export function renderDashboard(store: Store, config: MemphisConfig): string {
+  const report = buildStatusReport(store, config);
 
   let content = `{bold}{cyan}⚡ Dashboard{/cyan}{/bold}\n\n`;
   content += `Witaj w Memphis! Twój lokalny mózg AI.\n\n`;
 
-  if (chains.length === 0) {
-    content += `{yellow}Brak łańcuchów pamięci. Zacznij od dodania wpisu do dziennika!{/yellow}\n`;
+  // Chains with health
+  content += `{bold}Łańcuchy pamięci:{/bold}\n\n`;
+  if (report.chains.length === 0) {
+    content += `{yellow}Brak łańcuchów pamięci.{/yellow}\n`;
   } else {
-    content += `{bold}Łańcuchy pamięci:{/bold}\n\n`;
-    for (const chain of chains) {
-      const stats = store.getChainStats(chain);
-      content += `{cyan}▸ ${chain}{/cyan}\n`;
-      content += `    Bloki:  ${stats.blocks}\n`;
-      content += `    Pierwszy: ${formatDate(stats.first)}\n`;
-      content += `    Ostatni:  ${formatDate(stats.last)}\n\n`;
+    for (const chain of report.chains) {
+      let healthIcon: string;
+      let healthColor: string;
+      switch (chain.health) {
+        case "ok":
+          healthIcon = "✓";
+          healthColor = "green";
+          break;
+        case "broken":
+          healthIcon = "✗";
+          healthColor = "red";
+          break;
+        case "empty":
+          healthIcon = "·";
+          healthColor = "gray";
+          break;
+      }
+      content += `{cyan}▸ ${chain.name}{/cyan} ${healthColor}${healthIcon}{/${healthColor}} (${chain.blocks} blocks)\n`;
+      if (chain.health === "broken" && chain.broken_at !== undefined) {
+        content += `    {red}broken at block ${chain.broken_at}{/red}\n`;
+      }
+      if (chain.last) {
+        content += `    Ostatni: ${formatDate(chain.last)}\n`;
+      }
+      content += `\n`;
     }
   }
 
-  content += `\n{bold}Ostatnia aktywność:{/bold}\n`;
-  for (const chain of chains.slice(0, 3)) {
-    const blocks = store.readChain(chain);
-    if (blocks.length > 0) {
-      const last = blocks[blocks.length - 1];
-      content += `  {gray}•{/gray} ${chain}: ${truncate(last.data?.content ?? "", 60)}\n`;
+  // Vault
+  content += `{bold}Vault:{/bold}\n`;
+  if (report.vault.health === "ok") {
+    content += `{green}✓{/green} ${report.vault.blocks} kluczy\n`;
+  } else if (report.vault.health === "not_initialized") {
+    content += `{yellow}✗ nie zainicjowany{/yellow}\n`;
+  } else {
+    content += `{red}✗ uszkodzony{/red}\n`;
+  }
+  content += `\n`;
+
+  // Providers
+  content += `{bold}Providers:{/bold}\n`;
+  if (report.providers.length === 0) {
+    content += `{gray}Brak skonfigurowanych{/gray}\n`;
+  } else {
+    for (const p of report.providers) {
+      let statusColor = p.health === "ready" ? "green" : "yellow";
+      let statusIcon = p.health === "ready" ? "✓" : "⚠";
+      content += `${p.name} (${p.model || "?"}) {${statusColor}${statusIcon}{/${statusColor}}\n`;
     }
+  }
+  content += `\n`;
+
+  // Recent
+  content += `{bold}Ostatnia aktywność:{/bold}\n`;
+  if (report.recent.length === 0) {
+    content += `{gray}Brak wpisów{/gray}\n`;
+  } else {
+    for (const r of report.recent) {
+      const time = new Date(r.timestamp).toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
+      content += `  {gray}${time}{/gray} ${r.chain} ${truncate(r.content, 50)}\n`;
+    }
+  }
+
+  // Overall status
+  content += `\n{bold}Status:{/bold} `;
+  if (report.ok) {
+    content += `{green}OK{/green}\n`;
+  } else {
+    content += `{red}Problemy{/red}\n`;
   }
 
   return content;

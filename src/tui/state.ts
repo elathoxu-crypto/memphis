@@ -10,6 +10,8 @@ export type ScreenName =
   | "vault"
   | "recall"
   | "ask"
+  | "decisions"
+  | "summary"
   | "openclaw"
   | "cline"
   | "offline"
@@ -21,6 +23,8 @@ export const SCREEN_NAMES: ScreenName[] = [
   "vault",
   "recall",
   "ask",
+  "decisions",
+  "summary",
   "openclaw",
   "cline",
   "offline",
@@ -34,6 +38,8 @@ export const KEY_TO_SCREEN: Record<string, ScreenName> = {
   "3": "vault",
   "4": "recall",
   "5": "ask",
+  "0": "decisions",
+  "s": "summary",
   "6": "openclaw",
   "7": "cline",
   "8": "offline",
@@ -47,6 +53,8 @@ export const SCREEN_LABELS: Record<ScreenName, string> = {
   vault:     " Vault",
   recall:    " Recall",
   ask:       " Ask",
+  decisions: " Decisions",
+  summary:   " Summary",
   openclaw:  " OpenClaw",
   cline:     " Cline",
   offline:   " Offline",

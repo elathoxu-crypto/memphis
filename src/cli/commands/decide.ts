@@ -74,7 +74,7 @@ export async function decideCommand(title: string, opts: DecideOptions) {
     evidence: opts.mode === "inferred" ? { refs: splitPipe(opts.evidenceRefs), note: opts.evidenceNote } : undefined,
   });
 
-  const block = store.addBlock("decisions", {
+  const block = await store.appendBlock("decisions", {
     type: "decision",
     content: JSON.stringify(decision),
     tags: ["decision", decision.mode, decision.scope, decision.status, ...tags].filter(Boolean),

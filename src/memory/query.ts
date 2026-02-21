@@ -21,15 +21,15 @@ export function queryBlocks(store: Store, opts: QueryOptions): Block[] {
   if (opts.keyword) {
     const kw = opts.keyword.toLowerCase();
     results = results.filter(b =>
-      b.data.content.toLowerCase().includes(kw) ||
-      b.data.tags.some(t => t.toLowerCase().includes(kw))
+      (b.data.content?.toLowerCase().includes(kw) ?? false) ||
+      (b.data.tags?.some(t => t.toLowerCase().includes(kw)) ?? false)
     );
   }
 
   if (opts.tag) {
     const tag = opts.tag.toLowerCase();
     results = results.filter(b =>
-      b.data.tags.some(t => t.toLowerCase() === tag)
+      (b.data.tags?.some(t => t.toLowerCase() === tag) ?? false)
     );
   }
 

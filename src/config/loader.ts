@@ -1,7 +1,16 @@
 import { readFileSync, existsSync } from "node:fs";
 import { parse } from "yaml";
 import { z } from "zod";
+import { homedir } from "node:os";
 import { DEFAULT_CONFIG, CONFIG_PATH } from "./defaults.js";
+
+// Helper to resolve ~ in paths
+function resolvePath(path: string): string {
+  if (path.startsWith("~/") || path === "~") {
+    return path.replace("~", homedir());
+  }
+  return path;
+}
 
 // Config schema validation
 const ProviderSchema = z.object({
@@ -56,6 +65,12 @@ export function loadConfig(): MemphisConfig {
 
   // Resolve env vars in api_key
   const merged = deepMerge(DEFAULT_CONFIG, fileConfig) as MemphisConfig;
+  
+  // Resolve ~ in memory.path
+  if (merged.memory?.path) {
+    merged.memory.path = resolvePath(merged.memory.path);
+  }
+  
   if (merged.providers) {
     for (const key of Object.keys(merged.providers)) {
       const provider = merged.providers[key];
