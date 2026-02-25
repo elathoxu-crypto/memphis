@@ -170,6 +170,7 @@ export interface AskOptions {
   noSummaries?: boolean; // disable summaries
   summariesMax?: number; // max summaries to include (default: 2)
   explainContext?: boolean; // print why context was built this way
+  vaultPassword?: string; // password for vault decryption
 }
 
 export interface AskContextHit {
@@ -400,6 +401,7 @@ export async function askWithContext(
     noSummaries = false,
     summariesMax = 2,
     explainContext = false,
+    vaultPassword,
   } = opts;
 
   // Step 1: Decide whether to use summaries
@@ -450,7 +452,7 @@ export async function askWithContext(
   // Step 4: Get provider
   let providerResult;
   try {
-    providerResult = await selectProvider(provider, includeVault);
+    providerResult = await selectProvider(provider, includeVault, vaultPassword);
   } catch (err) {
     // No provider - return fallback with recall results
     return {

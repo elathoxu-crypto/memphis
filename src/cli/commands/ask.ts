@@ -36,6 +36,7 @@ export async function askCommand(question: string, options?: {
     noSummaries: options?.noSummaries === true,
     summariesMax: options?.summariesMax || 2,
     explainContext: options?.explainContext,
+    vaultPassword: options?.vaultPassword || process.env.VAULT_PASSWORD,
   };
 
   // Pass vault password via special option (not in AskOptions interface)
