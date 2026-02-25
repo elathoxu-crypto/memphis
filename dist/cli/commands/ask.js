@@ -1,120 +1,96 @@
 import chalk from "chalk";
 import { Store } from "../../memory/store.js";
 import { loadConfig } from "../../config/loader.js";
-import { queryBlocks } from "../../memory/query.js";
-import { log } from "../../utils/logger.js";
-import { OpenRouterProvider } from "../../providers/openrouter.js";
-import { OllamaProvider } from "../../providers/ollama.js";
-import { OpenAIProvider } from "../../providers/openai.js";
+import { askWithContext } from "../../core/ask.js";
+import { checkAndSaveDecision } from "../../core/decision-detector.js";
 import { memphis } from "../../agents/logger.js";
-export async function askCommand(question) {
+export async function askCommand(question, options) {
     const config = loadConfig();
     const store = new Store(config.memory.path);
-    // Search memory for relevant context
-    const keywords = question.toLowerCase().split(/\s+/);
-    let results = [];
-    for (const kw of keywords) {
-        if (kw.length < 3)
-            continue;
-        const found = queryBlocks(store, { keyword: kw, limit: 5 });
-        results.push(...found);
-    }
-    // Deduplicate by hash
-    const seen = new Set();
-    results = results.filter(b => {
-        if (seen.has(b.hash))
-            return false;
-        seen.add(b.hash);
-        return true;
-    });
-    // Build context from memory
-    const contextBlocks = results.slice(0, 10);
-    const context = contextBlocks
-        .map(b => `[${b.chain}#${b.index}] ${b.data.content}`)
-        .join("\n\n");
-    // Find first configured provider (Ollama > OpenAI > OpenRouter)
-    let provider = null;
-    let providerName = "";
-    let model = "";
-    // Try Ollama first (local, free)
-    const ollamaConfig = config.providers?.ollama;
-    if (ollamaConfig) {
-        provider = new OllamaProvider();
-        providerName = "Ollama";
-        model = ollamaConfig?.model || "llama3.1";
-    }
-    // Try OpenAI
-    if (!provider) {
-        const openaiConfig = config.providers?.openai;
-        if (openaiConfig?.api_key || process.env.OPENAI_API_KEY) {
-            provider = new OpenAIProvider();
-            providerName = "OpenAI";
-            model = openaiConfig?.model || "gpt-4o";
+    const askOptions = {
+        question,
+        provider: options?.provider || options?.model, // model flag maps to provider (ollama)
+        includeVault: options?.includeVault || options?.useVault || false,
+        topK: options?.top || 8,
+        since: options?.since,
+        noSave: options?.noSave || false,
+        json: options?.json || false,
+        // For boolean flags with --no- prefix, check if explicitly set
+        preferSummaries: options?.preferSummaries === true,
+        noSummaries: options?.noSummaries === true,
+        summariesMax: options?.summariesMax || 2,
+        explainContext: options?.explainContext,
+    };
+    // Pass vault password via special option (not in AskOptions interface)
+    const vaultPassword = options?.vaultPassword || process.env.VAULT_PASSWORD;
+    try {
+        const startTime = Date.now();
+        const result = await askWithContext(store, askOptions);
+        const duration = (Date.now() - startTime) / 1000;
+        if (options?.json) {
+            // JSON output
+            console.log(JSON.stringify({
+                answer: result.answer,
+                provider: result.provider,
+                model: result.model,
+                tokens_used: result.tokens_used,
+                context: result.context,
+            }, null, 2));
         }
-    }
-    // Try OpenRouter as fallback
-    if (!provider) {
-        const openrouterConfig = config.providers?.openrouter;
-        if (openrouterConfig?.api_key || process.env.OPENROUTER_API_KEY) {
-            provider = new OpenRouterProvider(openrouterConfig?.api_key);
-            providerName = "OpenRouter";
-            model = openrouterConfig?.model || "anthropic/claude-sonnet-4";
-        }
-    }
-    if (provider && provider.isConfigured()) {
-        try {
-            const messages = [
-                {
-                    role: "system",
-                    content: `You are Memphis, an AI assistant with access to the user's memory chains. 
-Use the provided context from memory to answer the question. If the context doesn't contain 
-relevant information, say so honestly. Be concise and helpful.`,
-                },
-            ];
-            if (context) {
-                messages.push({
-                    role: "system",
-                    content: `Relevant memory context:\n${context}`,
-                });
+        else {
+            // Human readable output
+            if (result.provider === "none") {
+                // No provider - show recall results only
+                console.log(chalk.yellow("⚠ No LLM provider available. Showing recall results:\n"));
+                for (let i = 0; i < result.context.hits.length; i++) {
+                    const hit = result.context.hits[i];
+                    console.log(chalk.gray(`[${i + 1}] ${hit.chain}#${String(hit.index).padStart(6, "0")} (score=${hit.score})`));
+                    console.log(`    ${hit.snippet}`);
+                    console.log();
+                }
             }
-            messages.push({
-                role: "user",
-                content: question,
-            });
-            console.log(chalk.gray(`🤔 Consulting ${providerName} (${model})...\n`));
-            const startTime = Date.now();
-            const response = await provider.chat(messages, {
-                model: model,
-                temperature: 0.7,
-            });
-            const duration = (Date.now() - startTime) / 1000;
-            console.log(chalk.white(response.content));
-            if (response.usage) {
-                console.log(chalk.gray(`\nTokens used: ${response.usage.total_tokens}`));
+            else {
+                // Show answer
+                console.log(chalk.white(result.answer));
+                // Show context info
+                console.log(chalk.gray(`\n📚 Context: ${result.context.hits.length} hits`));
+                console.log(chalk.gray(`🤖 Provider: ${result.provider} (${result.model})`));
+                if (result.tokens_used) {
+                    console.log(chalk.gray(`💬 Tokens: ${result.tokens_used}`));
+                }
+                if (!askOptions.noSave && result.savedBlock) {
+                    console.log(chalk.gray(`💾 Saved to: ${result.savedBlock.chain}#${String(result.savedBlock.index).padStart(6, "0")}`));
+                    // Check for decision (async, non-blocking)
+                    try {
+                        const decisionBlock = await checkAndSaveDecision(store, result.savedBlock);
+                        if (decisionBlock) {
+                            console.log(chalk.gray(`\n📋 Decision detected! Saved to decision#${String(decisionBlock.index).padStart(6, "0")}`));
+                        }
+                    }
+                    catch (err) {
+                        // Non-blocking - decision detection is best-effort
+                    }
+                }
+                // Show context hits (compact)
+                if (result.context.hits.length > 0) {
+                    console.log(chalk.gray("\nContext hits:"));
+                    for (let i = 0; i < result.context.hits.length; i++) {
+                        const hit = result.context.hits[i];
+                        const tags = hit.tags.length > 0 ? ` [${hit.tags.slice(0, 2).join(", ")}]` : "";
+                        console.log(chalk.gray(`  ${i + 1}. ${hit.chain}#${String(hit.index).padStart(6, "0")}${tags}`));
+                    }
+                }
             }
-            // Log to unified logger
-            memphis.api(providerName.toLowerCase(), "ok", duration);
-            return;
         }
-        catch (err) {
-            console.log(chalk.yellow(`⚠ ${providerName} error: ${err}. Falling back to memory search.\n`));
-            memphis.error(providerName, String(err));
+        // Log to unified logger
+        if (result.provider !== "none") {
+            memphis.api(result.provider.toLowerCase(), "ok", duration);
         }
     }
-    // Fallback: display memory results without LLM
-    if (results.length === 0) {
-        log.warn("No relevant blocks found in memory.");
-        log.info("Tip: add context with 'memphis journal \"...\"'");
-        return;
-    }
-    log.info(`Found ${results.length} relevant blocks:`);
-    for (const block of results.slice(0, 10)) {
-        console.log();
-        log.block(block.chain, block.index, block.hash);
-        console.log(`  ${block.data.content.slice(0, 200)}`);
-        if (block.data.tags.length > 0) {
-            console.log(`  tags: ${block.data.tags.join(", ")}`);
-        }
+    catch (err) {
+        console.log(chalk.red(`❌ Error: ${err}`));
+        memphis.error("ask", String(err));
+        process.exit(1);
     }
 }
 //# sourceMappingURL=ask.js.map

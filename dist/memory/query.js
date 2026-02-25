@@ -7,12 +7,12 @@ export function queryBlocks(store, opts) {
     }
     if (opts.keyword) {
         const kw = opts.keyword.toLowerCase();
-        results = results.filter(b => b.data.content.toLowerCase().includes(kw) ||
-            b.data.tags.some(t => t.toLowerCase().includes(kw)));
+        results = results.filter(b => (b.data.content?.toLowerCase().includes(kw) ?? false) ||
+            (b.data.tags?.some(t => t.toLowerCase().includes(kw)) ?? false));
     }
     if (opts.tag) {
         const tag = opts.tag.toLowerCase();
-        results = results.filter(b => b.data.tags.some(t => t.toLowerCase() === tag));
+        results = results.filter(b => (b.data.tags?.some(t => t.toLowerCase() === tag) ?? false));
     }
     if (opts.type) {
         results = results.filter(b => b.data.type === opts.type);

@@ -1,23 +1,23 @@
 import { Store } from "../../memory/store.js";
 import { loadConfig } from "../../config/loader.js";
-import { queryBlocks } from "../../memory/query.js";
-import { log } from "../../utils/logger.js";
+import { recall } from "../../core/recall.js";
 import { recallDecisionsV1, formatDecisionOneLiner } from "../../decision/recall-v1.js";
-export async function recallCommand(scopeOrKeyword, query, options) {
+import chalk from "chalk";
+export async function recallCommand(scopeOrKeyword, queryText, options) {
     const config = loadConfig();
     const store = new Store(config.memory.path);
-    // New: decisions recall
+    const limit = options.limit ? parseInt(options.limit) : 20;
+    // Handle "decisions" specially
     if (scopeOrKeyword === "decisions") {
-        const limit = options.limit ? parseInt(options.limit) : 15;
         const results = recallDecisionsV1(store, {
-            query,
+            query: queryText,
             limit,
             since: options.since,
             projectOnly: !!options.project,
             allProjects: !!options.all,
         });
         if (results.length === 0) {
-            log.warn(`No decisions found${query ? ` for "${query}"` : ""}`);
+            console.log(chalk.yellow(`No decisions found${queryText ? ` for "${queryText}"` : ""}`));
             return;
         }
         for (const r of results) {
@@ -29,27 +29,63 @@ export async function recallCommand(scopeOrKeyword, query, options) {
         }
         return;
     }
-    // Default: legacy recall by keyword
-    const keyword = scopeOrKeyword;
-    const results = queryBlocks(store, {
-        keyword,
+    // Build recall query
+    const recallQuery = {
+        text: scopeOrKeyword || queryText,
         chain: options.chain,
+        type: options.type,
         tag: options.tag,
-        limit: options.limit ? parseInt(options.limit) : 20,
-    });
-    if (results.length === 0) {
-        log.warn(`Nothing found for "${keyword}"`);
+        since: options.since,
+        until: options.until,
+        limit,
+        includeVault: options.includeVault,
+    };
+    const result = recall(store, recallQuery);
+    // JSON output
+    if (options.json) {
+        console.log(JSON.stringify({
+            query: result.query,
+            hits: result.hits.map(h => ({
+                chain: h.chain,
+                index: h.index,
+                timestamp: h.timestamp,
+                type: h.type,
+                tags: h.tags,
+                score: h.score,
+                snippet: h.snippet,
+            })),
+        }, null, 2));
         return;
     }
-    log.info(`${results.length} blocks matching "${keyword}":`);
-    for (const block of results) {
-        console.log();
-        log.block(block.chain, block.index, block.hash);
-        console.log(`  ${block.timestamp}`);
-        console.log(`  ${block.data.content.slice(0, 300)}`);
-        if (block.data.tags.length > 0) {
-            console.log(`  tags: ${block.data.tags.join(", ")}`);
+    // Human output
+    if (result.hits.length === 0) {
+        console.log(chalk.yellow(`Nothing found for "${recallQuery.text || "(all)"}"`));
+        return;
+    }
+    console.log(chalk.bold(`\n🔍 ${result.hits.length} results:\n`));
+    for (const hit of result.hits) {
+        const time = new Date(hit.timestamp).toLocaleString("pl-PL", {
+            month: "short", day: "numeric", hour: "2-digit", minute: "2-digit"
+        });
+        // Color by type
+        const getTypeColor = (t) => {
+            if (t === "ask")
+                return chalk.cyan;
+            if (t === "journal")
+                return chalk.green;
+            if (t === "decision")
+                return chalk.magenta;
+            if (t === "system")
+                return chalk.yellow;
+            return chalk.dim;
+        };
+        const typeColorFn = getTypeColor(hit.type);
+        console.log(`${chalk.gray(time)} ${chalk.cyan(hit.chain)} ${typeColorFn(hit.type)} ${chalk.gray("[")}${hit.score}${chalk.gray("]")}`);
+        console.log(`  ${hit.snippet}`);
+        if (hit.tags.length > 0) {
+            console.log(chalk.gray(`  tags: ${hit.tags.join(", ")}`));
         }
+        console.log();
     }
 }
 //# sourceMappingURL=recall.js.map

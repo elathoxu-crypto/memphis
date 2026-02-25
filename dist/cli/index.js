@@ -1,15 +1,56 @@
 #!/usr/bin/env node
+// Terminal hard reset (combines both cleanups into one)
+function cleanupTerminalHard() {
+    if (!process.stdin.isTTY)
+        return;
+    try {
+        process.stdout.write("\x1b[?1049l\x1b[0m\x1b[?25h");
+    }
+    catch { }
+    try {
+        process.stdin.setRawMode(false);
+    }
+    catch { }
+    try {
+        process.stdin.pause();
+    }
+    catch { }
+}
+// Debug: dump active handles
+function dumpActiveHandles(label = "final") {
+    try {
+        const handles = process._getActiveHandles?.() ?? [];
+        const requests = process._getActiveRequests?.() ?? [];
+        const hNames = handles.map((h) => h?.constructor?.name ?? "Unknown");
+        const rNames = requests.map((r) => r?.constructor?.name ?? "Unknown");
+        console.error("[DEBUG] Active handles (" + label + "):", hNames.slice(0, 5));
+        console.error("[DEBUG] Active requests (" + label + "):", rNames.slice(0, 5));
+        console.error("[DEBUG] stdin: isTTY=" + process.stdin.isTTY + " readable=" + process.stdin.readable);
+    }
+    catch (e) {
+        console.error("[DEBUG] Error:", e);
+    }
+}
+// Register cleanup handlers
+process.on("exit", cleanupTerminalHard);
+process.on("SIGINT", () => { cleanupTerminalHard(); process.exit(130); });
+process.on("SIGTERM", () => { cleanupTerminalHard(); process.exit(143); });
 import { Command } from "commander";
+import { Store } from "../memory/store.js";
+import { loadConfig } from "../config/loader.js";
 import { journalCommand } from "./commands/journal.js";
 import { askCommand } from "./commands/ask.js";
 import { recallCommand } from "./commands/recall.js";
 import { statusCommand } from "./commands/status.js";
 import { initCommand } from "./commands/init.js";
 import { vaultCommand } from "./commands/vault.js";
+import { verifyCommand } from "./commands/verify.js";
+import { repairCommand } from "./commands/repair.js";
+import { reviseCommand } from "./commands/revise.js";
 import { agentCommand } from "./commands/agent.js";
 import { decideCommand } from "./commands/decide.js";
 import { showCommand } from "./commands/show.js";
-import { reviseCommand } from "./commands/revise.js";
+import { botCommand } from "./commands/bot.js";
 import { runOpenClawCommands } from "../bridges/openclaw.js";
 import { MemphisTUI } from "../tui/index.js";
 const program = new Command();
@@ -28,19 +69,87 @@ program
     .action(journalCommand);
 program
     .command("ask <question>")
-    .description("Ask Memphis (searches memory, later: LLM)")
-    .action(askCommand);
+    .description("Ask Memphis (uses recall context + LLM)")
+    .option("-v, --use-vault", "Use API keys from vault (requires VAULT_PASSWORD env var)")
+    .option("-p, --vault-password <password>", "Vault password (or use VAULT_PASSWORD env)")
+    .option("-m, --model <model>", "Model to use (forces Ollama)")
+    .option("--provider <provider>", "Provider: ollama, openai, openrouter, codex, openclaw")
+    .option("-t, --top <n>", "Number of context hits (default: 8)", "8")
+    .option("--since <date>", "Only recall blocks newer than date (YYYY-MM-DD)")
+    .option("--include-vault", "Include vault blocks in recall search")
+    .option("--no-save", "Don't save the answer to chain")
+    .option("-j, --json", "Output JSON with answer + context")
+    .option("--prefer-summaries", "Prefer summary context (for overview questions)")
+    .option("--no-summaries", "Disable summary context")
+    .option("--summaries <n>", "Max summaries to include (default: 2)", "2")
+    .option("--explain-context", "Show why context was built this way")
+    .action((question, options) => {
+    askCommand(question, {
+        useVault: options.useVault,
+        vaultPassword: options.vaultPassword || process.env.VAULT_PASSWORD,
+        model: options.model,
+        provider: options.provider,
+        top: parseInt(options.top) || 8,
+        since: options.since,
+        includeVault: options.includeVault,
+        noSave: options.noSave,
+        json: options.json,
+        preferSummaries: options.preferSummaries,
+        noSummaries: options.noSummaries,
+        summariesMax: parseInt(options.summaries) || 2,
+        explainContext: options.explainContext,
+    });
+});
 program
-    .command("recall <keyword>")
-    .description("Search memory by keyword")
+    .command("recall <scopeOrKeyword> [query]")
+    .description("Recall memory (keyword search) or decisions")
     .option("-c, --chain <chain>", "Search specific chain")
+    .option("-t, --type <type>", "Filter by type (journal/ask/decision/system)")
     .option("-l, --limit <n>", "Max results")
     .option("--tag <tag>", "Filter by tag")
-    .action(recallCommand);
+    .option("--since <time>", "Time window, e.g. 14d, 2w, 2026-01-01")
+    .option("--until <time>", "Until date")
+    .option("--project", "Current project only (for decisions)")
+    .option("--all", "All projects (for decisions)")
+    .option("-j, --json", "Output JSON")
+    .option("--include-vault", "Include vault in search")
+    .action((scopeOrKeyword, query, options) => {
+    recallCommand(scopeOrKeyword, query, options);
+});
 program
     .command("status")
     .description("Show Memphis status")
-    .action(statusCommand);
+    .option("-j, --json", "Output JSON")
+    .option("-v, --verbose", "Show detailed info")
+    .action((opts) => {
+    statusCommand({ json: opts.json, verbose: opts.verbose });
+});
+program
+    .command("verify")
+    .description("Verify chain integrity")
+    .option("-c, --chain <chain>", "Verify specific chain only")
+    .option("-j, --json", "Output JSON")
+    .option("-v, --verbose", "Show detailed errors")
+    .action((opts) => {
+    verifyCommand({
+        chain: opts.chain,
+        json: opts.json,
+        verbose: opts.verbose,
+    });
+});
+program
+    .command("repair")
+    .description("Repair chain integrity (safe mode - quarantine damaged blocks)")
+    .option("-c, --chain <chain>", "Repair specific chain only")
+    .option("-d, --dry-run", "Show what would be done without making changes")
+    .option("-j, --json", "Output JSON")
+    .action((opts) => {
+    repairCommand({
+        chain: opts.chain,
+        dryRun: opts.dryRun,
+        json: opts.json,
+    });
+});
 program
     .command("decide")
     .description("Record a decision (conscious or inferred)")
@@ -114,6 +223,11 @@ program
     }
 });
 program
+    .command("bot")
+    .description("Run Telegram bot for Memphis")
+    .argument("[action]", "start | webhook", "start")
+    .action(botCommand);
+program
     .command("tui")
     .description("Launch the terminal UI")
     .option("-s, --screen <screen>", "Open specific screen (dashboard, journal, vault, recall, ask, openclaw, settings)")
@@ -140,5 +254,45 @@ program
     }
     tui.run();
 });
+// Summarize command
+import { autosummarize, shouldTriggerAutosummary } from "../core/autosummarizer.js";
+program
+    .command("summarize")
+    .description("Create or check autosummary")
+    .option("--dry-run", "Show what would be summarized without saving")
+    .option("--force", "Force summary creation regardless of block count")
+    .option("--llm", "Use LLM for narrative summary (requires Ollama)")
+    .option("--blocks <n>", "Trigger after N new blocks (default: 50)")
+    .action(async (opts) => {
+    const config = loadConfig();
+    const store = new Store(config.memory.path);
+    const threshold = parseInt(opts.blocks) || 50;
+    if (!opts.force && !shouldTriggerAutosummary(store, threshold)) {
+        console.log(`Not enough new blocks (need ${threshold})`);
+        console.log(`Use --force to create anyway`);
+        return;
+    }
+    try {
+        const result = await autosummarize(store, {
+            useLLM: opts.llm,
+            dryRun: opts.dryRun,
+        });
+        if (opts.dryRun) {
+            console.log("=== DRY RUN - Summary that would be created ===");
+            console.log(result.summary);
+        }
+        else if (result.block) {
+            console.log(`✓ Summary created: summary#${String(result.block.index).padStart(6, "0")}`);
+            console.log(`  Range: ${result.summary.range.from} → ${result.summary.range.to}`);
+            console.log(`  Stats: ${result.summary.stats.journal} journal, ${result.summary.stats.ask} ask, ${result.summary.stats.decisions} decisions`);
+        }
+    }
+    catch (err) {
+        console.error("Summary failed:", err);
+    }
+});
 program.parse();
+process.on("exit", () => dumpActiveHandles("exit"));
+process.on("SIGINT", () => { dumpActiveHandles("SIGINT"); process.exit(130); });
+process.on("SIGTERM", () => { dumpActiveHandles("SIGTERM"); process.exit(143); });
 //# sourceMappingURL=index.js.map

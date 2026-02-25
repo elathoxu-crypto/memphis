@@ -1,10 +1,37 @@
 export interface BlockData {
-    type: "journal" | "build" | "adr" | "ops" | "ask" | "system" | "vault" | "credential" | "decision";
+    type: "journal" | "build" | "adr" | "ops" | "ask" | "system" | "vault" | "credential" | "decision" | "project_task" | "break_task";
     content: string;
     tags: string[];
     agent?: string;
     provider?: string;
     tokens_used?: number;
+    context_refs?: Array<{
+        chain: string;
+        index: number;
+        score: number;
+    }>;
+    source_ref?: {
+        chain: string;
+        index: number;
+        hash: string;
+    };
+    decision_status?: "active" | "superseded" | "retracted";
+    supersedes?: number;
+    summary_version?: string;
+    summary_range?: {
+        chain: string;
+        from: number;
+        to: number;
+    };
+    summary_refs?: Array<{
+        chain: string;
+        index: number;
+        hash: string;
+    }>;
+    data?: Record<string, unknown>;
+    task?: string;
+    project?: string;
+    description?: string;
     encrypted?: string;
     revoked?: boolean;
     iv?: string;

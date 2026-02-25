@@ -1,6 +1,6 @@
 import { sha256 } from "../utils/hash.js";
 // SOUL - Self-Organizing Universal Ledger Rules
-const ALLOWED_TYPES = ["journal", "build", "adr", "ops", "ask", "system", "vault", "credential"];
+const ALLOWED_TYPES = ["journal", "build", "adr", "ops", "ask", "system", "vault", "credential", "decision", "project_task", "break_task", "break_work", "project_task_complete"];
 const GENESIS_HASH = "0".repeat(64);
 const SOUL_VERSION = "1.0.0";
 /**
@@ -29,16 +29,25 @@ export function validateBlockAgainstSoul(block, prevBlock) {
             errors.push(`Timestamp ${block.timestamp} is before previous block ${prevBlock.timestamp}`);
         }
     }
-    // 5. Validate data.content
-    if (!block.data.content || typeof block.data.content !== "string" || block.data.content.trim().length === 0) {
-        errors.push("Content must be non-empty string");
+    // 5. Validate data.content - support multiple formats:
+    // - New format: data.content (string)
+    // - Legacy format 1: data.data (object)
+    // - Legacy format 2: data.task (flat structure with project/task fields)
+    const hasContent = block.data.content && typeof block.data.content === "string" && block.data.content.trim().length > 0;
+    const hasLegacyData = block.data.data && typeof block.data.data === "object";
+    const hasFlatData = block.data.task && typeof block.data.task === "string";
+    if (!hasContent && !hasLegacyData && !hasFlatData) {
+        errors.push("Content must be non-empty string or have legacy data object");
     }
     // 6. Validate data.type
     if (!ALLOWED_TYPES.includes(block.data.type)) {
         errors.push(`Invalid type: ${block.data.type}. Must be one of: ${ALLOWED_TYPES.join(", ")}`);
     }
-    // 7. Validate data.tags is array
-    if (!Array.isArray(block.data.tags)) {
+    // 7. Validate data.tags is array - be lenient for legacy blocks
+    if (!block.data.tags) {
+        // Legacy blocks might not have tags - that's OK for now
+    }
+    else if (!Array.isArray(block.data.tags)) {
         errors.push("Tags must be an array");
     }
     // 8. Validate index sequentiality

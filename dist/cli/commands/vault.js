@@ -70,7 +70,7 @@ export async function vaultCommand(opts) {
             }
             const password = await resolveVaultPassword(opts);
             const encrypted = encrypt(opts.value, password);
-            store.addBlock(chain, {
+            await store.appendBlock(chain, {
                 type: "vault",
                 content: opts.key,
                 tags: ["secret", opts.key],
@@ -138,7 +138,7 @@ export async function vaultCommand(opts) {
                 return;
             }
             // Append-only revocation block (does not erase history)
-            store.addBlock(chain, {
+            await store.appendBlock(chain, {
                 type: "vault",
                 content: opts.key,
                 tags: ["revoked", opts.key],

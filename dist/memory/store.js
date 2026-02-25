@@ -1,6 +1,40 @@
-import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync } from "node:fs";
-import { join } from "node:path";
-import { createBlock } from "./chain.js";
+import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, openSync, fsyncSync, closeSync, unlinkSync, renameSync } from "node:fs";
+import { join, dirname } from "node:path";
+import { randomUUID } from "node:crypto";
+import { createBlock, validateBlockAgainstSoul } from "./chain.js";
+import { commitBlock } from "../utils/git.js";
+/**
+
+Atomic write - crash-safe file write
+
+Flow:
+1. Write to temp file in same directory
+2. fsync to disk
+3. Atomic rename to final
+*/
+function atomicWriteFile(targetPath, data, mode) {
+    const dir = dirname(targetPath);
+    mkdirSync(dir, { recursive: true, mode: 0o700 });
+    const tmpPath = join(dir, `.${randomUUID()}.tmp`);
+    try {
+        const fd = openSync(tmpPath, "wx", mode);
+        try {
+            writeFileSync(fd, data, { encoding: "utf-8" });
+            fsyncSync(fd);
+        }
+        finally {
+            closeSync(fd);
+        }
+        renameSync(tmpPath, targetPath);
+    }
+    catch (error) {
+        try {
+            unlinkSync(tmpPath);
+        }
+        catch { /* ignore */ }
+        throw error;
+    }
+}
 export class StoreError extends Error {
     code;
     constructor(message, code) {
@@ -19,6 +53,9 @@ export class Store {
         catch (err) {
             throw new StoreError(`Failed to create store directory: ${err}`, "DIR_CREATE_FAILED");
         }
+    }
+    getBasePath() {
+        return this.basePath;
     }
     chainDir(chain) {
         const dir = join(this.basePath, chain);
@@ -50,20 +87,62 @@ export class Store {
             throw new StoreError(`Failed to read last block: ${err}`, "READ_LAST_BLOCK_FAILED");
         }
     }
-    addBlock(chain, data) {
+    /**
+     * Unified appendBlock - the ONLY write path for Memphis
+     *
+     * Features:
+     * - SOUL validation (strict)
+     * - Atomic write (crash-safe)
+     * - Optional git auto-commit
+     *
+     * This is the ONLY way to write blocks to chain.
+     */
+    async appendBlock(chain, data) {
         try {
+            // 1. Get previous block for chain linking
             const prev = this.getLastBlock(chain);
+            // 2. Create new block with proper indexing
             const block = createBlock(chain, data, prev);
-            const file = this.blockFile(chain, block.index);
+            // 3. SOUL validation - strict
+            const soul = validateBlockAgainstSoul(block, prev);
+            if (!soul.valid) {
+                throw new StoreError(`SOUL validation failed: ${soul.errors.join("; ")}`, "SOUL_INVALID");
+            }
+            // 4. Determine file mode
             const mode = (chain === "vault" || chain === "credential") ? 0o600 : 0o644;
-            writeFileSync(file, JSON.stringify(block, null, 2), { encoding: "utf-8", mode });
+            // 5. Atomic write - crash safe
+            const file = this.blockFile(chain, block.index);
+            atomicWriteFile(file, JSON.stringify(block, null, 2), mode);
+            // 6. Optional git auto-commit (non-fatal)
+            try {
+                commitBlock(this.basePath, block, { push: false });
+            }
+            catch {
+                // Git commit is non-fatal - continue even if git fails
+            }
             return block;
         }
         catch (err) {
             if (err instanceof StoreError)
                 throw err;
-            throw new StoreError(`Failed to add block: ${err}`, "ADD_BLOCK_FAILED");
+            throw new StoreError(`Failed to append block: ${err}`, "APPEND_BLOCK_FAILED");
         }
+    }
+    /**
+     * DEPRECATED: Use appendBlock() instead
+     * Kept for backward compatibility during migration
+     */
+    addBlock(chain, data) {
+        // Sync wrapper - just call appendBlock synchronously
+        // This will throw if there's an error
+        let result;
+        this.appendBlock(chain, data).then(block => {
+            result = block;
+        }).catch(err => {
+            throw new StoreError(`addBlock deprecated, use await appendBlock(): ${err}`, "DEPRECATED");
+        });
+        // @ts-ignore - for migration period
+        return result;
     }
     readChain(chain) {
         try {

@@ -1,49 +1,100 @@
 import { Store } from "../../memory/store.js";
-import { verifyChain } from "../../memory/chain.js";
+import { buildStatusReport } from "../../core/status.js";
 import { loadConfig } from "../../config/loader.js";
-import { log } from "../../utils/logger.js";
 import chalk from "chalk";
-export async function statusCommand() {
+export async function statusCommand(options = {}) {
     const config = loadConfig();
     const store = new Store(config.memory.path);
+    const report = buildStatusReport(store, config);
+    // JSON output
+    if (options.json) {
+        console.log(JSON.stringify(report, null, 2));
+        process.exit(0);
+    }
+    // Human output
     console.log();
     console.log(chalk.bold("  Memphis 🧠"));
     console.log(chalk.dim("  Local-first AI brain with persistent memory"));
     console.log();
     // Chains
-    const chains = store.listChains();
-    if (chains.length === 0) {
-        log.warn("No chains yet. Start with: memphis journal \"hello world\"");
+    console.log(chalk.bold("  Chains:"));
+    if (report.chains.length === 0) {
+        console.log(chalk.gray("    No chains yet"));
     }
     else {
-        console.log(chalk.bold("  Chains:"));
-        for (const chain of chains) {
-            const blocks = store.readChain(chain);
-            const { valid, broken_at } = verifyChain(blocks);
-            const status = valid
-                ? chalk.green("✓ valid")
-                : chalk.red(`✗ broken at block ${broken_at}`);
-            console.log(`    ${chalk.cyan("⛓")} ${chain} — ${blocks.length} blocks — ${status}`);
+        for (const chain of report.chains) {
+            let status;
+            switch (chain.health) {
+                case "ok":
+                    status = chalk.green(`✓ ${chain.blocks} blocks`);
+                    break;
+                case "broken":
+                    status = chalk.red(`✗ broken at block ${chain.broken_at}`);
+                    break;
+                case "empty":
+                    status = chalk.gray("· empty");
+                    break;
+            }
+            console.log(`    ${chalk.cyan("⛓")} ${chain.name} — ${status}`);
         }
     }
     console.log();
     // Providers
-    const providers = Object.entries(config.providers || {});
-    if (providers.length === 0) {
-        log.warn("No providers configured. Add to ~/.memphis/config.yaml");
+    console.log(chalk.bold("  Providers:"));
+    if (report.providers.length === 0) {
+        console.log(chalk.gray("    No providers configured"));
     }
     else {
-        console.log(chalk.bold("  Providers:"));
-        for (const [name, p] of providers) {
-            // Ollama doesn't need a key - always configured if server is running
-            const isOllama = name === "ollama";
-            const hasKey = p.api_key && p.api_key.length > 0;
-            const status = isOllama || hasKey
-                ? chalk.green("✓ ready")
-                : chalk.red("✗ no key");
-            console.log(`    ${name} — ${p.model || "?"} — ${p.role || "?"} — ${status}`);
+        for (const p of report.providers) {
+            let status;
+            switch (p.health) {
+                case "ready":
+                    status = chalk.green("✓ ready");
+                    break;
+                case "no_key":
+                    status = chalk.yellow("⚠ no key");
+                    break;
+                case "offline":
+                    status = chalk.red("✗ offline");
+                    break;
+                case "error":
+                    status = chalk.red(`✗ ${p.detail || "error"}`);
+                    break;
+            }
+            console.log(`    ${p.name} — ${p.model || "?"} — ${p.role || "?"} — ${status}`);
         }
     }
+    // Vault
+    console.log();
+    console.log(chalk.bold("  Vault:"));
+    let vaultStatus;
+    switch (report.vault.health) {
+        case "ok":
+            vaultStatus = chalk.green(`✓ ${report.vault.blocks} keys`);
+            break;
+        case "not_initialized":
+            vaultStatus = chalk.yellow("✗ not initialized");
+            break;
+        case "broken":
+            vaultStatus = chalk.red("✗ broken");
+            break;
+    }
+    console.log(`    ${vaultStatus}`);
+    // Recent
+    console.log();
+    console.log(chalk.bold("  Recent:"));
+    if (report.recent.length === 0) {
+        console.log(chalk.gray("    No recent blocks"));
+    }
+    else {
+        for (const r of report.recent) {
+            const time = new Date(r.timestamp).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+            console.log(`    ${chalk.gray(time)} ${chalk.cyan(r.chain)} ${chalk.dim(r.type)} ${r.content.substring(0, 40)}...`);
+        }
+    }
+    // Summary
+    console.log();
+    console.log(chalk.bold("  Status:") + (report.ok ? chalk.green(" OK") : chalk.red(" ISSUES")));
     console.log();
 }
 //# sourceMappingURL=status.js.map

@@ -3,7 +3,7 @@
  * Centralised store for all mutable UI state.
  * Screens read and write here; no cross-screen imports needed.
  */
-export type ScreenName = "dashboard" | "journal" | "vault" | "recall" | "ask" | "openclaw" | "cline" | "offline" | "settings";
+export type ScreenName = "dashboard" | "journal" | "vault" | "recall" | "ask" | "decisions" | "summary" | "openclaw" | "cline" | "offline" | "settings";
 export declare const SCREEN_NAMES: ScreenName[];
 /** Maps 1-9 keyboard digit to ScreenName */
 export declare const KEY_TO_SCREEN: Record<string, ScreenName>;

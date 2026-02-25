@@ -15,6 +15,8 @@ import { renderJournalStatic, setupJournalInput } from "./screens/journal.js";
 import { renderVaultStatic, setupVaultInput } from "./screens/vault.js";
 import { renderRecallStatic, setupRecallInput } from "./screens/recall.js";
 import { renderAskStatic, setupAskInput } from "./screens/ask.js";
+import { renderDecisionsStatic, setupDecisionsInput } from "./screens/decisions.js";
+import { renderSummaryStatic, setupSummaryInput } from "./screens/summary.js";
 import { renderOpenClaw, setupOpenClawInput } from "./screens/openclaw.js";
 import { renderCline, setupClineInput } from "./screens/cline.js";
 import { renderOffline, setupOfflineInput } from "./screens/offline.js";
@@ -186,7 +188,7 @@ export class MemphisTUI {
         const onDone = () => this.screen.render();
         switch (name) {
             case "dashboard":
-                this.contentBox.setContent(renderDashboard(this.store));
+                this.contentBox.setContent(renderDashboard(this.store, this.config));
                 break;
             case "journal":
                 this.contentBox.setContent(renderJournalStatic());
@@ -203,6 +205,14 @@ export class MemphisTUI {
             case "ask":
                 this.contentBox.setContent(renderAskStatic(this.state.llmProviderName));
                 setupAskInput(this.store, this.widgets, this.llmProvider, this.state.llmProviderName, this.state.selectedModel, onDone);
+                break;
+            case "decisions":
+                this.contentBox.setContent(renderDecisionsStatic());
+                setupDecisionsInput(this.store, this.widgets, onDone);
+                break;
+            case "summary":
+                this.contentBox.setContent(renderSummaryStatic());
+                setupSummaryInput(this.store, this.widgets, onDone);
                 break;
             case "openclaw":
                 this.contentBox.setContent(renderOpenClaw(this.openclawBridge));
