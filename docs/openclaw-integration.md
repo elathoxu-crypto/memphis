@@ -103,5 +103,22 @@ node dist/cli/index.js init
 
 Po tych krokach `~/.memphis/config.yaml` zostanie wygenerowany od nowa, a `memphis status` powinien pokazać lokalnego providera (Ollama). Jeśli korzystasz z globalnej komendy `memphis`, pamiętaj by po rebuildzie wykonać `npm link` lub uruchamiać CLI przez `node dist/cli/index.js <cmd>`.
 
+⚠️ Jeśli `status` wywala błąd `providers: Invalid input: expected record, received null`, oznacza to że config ma puste pole providers. Napraw ręcznie:
+
+```bash
+cat <<'EOF' > ~/.memphis/config.yaml
+providers:
+  ollama:
+    url: http://localhost:11434
+    model: llama2
+    role: primary
+
+memory:
+  path: ~/.memphis/chains
+  auto_git: false
+  auto_git_push: false
+EOF
+```
+
 ---
 Ta instrukcja powinna być aktualizowana razem z nowymi integracjami. Jeśli Style zyskuje nowe uprawnienia lub ograniczenia, dopisz je tutaj i w README.
