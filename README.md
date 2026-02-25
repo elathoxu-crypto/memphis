@@ -25,6 +25,28 @@ Memphis is a **personal AI brain** that remembers everything you tell it. It's b
 | **Offline-first** | Works without internet (Ollama) |
 | **Vault** | Encrypted secrets with AES-256-GCM |
 
+### Installation
+
+Requirements:
+- Node.js 20+ (tested on 20.11 / 20.12)
+- npm 10+
+- Optional: Pinata account (for IPFS share-sync)
+
+```bash
+# Clone & install dependencies
+git clone https://github.com/elathoxu-crypto/memphis.git
+cd memphis
+npm install
+
+# Build TypeScript once (creates dist/)
+npm run build
+
+# Optional: expose CLI globally
+npm link
+```
+
+After linking you can call `memphis` from anywhere. For a clean slate remove `~/.memphis` before running `memphis init`.
+
 ### Quick Start
 
 ```bash
@@ -69,9 +91,52 @@ memphis journal "Postanawiam, że używamy TypeScript"
 | `memphis summarize` | Create/force autosummary |
 | `memphis summarize --dry-run` | Preview without saving |
 | `memphis tui` | Launch terminal UI |
+| `memphis share-sync [flags]` | Sync share-tagged blocks via Pinata/IPFS |
 | `memphis vault init` | Initialize encrypted vault |
 | `memphis vault add <key> <value>` | Add secret |
 | `memphis vault list` | List secrets |
+
+### Share Sync (IPFS + Pinata)
+
+Memphis potrafi publikować i importować wpisy oznaczone tagiem `share` przez Pinata/IPFS. Szczegóły architektury znajdziesz w [`docs/ipfs-shared-memory-plan.md`](./docs/ipfs-shared-memory-plan.md) oraz drabince zadań [`docs/ipfs-share-sync-codex.md`](./docs/ipfs-share-sync-codex.md).
+
+#### Konfiguracja (\~/\.memphis/config.yaml)
+
+```yaml
+integrations:
+  pinata:
+    # Najprościej JWT – ustaw w configu lub przez env PINATA_JWT
+    jwt: ${PINATA_JWT}
+    # Alternatywnie para API key + secret
+    # apiKey: ${PINATA_API_KEY}
+    # apiSecret: ${PINATA_SECRET}
+```
+
+Możesz też pominąć wpis w pliku i polegać tylko na zmiennych środowiskowych (`PINATA_JWT` albo `PINATA_API_KEY` + `PINATA_SECRET`).
+
+#### Użycie CLI
+
+```bash
+# Wypchnięcie lokalnych bloków share
+memphis share-sync --push
+
+# Pobranie nowych CIDów i import do łańcucha `share`
+memphis share-sync --pull
+
+# Push+pull w jednym kroku (z limitem 5 wpisów)
+memphis share-sync --all --limit 5
+
+# Symulacja bez zmian
+memphis share-sync --all --dry-run
+
+# Czyszczenie starych pinów / wpisów sieciowych
+memphis share-sync --cleanup
+
+# Gdy agent nie może uploadować (np. Watra)
+memphis share-sync --all --push-disabled
+```
+
+Polecenia zapisują log `~/.memphis/network-chain.jsonl`, więc łatwo śledzić historię CIDów.
 
 ### Architecture
 
@@ -120,6 +185,16 @@ Priority order (fallback chain):
 - [`docs/deployment-second-pc.md`](./docs/deployment-second-pc.md) — instrukcja instalacji na Ubuntu + GTX 1060
 - [`docs/offline-toggle-checklist.md`](./docs/offline-toggle-checklist.md) — wymagania dla TUI offline
 - [`docs/vault-policy.md`](./docs/vault-policy.md) — polityka dostępu do sekretów
+
+### Troubleshooting
+
+| Problem | Rozwiązanie |
+|---------|-------------|
+| `Pinata credentials missing` | Dodaj `integrations.pinata` w configu albo ustaw `PINATA_JWT` / `PINATA_API_KEY` + `PINATA_SECRET`. Możesz szybko przetestować `memphis share-sync --push --dry-run`. |
+| `process.exit` podczas testów | Upewnij się, że moduł Pinaty nie jest uruchamiany jako skrypt (w repo zastosowaliśmy already guard). Przy własnych testach mockuj `createPinataBridge`. |
+| `Failed to fetch CID` / `payload exceeds 4KB` | CID prawdopodobnie jest uszkodzony lub zawiera za duży JSON. Sprawdź `~/.memphis/network-chain.jsonl`, oznacz wpis jako `ignored` albo usuń go. |
+| Brak nowych bloków do push | Dodaj tag `share` w dowolnym łańcuchu (journal/ask/decision). Eksporter pomija `vault` i `share`. |
+| Cleanup nic nie usuwa | Domyślny TTL to 7 dni i dotyczy tylko wpisów ze statusem `imported` / `unavailable`. W razie potrzeby usuń ręcznie plik `network-chain.jsonl`. |
 
 ### Tech Stack
 
