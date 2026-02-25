@@ -39,9 +39,6 @@ export async function askCommand(question: string, options?: {
     vaultPassword: options?.vaultPassword || process.env.VAULT_PASSWORD,
   };
 
-  // Pass vault password via special option (not in AskOptions interface)
-  const vaultPassword = options?.vaultPassword || process.env.VAULT_PASSWORD;
-
   try {
     const startTime = Date.now();
     const result = await askWithContext(store, askOptions);
