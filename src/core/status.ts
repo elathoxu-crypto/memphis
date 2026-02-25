@@ -1,6 +1,7 @@
 import { Store } from "../memory/store.js";
 import { verifyChain, type Block } from "../memory/chain.js";
 import type { MemphisConfig } from "../config/loader.js";
+import { loadOfflineConfig } from "../offline/config.js";
 
 export interface ChainStatus {
   name: string;
@@ -18,6 +19,13 @@ export interface ProviderStatus {
   role?: string;
   health: "ready" | "no_key" | "offline" | "error";
   detail?: string;
+}
+
+export interface OfflineStatusInfo {
+  enabled: "auto" | "on" | "off";
+  primary: string;
+  fallbacks: string[];
+  lastSwitch?: string | null;
 }
 
 export interface VaultStatus {
@@ -41,6 +49,7 @@ export interface StatusReport {
   providers: ProviderStatus[];
   vault: VaultStatus;
   recent: RecentBlock[];
+  offline: OfflineStatusInfo;
 }
 
 /**
@@ -147,6 +156,14 @@ export function buildStatusReport(store: Store, config: MemphisConfig): StatusRe
   const allChainsOk = chains.every(c => c.health !== "broken");
   const allProvidersOk = providers.every(p => p.health === "ready");
   const ok = allChainsOk && allProvidersOk;
+
+  const offlineConfig = loadOfflineConfig();
+  const offline: OfflineStatusInfo = {
+    enabled: offlineConfig.enabled,
+    primary: offlineConfig.preferredModel,
+    fallbacks: offlineConfig.fallbackModels,
+    lastSwitch: offlineConfig.lastSwitch,
+  };
   
   return {
     ok,
@@ -154,5 +171,6 @@ export function buildStatusReport(store: Store, config: MemphisConfig): StatusRe
     providers,
     vault,
     recent,
+    offline,
   };
 }

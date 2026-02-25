@@ -54,7 +54,11 @@ export async function repairCommand(options: RepairCliOptions = {}) {
         console.log(chalk.green(`  ✓ ${r.chain} OK (head=${r.head})`));
         break;
       case "fixed":
-        console.log(chalk.yellow(`  ⚠ ${r.chain} FIXED (head=${r.head}, quarantined=${r.quarantined})`));
+        if (options.dryRun && r.would_quarantine !== undefined) {
+          console.log(chalk.yellow(`  ⚠ ${r.chain} FIXED (head=${r.head}, would_quarantine=${r.would_quarantine})`));
+        } else {
+          console.log(chalk.yellow(`  ⚠ ${r.chain} FIXED (head=${r.head}, quarantined=${r.quarantined})`));
+        }
         hasIssues = true;
         break;
       case "broken":

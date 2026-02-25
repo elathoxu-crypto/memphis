@@ -9,6 +9,7 @@ export interface QuarantineResult {
   status: "ok" | "fixed" | "broken";
   head: number;
   quarantined: number;
+  would_quarantine?: number; // For dry-run: how many would be quarantined
   quarantine_dir?: string;
   errors: string[];
 }
@@ -69,6 +70,9 @@ function reviseChain(store: Store, chain: string, dryRun: boolean): QuarantineRe
     quarantined: 0,
     errors: [],
   };
+
+  // Track what would be quarantined in dry-run mode
+  let wouldQuarantineCount = 0;
   
   if (files.length === 0) {
     result.head = -1;
@@ -89,6 +93,8 @@ function reviseChain(store: Store, chain: string, dryRun: boolean): QuarantineRe
       if (!dryRun) {
         quarantineFile(chainDir, filename);
         result.quarantined++;
+      } else {
+        wouldQuarantineCount++;
       }
       break; // Stop on first error
     }
@@ -101,6 +107,8 @@ function reviseChain(store: Store, chain: string, dryRun: boolean): QuarantineRe
       if (!dryRun) {
         quarantineFile(chainDir, filename);
         result.quarantined++;
+      } else {
+        wouldQuarantineCount++;
       }
       break;
     }
@@ -112,6 +120,8 @@ function reviseChain(store: Store, chain: string, dryRun: boolean): QuarantineRe
       if (!dryRun) {
         quarantineFile(chainDir, filename);
         result.quarantined++;
+      } else {
+        wouldQuarantineCount++;
       }
       break;
     }
@@ -132,12 +142,17 @@ function reviseChain(store: Store, chain: string, dryRun: boolean): QuarantineRe
   if (result.errors.length === 0) {
     result.status = "ok";
     result.head = lastValidIndex;
-  } else if (lastValidIndex >= 0 || result.quarantined > 0) {
+  } else if (lastValidIndex >= 0 || result.quarantined > 0 || (dryRun && wouldQuarantineCount > 0)) {
     result.status = "fixed";
     result.head = lastValidIndex;
   } else {
     result.status = "broken";
     result.head = -1;
+  }
+  
+  // Set would_quarantine for dry-run mode
+  if (dryRun && wouldQuarantineCount > 0) {
+    result.would_quarantine = wouldQuarantineCount;
   }
   
   return result;

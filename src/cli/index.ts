@@ -60,7 +60,13 @@ program
   .command("journal <message>")
   .description("Add a journal entry to memory")
   .option("-t, --tags <tags>", "Comma-separated tags")
-  .action(journalCommand);
+  .option("-f, --force", "Force autosummary after this entry")
+  .action((message, options) => {
+    journalCommand(message, {
+      tags: options.tags,
+      force: options.force,
+    });
+  });
 
 program
   .command("ask <question>")

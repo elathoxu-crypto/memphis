@@ -6,10 +6,11 @@ import { memphis } from "../../agents/logger.js";
 import { checkAndSaveDecision } from "../../core/decision-detector.js";
 import { autosummarize, shouldTriggerAutosummary } from "../../core/autosummarizer.js";
 
-export async function journalCommand(message: string, options: { tags?: string }) {
+export async function journalCommand(message: string, options: { tags?: string; force?: boolean }) {
   const config = loadConfig();
   const store = new Store(config.memory.path);
   const tags = options.tags ? options.tags.split(",").map(t => t.trim()) : [];
+  const force = options.force || false;
 
   const block = await store.appendBlock("journal", {
     type: "journal",
@@ -33,12 +34,17 @@ export async function journalCommand(message: string, options: { tags?: string }
   }
 
   // Check for autosummary trigger (non-blocking, with unref)
+  // If --force is used, always trigger summary regardless of block count
   setTimeout(async () => {
     try {
-      if (shouldTriggerAutosummary(store, 50)) {
-        const result = await autosummarize(store, { dryRun: false });
+      const shouldSummarize = force || shouldTriggerAutosummary(store, 50);
+      if (shouldSummarize) {
+        const result = await autosummarize(store, { dryRun: false, force });
         if (result.block) {
-          console.log(chalk.gray(`\n📊 Autosummary created: summary#${String(result.block.index).padStart(6, "0")}`));
+          const msg = force 
+            ? `\n📊 Autosummary forced: summary#${String(result.block.index).padStart(6, "0")}`
+            : `\n📊 Autosummary created: summary#${String(result.block.index).padStart(6, "0")}`;
+          console.log(chalk.gray(msg));
         }
       }
     } catch (err) {

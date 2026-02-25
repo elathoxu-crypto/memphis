@@ -3,14 +3,24 @@
  */
 import type { Store } from "../../memory/store.js";
 import type { MemphisConfig } from "../../config/loader.js";
+import type { TUIState } from "../state.js";
 import { truncate, formatDate } from "../helpers.js";
-import { buildStatusReport, type StatusReport } from "../../core/status.js";
+import { buildStatusReport } from "../../core/status.js";
 
-export function renderDashboard(store: Store, config: MemphisConfig): string {
+export function renderDashboard(store: Store, config: MemphisConfig, state: TUIState): string {
   const report = buildStatusReport(store, config);
 
   let content = `{bold}{cyan}⚡ Dashboard{/cyan}{/bold}\n\n`;
   content += `Witaj w Memphis! Twój lokalny mózg AI.\n\n`;
+
+  content += `{bold}Status operacyjny:{/bold}\n`;
+  content += `  Rola: {cyan}${state.activeRole}{/cyan}\n`;
+  content += `  LLM: ${state.llmProviderName !== "none" ? `{green}${state.llmProviderName} (${state.selectedModel}){/green}` : `{red}brak{/red}`}\n`;
+  content += `  Tryb: ${state.offlineMode ? `{yellow}OFFLINE{/yellow}` : `{green}ONLINE{/green}`}\n`;
+  content += `  Guarded Terminal: ${state.guardedMode}\n`;
+  content += `  USB: ${state.usbStatus}\n`;
+  content += `  Ostatni sync: ${state.lastSync ?? "-"}\n`;
+  content += `  Ostatni backup: ${state.lastBackup ?? "-"}\n\n`;
 
   // Chains with health
   content += `{bold}Łańcuchy pamięci:{/bold}\n\n`;

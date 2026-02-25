@@ -14,6 +14,7 @@ export interface SummaryOptions {
   useLLM?: boolean; // Level 2 summary
   provider?: string;
   dryRun?: boolean;
+  force?: boolean; // Force summary creation regardless of block count
 }
 
 export interface SummaryResult {
@@ -286,6 +287,7 @@ export async function autosummarize(
     useLLM: opts?.useLLM || false,
     provider: opts?.provider,
     dryRun: opts?.dryRun || false,
+    force: opts?.force || false,
   };
 
   // Try to acquire lock
@@ -309,12 +311,12 @@ export async function autosummarize(
     // Start from the block AFTER the last summary, or from beginning if no previous summary
     const fromIndex = lastMarker ? lastMarker.toIndex + 1 : 0;
     
-    // Check if we have enough new blocks
+    // Check if we have enough new blocks (unless force is enabled)
     const journalCount = countBlocksSince(store, "journal", fromIndex);
     const askCount = countBlocksSince(store, "ask", fromIndex);
     const totalNew = journalCount + askCount;
     
-    if (totalNew < options.triggerBlocks && !options.dryRun) {
+    if (totalNew < options.triggerBlocks && !options.dryRun && !options.force) {
       return {
         summary: {
           version: "v1",

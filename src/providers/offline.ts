@@ -2,17 +2,9 @@
 // Part of the Offline Mode project
 
 import type { Provider } from "./index.js";
+import { loadOfflineConfig, saveOfflineConfig, DEFAULT_OFFLINE_CONFIG, type OfflineConfig } from "../offline/config.js";
 
 export type NetworkStatus = "online" | "offline" | "checking";
-
-export interface OfflineConfig {
-  enabled: "auto" | "on" | "off";
-  preferredModel: string;
-  fallbackModels: string[];
-  cacheContextBlocks: number;
-  cacheEnabled: boolean;
-  maxRamUsage: string;
-}
 
 export interface FallbackChainResult {
   provider: Provider | null;
@@ -21,20 +13,7 @@ export interface FallbackChainResult {
   error?: string;
 }
 
-const DEFAULT_OFFLINE_CONFIG: OfflineConfig = {
-  enabled: "auto",
-  preferredModel: "llama3.2:1b",
-  fallbackModels: ["llama3.2:3b", "gemma3:4b"],
-  cacheContextBlocks: 50,
-  cacheEnabled: true,
-  maxRamUsage: "2GB",
-};
-
-const FALLBACK_CHAIN = [
-  "llama3.2:1b",
-  "llama3.2:3b",
-  "gemma3:4b",
-];
+const FALLBACK_CHAIN = [...DEFAULT_OFFLINE_CONFIG.fallbackModels];
 
 export class OfflineDetector {
   private cache: Map<string, { status: NetworkStatus; timestamp: number }> = new Map();
@@ -45,14 +24,13 @@ export class OfflineDetector {
    * Uses a simple connectivity check
    */
   async detect(): Promise<NetworkStatus> {
-    // Check cache first
     const cached = this.cache.get("network");
     if (cached && Date.now() - cached.timestamp < this.cacheTimeout) {
       return cached.status;
     }
 
     const status = await this.checkConnectivity();
-    
+
     this.cache.set("network", {
       status,
       timestamp: Date.now(),
@@ -62,7 +40,6 @@ export class OfflineDetector {
   }
 
   private async checkConnectivity(): Promise<NetworkStatus> {
-    // Try to reach a reliable external endpoint
     const endpoints = [
       "https://api.github.com",
       "https://api.openai.com",
@@ -82,7 +59,6 @@ export class OfflineDetector {
         clearTimeout(timeout);
         return "online";
       } catch {
-        // Try next endpoint
         continue;
       }
     }
@@ -90,9 +66,6 @@ export class OfflineDetector {
     return "offline";
   }
 
-  /**
-   * Check if a specific provider is available
-   */
   async checkProvider(provider: string): Promise<boolean> {
     try {
       const controller = new AbortController();
@@ -109,35 +82,24 @@ export class OfflineDetector {
     }
   }
 
-  /**
-   * Clear the detection cache
-   */
   clearCache(): void {
     this.cache.clear();
   }
 }
 
-/**
- * Fallback chain manager - tries providers in order until one works
- */
 export class FallbackChain {
   private providers: Map<string, Provider> = new Map();
   private config: OfflineConfig;
 
   constructor(config: Partial<OfflineConfig> = {}) {
-    this.config = { ...DEFAULT_OFFLINE_CONFIG, ...config };
+    const persisted = loadOfflineConfig();
+    this.config = { ...persisted, ...config };
   }
 
-  /**
-   * Register a provider
-   */
   registerProvider(name: string, provider: Provider): void {
     this.providers.set(name, provider);
   }
 
-  /**
-   * Try providers in fallback order until one succeeds
-   */
   async tryProviders(
     messages: import("./index.js").LLMMessage[],
     options?: { model?: string; temperature?: number; max_tokens?: number }
@@ -145,10 +107,9 @@ export class FallbackChain {
     const detector = new OfflineDetector();
     const isOnline = await detector.detect();
 
-    // If online, try cloud providers first
     if (isOnline) {
       const cloudProviders = ["openai", "openrouter", "minimax"];
-      
+
       for (const name of cloudProviders) {
         const provider = this.providers.get(name);
         if (provider && provider.isConfigured()) {
@@ -167,14 +128,11 @@ export class FallbackChain {
       }
     }
 
-    // Try local providers (Ollama)
     const localProviders = ["ollama"];
-    
     for (const name of localProviders) {
       const provider = this.providers.get(name);
       if (provider && provider.isConfigured()) {
-        // Try preferred model first, then fallbacks
-        const models = options?.model 
+        const models = options?.model
           ? [options.model, ...this.config.fallbackModels]
           : [this.config.preferredModel, ...this.config.fallbackModels];
 
@@ -205,24 +163,15 @@ export class FallbackChain {
     };
   }
 
-  /**
-   * Get the current offline config
-   */
   getConfig(): OfflineConfig {
     return this.config;
   }
 
-  /**
-   * Update offline config
-   */
   updateConfig(config: Partial<OfflineConfig>): void {
-    this.config = { ...this.config, ...config };
+    this.config = saveOfflineConfig(config);
   }
 }
 
-/**
- * Context cache for offline mode - caches recent blocks for fast access
- */
 export class ContextCache {
   private cache: string[] = [];
   private maxSize: number;
@@ -231,9 +180,6 @@ export class ContextCache {
     this.maxSize = maxSize;
   }
 
-  /**
-   * Add content to cache
-   */
   add(content: string): void {
     this.cache.push(content);
     if (this.cache.length > this.maxSize) {
@@ -241,63 +187,41 @@ export class ContextCache {
     }
   }
 
-  /**
-   * Add multiple items
-   */
   addMany(contents: string[]): void {
     for (const content of contents) {
       this.add(content);
     }
   }
 
-  /**
-   * Get recent context
-   */
   getRecent(count: number): string[] {
     return this.cache.slice(-count);
   }
 
-  /**
-   * Get all cached context
-   */
   getAll(): string[] {
     return [...this.cache];
   }
 
-  /**
-   * Clear the cache
-   */
   clear(): void {
     this.cache = [];
   }
 
-  /**
-   * Get cache size
-   */
   size(): number {
     return this.cache.length;
   }
 
-  /**
-   * Check if cache is empty
-   */
   isEmpty(): boolean {
     return this.cache.length === 0;
   }
 }
 
-/**
- * Get recommended offline model based on system resources
- */
 export function getRecommendedOfflineModel(): string {
-  // Check available memory (simplified)
-  // In production, you'd check actual system memory
-  return FALLBACK_CHAIN[0]; // llama3.2:1b is the default recommendation
+  const config = loadOfflineConfig();
+  return config.preferredModel || FALLBACK_CHAIN[0];
 }
 
-/**
- * Get all available offline models
- */
 export function getOfflineModels(): string[] {
-  return [...FALLBACK_CHAIN];
+  const config = loadOfflineConfig();
+  return config.fallbackModels.length ? [...config.fallbackModels] : [...FALLBACK_CHAIN];
 }
+
+export type { OfflineConfig };

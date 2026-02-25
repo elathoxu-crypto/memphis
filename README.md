@@ -101,6 +101,8 @@ Priority order (fallback chain):
 4. **OpenAI** — GPT-4o
 5. **OpenRouter** — Claude, etc.
 
+➡️ See [`docs/openclaw-integration.md`](./docs/openclaw-integration.md) for full instructions on wiring Memphis into OpenClaw/Style, offline toggle usage, vault policy, deployment on a second PC, and monitoring commands.
+
 ### Use Cases
 
 - **Daily journaling** — capture thoughts, decisions, progress
@@ -108,6 +110,13 @@ Priority order (fallback chain):
 - **Decision tracking** — auto-detected decisions with source refs
 - **Weekly reviews** — autosummaries provide overview
 - **Knowledge base** — searchable, verifiable memory
+
+### Documentation
+
+- [`docs/openclaw-integration.md`](./docs/openclaw-integration.md) — Style/OpenClaw setup, offline toggle, vault policy, monitoring
+- [`docs/deployment-second-pc.md`](./docs/deployment-second-pc.md) — instrukcja instalacji na Ubuntu + GTX 1060
+- [`docs/offline-toggle-checklist.md`](./docs/offline-toggle-checklist.md) — wymagania dla TUI offline
+- [`docs/vault-policy.md`](./docs/vault-policy.md) — polityka dostępu do sekretów
 
 ### Tech Stack
 

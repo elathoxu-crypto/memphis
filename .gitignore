@@ -1,6 +1,10 @@
 node_modules/
 *.js.map
 .memphis/
+dist/
+logs/
+.memphis-cache/
+.env.local
 
 # Keep dist for npm package (but don't commit build artifacts locally)
 # dist/ is generated during npm publish

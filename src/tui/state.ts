@@ -61,6 +61,8 @@ export const SCREEN_LABELS: Record<ScreenName, string> = {
   settings:  " Settings",
 };
 
+export type GuardedMode = "locked" | "armed" | "open";
+
 export interface TUIState {
   currentScreen: ScreenName;
   inputMode: string;
@@ -70,6 +72,16 @@ export interface TUIState {
   offlineMode: boolean;
   /** Currently selected Ollama model (overridable at runtime) */
   selectedModel: string;
+  /** Current operating role */
+  activeRole: "operator" | "ingester" | "advisor";
+  /** ISO timestamp of last sync */
+  lastSync?: string;
+  /** ISO timestamp of last backup */
+  lastBackup?: string;
+  /** USB status descriptor */
+  usbStatus: string;
+  /** Current guarded terminal state */
+  guardedMode: GuardedMode;
 }
 
 export function createInitialState(): TUIState {
@@ -79,5 +91,10 @@ export function createInitialState(): TUIState {
     llmProviderName: "none",
     offlineMode: false,
     selectedModel: process.env.OLLAMA_MODEL || "llama3.2:1b",
+    activeRole: "operator",
+    lastSync: undefined,
+    lastBackup: undefined,
+    usbStatus: "unknown",
+    guardedMode: "locked",
   };
 }

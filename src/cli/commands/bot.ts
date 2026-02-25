@@ -2,8 +2,51 @@ import chalk from "chalk";
 import { spawn } from "child_process";
 import { promisify } from "util";
 import { exec } from "child_process";
+import { createWriteStream, existsSync, mkdirSync } from "node:fs";
+import { dirname } from "node:path";
 
 const execAsync = promisify(exec);
+
+// Logger setup
+const LOG_DIR = process.env.LOG_DIR || "/tmp";
+const LOG_FILE = `${LOG_DIR}/memphis-bot.log`;
+const MAX_LOG_SIZE = 10 * 1024 * 1024; // 10MB
+
+function getLogger() {
+  const logDir = dirname(LOG_FILE);
+  if (!existsSync(logDir)) {
+    mkdirSync(logDir, { recursive: true });
+  }
+  
+  // Simple log rotation: check file size
+  let stream;
+  try {
+    const stats = require('node:fs').statSync(LOG_FILE);
+    if (stats.size > MAX_LOG_SIZE) {
+      // Rename old log
+      const rotated = `${LOG_FILE}.${Date.now()}`;
+      require('node:fs').renameSync(LOG_FILE, rotated);
+    }
+  } catch {}
+  
+  stream = createWriteStream(LOG_FILE, { flags: "a" });
+  
+  return {
+    info: (msg: string) => {
+      const line = `[${new Date().toISOString()}] INFO: ${msg}\n`;
+      process.stderr.write(line);
+      stream.write(line);
+    },
+    error: (msg: string, err?: any) => {
+      const line = `[${new Date().toISOString()}] ERROR: ${msg}${err ? ` - ${err}` : ''}\n`;
+      process.stderr.write(line);
+      stream.write(line);
+    },
+    close: () => stream.end()
+  };
+}
+
+const logger = getLogger();
 
 interface TelegramUpdate {
   update_id: number;
@@ -14,43 +57,169 @@ interface TelegramUpdate {
   };
 }
 
+import { get } from "node:https";
+
+// Use https module instead of fetch (more reliable on WSL2)
+function httpsGet(url: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const req = get(url, {
+      headers: {
+        'Connection': 'close'
+      }
+    }, (res) => {
+      let data = "";
+      res.on("data", chunk => data += chunk);
+      res.on("end", () => resolve(data));
+    });
+    req.on("error", reject);
+    req.setTimeout(15000, () => {
+      req.destroy();
+      reject(new Error("Request timeout"));
+    });
+  });
+}
+
 class MemphisBot {
   private token: string;
   private apiUrl: string;
   private offset: number = 0;
+  private stopped: boolean = false;
+  private attempt: number = 0;
+  private readonly MAX_ATTEMPTS = 10;
+  private readonly BASE_BACKOFF_MS = 2000;
+  private readonly MAX_BACKOFF_MS = 120000; // 2 min
+  private ownerId: number;
 
   constructor(token: string) {
     this.token = token;
     this.apiUrl = `https://api.telegram.org/bot${token}`;
+    // Owner ID from env (your Telegram user_id)
+    this.ownerId = parseInt(process.env.TELEGRAM_OWNER_ID || "0");
+  }
+
+  private isOwner(userId: number): boolean {
+    // If no owner set, allow all (dev mode)
+    if (!this.ownerId) return true;
+    return userId === this.ownerId;
+  }
+
+  // Exponential backoff with jitter
+  private backoffMs(attempt: number): number {
+    const exp = Math.min(attempt, 7); // max 2^7 = 128
+    const base = this.BASE_BACKOFF_MS * Math.pow(2, exp);
+    const jitter = Math.random() * 0.3 * base; // 0-30% jitter
+    return Math.min(base + jitter, this.MAX_BACKOFF_MS);
   }
 
   async start() {
-    console.log("🤖 Memphis Bot starting...");
+    logger.info("🤖 Memphis Bot starting...");
+    
+    // Setup graceful shutdown
+    this.setupSignalHandlers();
+    
     console.log(chalk.green("✅ Bot is running!"));
     console.log(chalk.gray("Send /help to the bot on Telegram"));
-    await this.poll();
+    
+    // Main loop with auto-restart
+    while (!this.stopped) {
+      try {
+        this.attempt = 0;
+        await this.poll();
+      } catch (e: any) {
+        if (this.stopped) {
+          logger.info("Bot stopped gracefully");
+          break;
+        }
+        
+        this.attempt++;
+        const waitMs = this.backoffMs(this.attempt);
+        
+        logger.error("Bot crashed in poll(), retrying", e.message || e);
+        logger.info(`Backoff ${this.attempt}: waiting ${Math.round(waitMs/1000)}s...`);
+        
+        // Degraded mode: never stop, just keep retrying with longer backoff
+        // User can manually stop with SIGTERM if needed
+        
+        await new Promise(r => setTimeout(r, waitMs));
+      }
+    }
+    
+    logger.info("Bot loop exited");
+    logger.close();
+    process.exit(0);
+  }
+
+  private setupSignalHandlers() {
+    const shutdown = (signal: string) => {
+      logger.info(`Received ${signal}, shutting down gracefully...`);
+      this.stopped = true;
+    };
+    
+    process.on("SIGINT", () => shutdown("SIGINT"));
+    process.on("SIGTERM", () => shutdown("SIGTERM"));
   }
 
   private async poll() {
-    while (true) {
+    logger.info("Poll: starting loop");
+    while (!this.stopped) {
       try {
-        const response = await fetch(`${this.apiUrl}/getUpdates?timeout=60&offset=${this.offset}`);
-        const data = await response.json() as { ok: boolean; result?: TelegramUpdate[] };
+        logger.info(`Poll: fetching (offset=${this.offset})`);
+        const responseText = await httpsGet(`${this.apiUrl}/getUpdates?timeout=10&offset=${this.offset}`);
         
-        if (!data.ok || !data.result) {
+        // Debug: log raw response
+        if (responseText.length < 100) {
+          logger.info(`Poll raw: ${responseText}`);
+        } else {
+          logger.info(`Poll raw (first 200): ${responseText.substring(0, 200)}`);
+        }
+        
+        const response = { ok: true, status: 200 }; // Mock response for logging
+        logger.info(`Poll: got response ${response.status}`);
+        
+        if (!response.ok) {
+          logger.error(`Telegram API error: ${response.status}`);
+          await new Promise(r => setTimeout(r, 5000));
+          continue;
+        }
+        
+        let data: { ok: boolean; result?: TelegramUpdate[]; error_code?: number; description?: string };
+        try {
+          data = JSON.parse(responseText);
+        } catch (e) {
+          logger.error(`Failed to parse response: ${responseText.substring(0, 100)}`);
+          await new Promise(r => setTimeout(r, 5000));
+          continue;
+        }
+        
+        if (!data.ok || data.error_code === 409) {
+          logger.error(`Telegram API error: ${data.error_code || 'unknown'} - ${data.description || ''}`);
+          await new Promise(r => setTimeout(r, 5000));
+          continue;
+        }
+        
+        logger.info(`Poll: raw response length ${responseText.length}`);
+        logger.info(`Poll: got ${data.result?.length || 0} updates`);
+        
+        if (!data.result || data.result.length === 0) {
           await new Promise(r => setTimeout(r, 1000));
           continue;
         }
         
         for (const update of data.result) {
+          logger.info(`Processing update ${update.update_id}: ${update.message?.text}`);
           this.offset = update.update_id + 1;
           
-          if (update.message?.text) {
-            await this.handleMessage(update.message.text, update.message.chat.id);
+          if (update.message?.text && update.message.from) {
+            await this.handleMessage(
+              update.message.text, 
+              update.message.chat.id,
+              update.message.from.id
+            );
           }
         }
-      } catch (e) {
-        console.error("Poll error:", e);
+      } catch (e: any) {
+        // Don't throw on poll errors - just log and continue
+        logger.error("Poll error", e.message || e);
         await new Promise(r => setTimeout(r, 5000));
       }
     }
@@ -82,7 +251,14 @@ class MemphisBot {
     });
   }
 
-  private async handleMessage(text: string, chatId: number) {
+  private async handleMessage(text: string, chatId: number, userId: number) {
+    console.log(`[HANDLE] text="${text}" chatId=${chatId} userId=${userId}`);
+    // Owner check
+    if (!this.isOwner(userId)) {
+      logger.info(`Rejected message from unknown user ${userId}`);
+      return;
+    }
+    
     const trimmed = text.trim();
     
     // If doesn't start with /, treat as a question to Memphis (chat mode!)
@@ -101,14 +277,22 @@ class MemphisBot {
         case "/start":
         case "/help":
           await this.sendMessage(chatId, 
-            "🤖 Memphis Bot\n\n" +
-            "Komendy:\n" +
-            "/ask [pytanie] - Zapytaj Memphis\n" +
-            "/journal [tekst] - Dodaj wpis\n" +
-            "/recall [słowo] - Szukaj w pamięci\n" +
-            "/decide [tytuł] [wybór] - Zapisz decyzję\n" +
-            "/status - Status systemu\n" +
-            "/last - Ostatnie wpisy"
+            "🤖 *MemphisBrain_bot*\n" +
+            "━━━━━━━━━━━━━━━━━━━━\n\n" +
+            "📋 *Komendy:*\n" +
+            "/ping – Status & uptime\n" +
+            "/status – Status łańcuchów\n" +
+            "/summary – Ostatnie summary\n" +
+            "/decisions – Lista decyzji\n" +
+            "/restart – Restart bota\n\n" +
+            "🔗 *Więcej:*\n" +
+            "/ask [pytanie] – Zapytaj Memphis\n" +
+            "/journal [tekst] – Dodaj wpis\n" +
+            "/recall [słowo] – Szukaj w pamięci\n" +
+            "/decide [tytuł] [wybór] – Zapisz decyzję\n\n" +
+            "━━━━━━━━━━━━━━━━━━━━\n" +
+            `Bot: @MemphisBrain_bot\n` +
+            `Owner: ${this.ownerId || 'dev mode'}`
           );
           break;
           
@@ -166,6 +350,71 @@ class MemphisBot {
           await this.sendMessage(chatId, this.truncate(lastResult, 4000));
           break;
           
+        case "/restart":
+          await this.sendMessage(chatId, "🔄 Restartuję bota...");
+          this.stopped = true;
+          break;
+          
+        case "/whoami":
+          await this.sendMessage(chatId, 
+            `🤖 *Bot Identity*\n\n` +
+            `Bot: @MemphisBrain_bot\n` +
+            `Chat ID: ${chatId}\n` +
+            `User ID: ${userId}\n` +
+            `Owner OK: ${this.isOwner(userId) ? '✅ Tak' : '❌ Nie'}\n` +
+            `Version: Memphis Bot v1.2`
+          );
+          break;
+          
+        case "/ping":
+          const uptime = process.uptime();
+          const minutes = Math.floor(uptime / 60);
+          await this.sendMessage(chatId, `🏓 *Pong!*\n\n✅ Bot działa!\n⏱️ Uptime: ${minutes} min\n🔐 Owner: ${this.ownerId || 'dev mode'}`);
+          break;
+          
+        case "/status":
+          try {
+            const status = await this.runMemphis(["status"]);
+            // Format: short + readable
+            const lines = status.split('\n').filter(l => 
+              l.includes('⛓') || l.includes('provider') || l.includes('ollama') || l.includes('Vault')
+            ).slice(0, 8);
+            await this.sendMessage(chatId, "📊 *Status*\n\n" + lines.join('\n'));
+          } catch (e) {
+            await this.sendMessage(chatId, `❌ Błąd: ${e}`);
+          }
+          break;
+          
+        case "/summary":
+          try {
+            // Get last 2 summaries
+            const summary = await this.runMemphis(["recall", "summary", "--limit", "1"]);
+            if (summary && summary.length > 20) {
+              // Take first 15 lines max
+              const short = summary.split('\n').slice(0, 15).join('\n');
+              await this.sendMessage(chatId, "📝 *Ostatnie Summary*\n\n" + this.truncate(short, 3500));
+            } else {
+              await this.sendMessage(chatId, "📝 *Brak summary*\n\nUżyj `memphis summarize --force` w CLI.");
+            }
+          } catch (e) {
+            await this.sendMessage(chatId, `❌ Błąd: ${e}`);
+          }
+          break;
+          
+        case "/decisions":
+          try {
+            const decisions = await this.runMemphis(["recall", "--chain", "decision", "--limit", "3"]);
+            if (decisions && decisions.length > 20) {
+              const short = decisions.split('\n').filter(l => l.includes('title') || l.includes('chosen') || l.includes('---')).slice(0, 10).join('\n');
+              await this.sendMessage(chatId, "📋 *Ostatnie Decyzje*\n\n" + this.truncate(short || decisions, 3500));
+            } else {
+              await this.sendMessage(chatId, "📋 *Brak decyzji*");
+            }
+          } catch (e) {
+            await this.sendMessage(chatId, `❌ Błąd: ${e}`);
+          }
+          break;
+          
         default:
           await this.sendMessage(chatId, "❓ Nieznana komenda. Użyj /help");
       }
@@ -175,15 +424,16 @@ class MemphisBot {
   }
 
   private truncate(text: string, max: number): string {
+    if (!text) return "(pusta odpowiedź)";
     if (text.length <= max) return text;
-    return text.substring(0, max - 100) + "\n\n...(截断)";
+    return text.substring(0, max - 100) + "\n\n...(więcej)";
   }
 
   private async sendMessage(chatId: number, text: string) {
     if (chatId === 0) return;
     
     try {
-      await fetch(`${this.apiUrl}/sendMessage`, {
+      const response = await fetch(`${this.apiUrl}/sendMessage`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
@@ -192,8 +442,10 @@ class MemphisBot {
           parse_mode: "Markdown"
         })
       });
+      const result = await response.json();
+      logger.info(`Sent message to ${chatId}: ${result.ok ? 'OK' : 'FAILED'}`);
     } catch (e) {
-      console.error("Send error:", e);
+      logger.error("Send error", e);
     }
   }
 }
