@@ -1,7 +1,10 @@
 import https from "https";
+import { pathToFileURL } from "url";
 
 export interface PinataConfig {
-  apiKey: string;
+  jwt?: string;
+  apiKey?: string;
+  apiSecret?: string;
   maxPins: number;
   ttlDays: number;
   cleanupEnabled: boolean;
@@ -20,7 +23,23 @@ export class PinataBridge {
   private baseUrl = "api.pinata.cloud";
 
   constructor(config: PinataConfig) {
+    if (!config.jwt && !(config.apiKey && config.apiSecret)) {
+      throw new Error("Pinata config requires either JWT or apiKey+apiSecret");
+    }
     this.config = config;
+  }
+
+  private buildHeaders(): Record<string, string> {
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    if (this.config.jwt) {
+      headers["Authorization"] = `Bearer ${this.config.jwt}`;
+    } else if (this.config.apiKey && this.config.apiSecret) {
+      headers["pinata_api_key"] = this.config.apiKey;
+      headers["pinata_secret_api_key"] = this.config.apiSecret;
+    }
+    return headers;
   }
 
   private async request(path: string, method: string, body?: string): Promise<any> {
@@ -29,10 +48,7 @@ export class PinataBridge {
         hostname: this.baseUrl,
         path: path,
         method: method,
-        headers: {
-          "Authorization": `Bearer ${this.config.apiKey}`,
-          "Content-Type": "application/json",
-        },
+        headers: this.buildHeaders(),
       };
 
       const req = https.request(options, (res) => {
@@ -137,19 +153,23 @@ export class PinataBridge {
 async function main() {
   const command = process.argv[2];
 
-  const config: PinataConfig = {
-    apiKey: process.env.PINATA_API_KEY || process.env.PINATA_JWT || "",
-    maxPins: 100,
-    ttlDays: 7,
-    cleanupEnabled: true,
-  };
+  const jwt = process.env.PINATA_JWT || undefined;
+  const apiKey = process.env.PINATA_API_KEY || undefined;
+  const apiSecret = process.env.PINATA_API_SECRET || process.env.PINATA_SECRET || undefined;
 
-  if (!config.apiKey) {
-    console.error("Error: PINATA_API_KEY or PINATA_JWT not set");
+  if (!jwt && !(apiKey && apiSecret)) {
+    console.error("Error: provide PINATA_JWT or PINATA_API_KEY + PINATA_SECRET");
     process.exit(1);
   }
 
-  const pinata = new PinataBridge(config);
+  const pinata = new PinataBridge({
+    jwt,
+    apiKey,
+    apiSecret,
+    maxPins: 100,
+    ttlDays: 7,
+    cleanupEnabled: true,
+  });
 
   switch (command) {
     case "pin": {
@@ -173,4 +193,8 @@ async function main() {
   }
 }
 
-main().catch(console.error);
+const isDirectRun = process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url;
+
+if (isDirectRun) {
+  main().catch(console.error);
+}

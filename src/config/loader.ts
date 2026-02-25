@@ -31,10 +31,21 @@ const AgentConfigSchema = z.object({
   context_window: z.number().int().positive().optional(),
 });
 
+const PinataIntegrationSchema = z.object({
+  jwt: z.string().optional(),
+  apiKey: z.string().optional(),
+  apiSecret: z.string().optional(),
+});
+
+const IntegrationsConfigSchema = z.object({
+  pinata: PinataIntegrationSchema.optional(),
+}).catchall(z.any()).optional();
+
 const MemphisConfigSchema = z.object({
   providers: z.record(z.string(), ProviderSchema).optional(),
   memory: MemoryConfigSchema.optional(),
   agents: z.record(z.string(), AgentConfigSchema).optional(),
+  integrations: IntegrationsConfigSchema,
 });
 
 export type MemphisConfig = z.infer<typeof MemphisConfigSchema> & typeof DEFAULT_CONFIG;

@@ -43,6 +43,7 @@ import { showCommand } from "./commands/show.js";
 import { botCommand } from "./commands/bot.js";
 import { runOpenClawCommands } from "../bridges/openclaw.js";
 import { MemphisTUI } from "../tui/index.js";
+import { shareSyncCommand } from "./share-sync.js";
 
 const program = new Command();
 
@@ -268,6 +269,29 @@ program
 
 // Summarize command
 import { autosummarize, shouldTriggerAutosummary } from "../core/autosummarizer.js";
+
+program
+  .command("share-sync")
+  .description("Sync share-tagged memory blocks via Pinata/IPFS")
+  .option("--push", "Export local share blocks and pin to IPFS")
+  .option("--pull", "Fetch remote share blocks and import them")
+  .option("--all", "Run push (unless disabled) followed by pull")
+  .option("--cleanup", "Remove stale pins and cleanup network log")
+  .option("--limit <n>", "Limit number of blocks per push", "10")
+  .option("--since <time>", "Only include blocks newer than time (e.g. 24h, 2026-02-20)")
+  .option("--dry-run", "Log actions without mutating state")
+  .option("--push-disabled", "Skip push even if --push/--all is provided")
+  .action(async (opts) => {
+    await shareSyncCommand({
+      push: opts.all ? true : opts.push,
+      pull: opts.all ? true : opts.pull,
+      cleanup: opts.cleanup,
+      limit: opts.limit ? parseInt(opts.limit, 10) : undefined,
+      since: opts.since,
+      dryRun: opts.dryRun,
+      pushDisabled: opts.pushDisabled,
+    });
+  });
 
 program
   .command("summarize")
