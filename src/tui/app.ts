@@ -88,8 +88,12 @@ export class MemphisTUI {
 
     this.initLLM();
 
+    // ── terminal reset (fixes overlapping text on some terminals) ───────────
+    process.stdout.write("\x1b[2J\x1b[3J\x1b[H");
+    process.stderr.write("\x1b[2J\x1b[3J\x1b[H");
+
     // ── screen ──────────────────────────────────────────────────────────────
-    this.screen = blessed.screen({ smartCSR: true, title: "Memphis – AI Brain", fullUnicode: true });
+    this.screen = blessed.screen({ smartCSR: false, title: "Memphis – AI Brain", fullUnicode: true });
 
     // ── header ──────────────────────────────────────────────────────────────
     this.headerBox = blessed.box({
