@@ -19,9 +19,10 @@ Plan przeniesienia Memphis na drugi komputer z Ubuntu oraz GPU GTX 1060 (3 GB)
 - [ ] Skonfiguruj `.memphis` (przenieś z głównego hosta lub `memphis init`)
 
 ### Modele & offline toggle
-- [ ] Zainstaluj Ollama / lokalny LLM kompatybilny z GTX 1060
+- [ ] Zainstaluj Ollamę / lokalny LLM kompatybilny z GTX 1060 (`curl https://ollama.com/install.sh | sh`)
+- [ ] `ollama pull qwen2.5-coder:3b` (rekomendowany model do offline)
 - [ ] Ustaw `qwen2.5-coder:3b` jako primary (Ollama), `o3:mini` jako fallback dla Style
-- [ ] Dodaj dokumentację offline toggle (TUI) i loguj wpisy z tagiem `offline-toggle`
+- [ ] Ustaw `status: "offline"` w `config/offline-toggle.json` i loguj każdy toggle tagiem `offline-toggle`
 
 ### Synchronizacja pamięci
 - [ ] `rsync ~/.memphis/` z głównego hosta

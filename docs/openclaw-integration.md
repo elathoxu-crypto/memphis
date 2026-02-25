@@ -29,21 +29,27 @@ npm link        # albo `npx tsx src/cli/index.ts` bez linka
 3. **Memphis CLI**: Style może uruchamiać komendy `memphis journal|ask|recall|status|repair`. Upewnij się, że output trafia do plików/logów w workspace (np. `session-report.md`).
 4. **Cline/integ**: jeżeli korzystasz z Cline (coding agent), trzymaj się reguły `cline -c ~/memphis ...`, żeby budowa odbywała się w repo Memphis.
 
-## 3. Offline Toggle & Provider Chain
+## 3. Offline Toggle & Local-only Mode
 
-Memphis ma wbudowany Offline Detector i Fallback Chain (`src/providers/offline.ts`). Tryb offline zapisuje stan w `config/offline-toggle.json`:
+Memphis ma wbudowany Offline Detector i Fallback Chain (`src/providers/offline.ts`). Jeśli chcesz działać wyłącznie lokalnie:
 
-```json
-{
-  "status": "online",   // albo "offline"
-  "preferredModel": "qwen2.5-coder:3b",
-  "fallbackModels": ["o3:mini", "llama3.1"]
-}
-```
+1. Zainstaluj Ollamę (lub inny lokalny runtime) i pobierz model, np. `qwen2.5-coder:3b`:
+   ```bash
+   curl https://ollama.com/install.sh | sh
+   ollama pull qwen2.5-coder:3b
+   ```
+2. Ustaw status na `offline` i wybierz model lokalny w `config/offline-toggle.json`:
+   ```json
+   {
+     "status": "offline",
+     "preferredModel": "qwen2.5-coder:3b",
+     "fallbackModels": ["o3:mini"]
+   }
+   ```
+3. W Memphis TUI przełącz się na Offline i wybierz lokalny model.
+4. `memphis status` powinien pokazywać, że provider = Ollama; żadne zapytania nie idą do MiniMax/OpenRouter.
 
-- `memphis status` pokazuje aktualny provider chain (OpenClaw → Codex → Ollama → OpenAI → OpenRouter).
-- W TUI (ekran Offline) można przełączać status i wybierać model lokalny.
-- Każdy toggle logujemy w journalu z tagiem `offline-toggle` + `agent:style`/`role:user`.
+Każdy toggle logujemy w journalu z tagiem `offline-toggle` + `agent:style`/`role:user`.
 
 ## 4. Vault Policy
 
