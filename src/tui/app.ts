@@ -334,12 +334,22 @@ export class MemphisTUI {
 
   // ─── Sidebar ───────────────────────────────────────────────────────────────
   private buildSidebar(): string {
+    const keyMap: Record<number, string> = {
+      1: "1", 2: "2", 3: "3", 4: "4", 5: "5",
+      6: "6", 7: "7", 8: "8", 9: "9", 10: "0", 11: "-",
+    };
+    const nameMap: Record<number, ScreenName> = {
+      1: "dashboard", 2: "journal", 3: "vault", 4: "recall", 5: "ask",
+      6: "decisions", 7: "summary", 8: "openclaw", 9: "cline", 10: "offline", 11: "settings",
+    };
+
     let content = `{bold}Nawigacja{/bold}\n\n`;
     let i = 1;
     for (const name of SCREEN_NAMES) {
       const active = this.state.currentScreen === name;
       const prefix = active ? "{cyan}▶{/cyan} " : "  ";
-      content += `${prefix}${i}. ${SCREEN_LABELS[name]}\n`;
+      const key = keyMap[i] || "?";
+      content += `${prefix}${key}. ${SCREEN_LABELS[name]}\n`;
       i++;
     }
 

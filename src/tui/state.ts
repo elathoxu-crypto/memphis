@@ -31,15 +31,15 @@ export const SCREEN_NAMES: ScreenName[] = [
   "settings",
 ];
 
-/** Maps 1-9 keyboard digit to ScreenName */
+/** Maps keyboard keys to ScreenName */
 export const KEY_TO_SCREEN: Record<string, ScreenName> = {
   "1": "dashboard",
   "2": "journal",
   "3": "vault",
   "4": "recall",
   "5": "ask",
-  "0": "decisions",
-  "s": "summary",
+  "-": "decisions",
+  "0": "summary",
   "6": "openclaw",
   "7": "cline",
   "8": "offline",
