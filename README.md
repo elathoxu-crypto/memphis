@@ -138,6 +138,17 @@ memphis share-sync --all --push-disabled
 
 Polecenia zapisują log `~/.memphis/network-chain.jsonl`, więc łatwo śledzić historię CIDów.
 
+#### Automatyzacja (cron / Heartbeat)
+
+- **Cron** – przykładowy wpis (co 30 minut, log do pliku):
+  ```bash
+  */30 * * * * /usr/bin/env -S bash -lc 'memphis share-sync --all --limit 5 >> ~/memphis-share-sync.log 2>&1'
+  ```
+- **Heartbeat** – dodaj do `HEARTBEAT.md` w workspace polecenie typu `memphis share-sync --all --limit 3 --push-disabled` i agent uruchomi je przy każdym pulsu.
+
+Pamiętaj o flagach `--dry-run` przy testach oraz `--push-disabled` na węzłach zablokowanych do uploadu.
+
+
 ### Architecture
 
 ```
