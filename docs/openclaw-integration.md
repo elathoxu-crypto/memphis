@@ -83,5 +83,25 @@ Checklist:
 - Pliki operacyjne (raporty, klucze, paczki ZIP) trzymaj poza repo – np. w `workspace/archive/`.
 - README i docs odzwierciedlają funkcje używane przez Style; jeśli dodajesz nowe funkcje, aktualizuj ten plik.
 
+## 8. Troubleshooting: czysty start
+
+Jeśli CLI krzyczy `ConfigError: providers ... expected record, received null`, zrób pełny reset:
+
+```bash
+# 1. Upewnij się, że używasz Node 20
+node -v            # jeśli >20 → nvm use 20
+
+# 2. Usuń stare dane i config
+rm -rf ~/.memphis
+
+# 3. Zainstaluj / przebuduj repo
+cd ~/memphis
+npm install
+npm run build
+node dist/cli/index.js init
+```
+
+Po tych krokach `~/.memphis/config.yaml` zostanie wygenerowany od nowa, a `memphis status` powinien pokazać lokalnego providera (Ollama). Jeśli korzystasz z globalnej komendy `memphis`, pamiętaj by po rebuildzie wykonać `npm link` lub uruchamiać CLI przez `node dist/cli/index.js <cmd>`.
+
 ---
 Ta instrukcja powinna być aktualizowana razem z nowymi integracjami. Jeśli Style zyskuje nowe uprawnienia lub ograniczenia, dopisz je tutaj i w README.

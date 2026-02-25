@@ -33,10 +33,13 @@ git clone https://github.com/elathoxu-crypto/memphis.git
 cd memphis
 npm install
 npm run build
-npm link
 
-# Initialize
-memphis init
+# Fresh install / reset (recommended)
+rm -rf ~/.memphis            # remove old chains & config
+node dist/cli/index.js init  # create clean ~/.memphis
+
+# (Optional) expose CLI globally
+npm link
 
 # Daily usage
 memphis journal "Working on Memphis AI brain today"
