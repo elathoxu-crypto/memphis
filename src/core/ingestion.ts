@@ -231,7 +231,13 @@ async function ingestFile(
 // ─── Public API ──────────────────────────────────────────────────────────────
 
 function collectFiles(pathOrDir: string, recursive: boolean): string[] {
-  const supported = new Set([".md", ".txt", ".markdown", ".rst", ".json", ".jsonl", ".pdf"]);
+  const supported = new Set([
+    ".md", ".txt", ".markdown", ".rst", ".json", ".jsonl", ".pdf",
+    ".ts", ".tsx", ".js", ".jsx", ".py", ".rb", ".rs", ".go", ".java",
+    ".c", ".cpp", ".cc", ".h", ".hpp", ".cs", ".swift", ".kt", ".m", ".mm",
+    ".sh", ".bash", ".zsh", ".ps1", ".yaml", ".yml", ".toml", ".ini", ".cfg",
+    ".conf", ".sql", ".html", ".css", ".scss", ".less", ".vue",
+  ]);
 
   if (!existsSync(pathOrDir)) throw new Error(`Path not found: ${pathOrDir}`);
 

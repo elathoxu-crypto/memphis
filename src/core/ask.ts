@@ -8,6 +8,7 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { homedir } from "node:os";
 import { fileURLToPath } from "node:url";
+import { GraphStore, type GraphEdge, type GraphNode } from "./graph.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -211,6 +212,113 @@ function buildContextWithSummaries(
   };
 }
 
+const MAX_GRAPH_NEIGHBORS = 6;
+const GRAPH_MIN_SCORE = 0.35;
+
+interface GraphNeighborEntry {
+  node: GraphNode;
+  sourceId: string;
+  edgeType: GraphEdge["type"];
+  score: number;
+}
+
+function formatBlockRef(nodeId: string): string {
+  const [chain, indexStr] = nodeId.split(":");
+  const index = Number.parseInt(indexStr ?? "0", 10);
+  return `${chain}#${String(Number.isFinite(index) ? index : 0).padStart(6, "0")}`;
+}
+
+function collectGraphNeighbors(hits: RecallHit[], graphStore: GraphStore): GraphNeighborEntry[] {
+  if (hits.length === 0) return [];
+  const nodes = graphStore.loadNodes();
+  const edges = graphStore.loadEdges();
+  if (nodes.length === 0 || edges.length === 0) return [];
+
+  const nodeMap = new Map<string, GraphNode>();
+  for (const node of nodes) {
+    nodeMap.set(node.id, node);
+  }
+
+  const recallIds = new Set(hits.map(hit => `${hit.chain}:${hit.index}`));
+  const neighborMap = new Map<string, GraphNeighborEntry>();
+
+  for (const edge of edges) {
+    if (edge.type === "semantic" && edge.score < GRAPH_MIN_SCORE) {
+      continue;
+    }
+
+    let sourceId: string | null = null;
+    let neighborId: string | null = null;
+
+    if (recallIds.has(edge.from) && !recallIds.has(edge.to)) {
+      sourceId = edge.from;
+      neighborId = edge.to;
+    } else if (recallIds.has(edge.to) && !recallIds.has(edge.from)) {
+      sourceId = edge.to;
+      neighborId = edge.from;
+    } else {
+      continue;
+    }
+
+    if (!neighborId || !sourceId) continue;
+    const node = nodeMap.get(neighborId);
+    if (!node) continue;
+
+    const existing = neighborMap.get(neighborId);
+    if (!existing || existing.score < edge.score) {
+      neighborMap.set(neighborId, {
+        node,
+        sourceId,
+        edgeType: edge.type,
+        score: edge.score,
+      });
+    }
+  }
+
+  return Array.from(neighborMap.values())
+    .sort((a, b) => b.score - a.score)
+    .slice(0, MAX_GRAPH_NEIGHBORS);
+}
+
+export interface GraphContextStats {
+  related?: number;
+}
+
+export function buildGraphContext(
+  hits: RecallHit[],
+  graphStore: GraphStore,
+  stats?: GraphContextStats
+): string {
+  const neighbors = collectGraphNeighbors(hits, graphStore);
+  if (stats) {
+    stats.related = neighbors.length;
+  }
+  if (neighbors.length === 0) {
+    return "";
+  }
+
+  const lines: string[] = [
+    "## GRAPH NEIGHBORS (knowledge graph)",
+    "",
+  ];
+
+  neighbors.forEach((entry, idx) => {
+    const node = entry.node;
+    const tags = node.tags.length > 0 ? ` [${node.tags.slice(0, 3).join(", ")}]` : "";
+    const date = node.timestamp ? node.timestamp.split("T")[0] : "";
+    lines.push(
+      `[G${idx + 1}] ${formatBlockRef(node.id)} ${date}${tags}`
+    );
+    lines.push(
+      `via ${formatBlockRef(entry.sourceId)} ← ${entry.edgeType} (score=${entry.score.toFixed(2)})`
+    );
+    lines.push(`"${node.snippet}"`);
+    lines.push("");
+  });
+
+  return lines.join("\n").trimEnd();
+}
+
 export interface AskOptions {
   question: string;
   chain?: string; // where to save (default: "journal" or "ask")
@@ -231,6 +339,7 @@ export interface AskOptions {
   semanticWeight?: number;
   semanticOnly?: boolean;
   disableSemantic?: boolean;
+  graph?: boolean; // enable knowledge graph neighbors
 }
 
 export interface AskContextHit {
@@ -364,7 +473,12 @@ export async function askWithContext(
     semanticWeight = 0.5,
     semanticOnly = false,
     disableSemantic = false,
+    graph: graphPreference,
   } = opts;
+
+  const graphStore = new GraphStore();
+  const graphAvailable = graphStore.hasData();
+  const shouldUseGraph = Boolean((graphPreference ?? graphAvailable) && graphAvailable);
 
   // Step 1: Decide whether to use summaries
   const useSummaries = preferSummaries || (!noSummaries && shouldUseSummaries(question));
@@ -400,6 +514,7 @@ export async function askWithContext(
   let contextStr: string;
   let summaryUsed = 0;
   let directUsed = hits.length;
+  let graphRelated = 0;
   
   if (useSummaries && summaries.length > 0) {
     const result = buildContextWithSummaries(summaries, hits, maxContextChars);
@@ -410,9 +525,29 @@ export async function askWithContext(
     contextStr = buildContextString(hits, maxContextChars);
   }
 
+  if (shouldUseGraph && hits.length > 0) {
+    const graphStats: GraphContextStats = {};
+    const graphContext = buildGraphContext(hits, graphStore, graphStats);
+    graphRelated = graphStats.related ?? 0;
+    if (graphContext) {
+      const spacer = contextStr ? "\n\n" : "";
+      contextStr = `${contextStr}${spacer}${graphContext}`;
+    }
+  }
+
   if (explainContext) {
     console.log(`[Context] Summary hits: ${summaryUsed}, Direct hits: ${directUsed}`);
     console.log(`[Context] Context length: ${contextStr.length} chars`);
+    const graphLabel = `[graph: ${graphRelated} related]`;
+    let graphStatus: string;
+    if (!graphAvailable) {
+      graphStatus = "[graph: unavailable]";
+    } else if (shouldUseGraph) {
+      graphStatus = `${graphLabel} (enabled)`;
+    } else {
+      graphStatus = `${graphLabel} (disabled)`;
+    }
+    console.log(`[Context] ${graphStatus}`);
   }
 
   // Step 4: Get provider

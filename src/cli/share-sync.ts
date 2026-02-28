@@ -41,6 +41,13 @@ export interface ShareSyncOptions {
   pushDisabled?: boolean;
 }
 
+export interface ShareSyncSummary {
+  pushed: number;
+  pulled: number;
+  cleanupPins: number;
+  cleanupEntries: number;
+}
+
 const sharePayloadSchema = z.object({
   agent: z.string(),
   timestamp: z.string(),
@@ -53,7 +60,7 @@ const sharePayloadSchema = z.object({
 
 export type SharePayload = z.infer<typeof sharePayloadSchema>;
 
-export async function shareSyncCommand(opts: ShareSyncOptions = {}): Promise<void> {
+export async function shareSyncCommand(opts: ShareSyncOptions = {}): Promise<ShareSyncSummary> {
   const config = loadConfig();
   const store = new Store(config.memory.path);
   const limit = opts.limit ?? 10;
@@ -64,9 +71,16 @@ export async function shareSyncCommand(opts: ShareSyncOptions = {}): Promise<voi
   const shouldPull = Boolean(opts.all || opts.pull);
   const shouldCleanup = Boolean(opts.cleanup);
 
+  const summary: ShareSyncSummary = {
+    pushed: 0,
+    pulled: 0,
+    cleanupPins: 0,
+    cleanupEntries: 0,
+  };
+
   if (!shouldPush && !shouldPull && !shouldCleanup) {
     console.log(chalk.gray("[share-sync] nothing to do (no flags provided)"));
-    return;
+    return summary;
   }
 
   if (shouldPush) {
@@ -82,6 +96,7 @@ export async function shareSyncCommand(opts: ShareSyncOptions = {}): Promise<voi
           try {
             const cid = await pinata.pinJSON(payload as any);
             console.log(chalk.green(`[share-sync] pushed ${payload.chain}#${payload.index} → ${cid}`));
+            summary.pushed += 1;
             await appendNetworkEntry({
               cid,
               agent: payload.agent,
@@ -121,6 +136,7 @@ export async function shareSyncCommand(opts: ShareSyncOptions = {}): Promise<voi
           const blockIndex = await importShareBlock(store, payload);
           await appendNetworkEntry({ ...entry, timestamp: new Date().toISOString(), status: "imported" });
           console.log(chalk.green(`[share-sync] imported ${entry.cid} → share#${String(blockIndex).padStart(6, "0")}`));
+          summary.pulled += 1;
         } catch (err) {
           console.error(chalk.red(`[share-sync] failed to import ${entry.cid}: ${err}`));
         }
@@ -136,12 +152,16 @@ export async function shareSyncCommand(opts: ShareSyncOptions = {}): Promise<voi
         const pinata = createPinataBridge();
         const removedPins = await pinata.cleanupOldPins();
         const removedEntries = await cleanupNetworkEntries();
+        summary.cleanupPins = removedPins;
+        summary.cleanupEntries = removedEntries;
         console.log(chalk.green(`[share-sync] cleanup removed ${removedPins} pins, ${removedEntries} network entries`));
       } catch (err) {
         console.error(chalk.red(`[share-sync] cleanup failed: ${err}`));
       }
     }
   }
+
+  return summary;
 }
 
 /**

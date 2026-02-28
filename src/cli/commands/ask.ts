@@ -22,6 +22,7 @@ export async function askCommand(question: string, options?: {
   semanticWeight?: number;
   semanticOnly?: boolean;
   noSemantic?: boolean;
+  graph?: boolean;
 }) {
   const config = loadConfig();
   const store = new Store(config.memory.path);
@@ -42,6 +43,7 @@ export async function askCommand(question: string, options?: {
     semanticWeight: options?.semanticWeight,
     semanticOnly: options?.semanticOnly,
     disableSemantic: options?.noSemantic,
+    graph: options?.graph,
   };
 
   // Pass vault password via special option (not in AskOptions interface)

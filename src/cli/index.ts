@@ -51,6 +51,7 @@ import { graphBuildCommand, graphShowCommand } from "./commands/graph.js";
 import { reflectCommand } from "./commands/reflect.js";
 import { planCommand } from "./commands/plan.js";
 import { ingestCommand } from "./commands/ingest.js";
+import { watchCommand } from "./commands/watch.js";
 import { DaemonManager } from "../daemon/index.js";
 
 const program = new Command();
@@ -97,6 +98,8 @@ program
   .option("--no-summaries", "Disable summary context")
   .option("--summaries <n>", "Max summaries to include (default: 2)", "2")
   .option("--explain-context", "Show why context was built this way")
+  .option("--graph", "Force knowledge graph context when available")
+  .option("--no-graph", "Disable knowledge graph context")
   .action((question, options) => {
     askCommand(question, {
       useVault: options.useVault,
@@ -115,6 +118,21 @@ program
       semanticWeight: options.semanticWeight,
       noSemantic: options.noSemantic,
       explainContext: options.explainContext,
+      graph: options.graph,
+    });
+  });
+
+program
+  .command("watch [path]")
+  .description("Watch a path for changes and auto-ingest updates")
+  .option("--no-embed", "Skip embedding after ingest")
+  .option("--chain <chain>", "Target chain (default: journal)")
+  .option("-q, --quiet", "Suppress output")
+  .action(async (pathArg: string | undefined, opts) => {
+    await watchCommand(pathArg, {
+      chain: opts.chain,
+      noEmbed: opts.noEmbed,
+      quiet: opts.quiet,
     });
   });
 

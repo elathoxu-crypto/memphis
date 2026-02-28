@@ -83,6 +83,10 @@ export class GraphStore {
     this.metaFile = path.join(GRAPH_DIR, "meta.json");
   }
 
+  hasData(): boolean {
+    return existsSync(this.metaFile) || existsSync(this.nodesFile);
+  }
+
   loadNodes(): GraphNode[] {
     if (!existsSync(this.nodesFile)) return [];
     return readFileSync(this.nodesFile, "utf-8")
