@@ -34,6 +34,7 @@ import { renderOpenClaw, setupOpenClawInput } from "./screens/openclaw.js";
 import { renderCline, setupClineInput } from "./screens/cline.js";
 import { renderOffline, setupOfflineInput } from "./screens/offline.js";
 import { renderSettings } from "./screens/settings.js";
+import { renderSoulScreen } from "./screens/soul.js";
 
 // ─── Colours ─────────────────────────────────────────────────────────────────
 const COLORS = {
@@ -300,8 +301,8 @@ export class MemphisTUI {
   private bindKeys(): void {
     this.screen.key(["escape", "q", "C-c"], () => process.exit(0));
 
-    // Number keys 1-9
-    this.screen.key(["1","2","3","4","5","6","7","8","9"], (ch: string) => {
+    // Navigation keys
+    this.screen.key(["1","2","3","4","5","6","7","8","9","0","-","=","+"], (ch: string) => {
       const name = KEY_TO_SCREEN[ch];
       if (name) this.navigateTo(name);
     });
@@ -336,11 +337,11 @@ export class MemphisTUI {
   private buildSidebar(): string {
     const keyMap: Record<number, string> = {
       1: "1", 2: "2", 3: "3", 4: "4", 5: "5",
-      6: "6", 7: "7", 8: "8", 9: "9", 10: "0", 11: "-",
+      6: "6", 7: "7", 8: "8", 9: "9", 10: "0", 11: "-", 12: "=" ,
     };
     const nameMap: Record<number, ScreenName> = {
       1: "dashboard", 2: "journal", 3: "vault", 4: "recall", 5: "ask",
-      6: "decisions", 7: "summary", 8: "openclaw", 9: "cline", 10: "offline", 11: "settings",
+      6: "decisions", 7: "summary", 8: "openclaw", 9: "cline", 10: "offline", 11: "settings", 12: "soul",
     };
 
     let content = `{bold}Nawigacja{/bold}\n\n`;
@@ -450,6 +451,10 @@ export class MemphisTUI {
 
       case "settings":
         this.contentBox.setContent(renderSettings(this.config, this.state));
+        break;
+
+      case "soul":
+        this.contentBox.setContent(renderSoulScreen(process.env.MEMPHIS_WORKSPACE));
         break;
     }
 

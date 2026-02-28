@@ -1,5 +1,9 @@
 import { Store } from "../memory/store.js";
 import type { Block } from "../memory/chain.js";
+import { loadSemanticIndex } from "../embeddings/loader.js";
+import { LocalOllamaBackend } from "../embeddings/backends/local.js";
+import { dotProduct, normalizeVector } from "../utils/math.js";
+
 
 export interface RecallQuery {
   text?: string;
@@ -26,6 +30,24 @@ export interface RecallHit {
 export interface RecallResult {
   query: RecallQuery;
   hits: RecallHit[];
+}
+
+export interface SemanticOptions {
+  semanticWeight?: number;
+  semanticOnly?: boolean;
+  disableSemantic?: boolean;
+}
+
+function cosineSimilarity(a: number[], b: number[]): number {
+  const dot = dotProduct(a, b);
+  const normA = Math.sqrt(dotProduct(a, a));
+  const normB = Math.sqrt(dotProduct(b, b));
+  if (normA === 0 || normB === 0) return 0;
+  return dot / (normA * normB);
+}
+
+function semanticScore(queryVector: number[], vector: number[]): number {
+  return cosineSimilarity(queryVector, vector);
 }
 
 /**
@@ -73,7 +95,7 @@ function parseDate(dateStr?: string): number | undefined {
 /**
  * Build recall result from query
  */
-export function recall(store: Store, query: RecallQuery): RecallResult {
+export async function recall(store: Store, query: RecallQuery, semanticOptions?: SemanticOptions): Promise<RecallResult> {
   const limit = query.limit || 20;
   const candidates: RecallHit[] = [];
 
@@ -94,6 +116,46 @@ export function recall(store: Store, query: RecallQuery): RecallResult {
   const untilMs = parseDate(query.until);
 
   // Search each chain
+  const semanticWeight = semanticOptions?.semanticWeight ?? 0.5;
+  const useSemantic = !semanticOptions?.disableSemantic && semanticWeight > 0;
+  const semanticOnly = semanticOptions?.semanticOnly;
+
+  const semanticHits: RecallHit[] = [];
+  if (useSemantic) {
+    const queryText = query.text?.trim();
+    if (queryText) {
+      try {
+        const backend = new LocalOllamaBackend();
+        await backend.init();
+        const queryVector = (await backend.embedBlocks([{ data: { content: queryText } } as any]))[0];
+        for (const chain of chains) {
+          const index = loadSemanticIndex(chain);
+          for (const entry of index) {
+            const score = semanticScore(queryVector, entry.vector);
+            if (score > 0.2) {
+              const chainBlocks = store.readChain(chain);
+              const block = chainBlocks.find(b => b.index === entry.blockIndex);
+              if (block) {
+                semanticHits.push({
+                  chain,
+                  index: block.index,
+                  timestamp: block.timestamp,
+                  type: block.data.type,
+                  tags: block.data.tags || [],
+                  score,
+                  snippet: block.data.content?.slice(0, 120) || "",
+                  content: block.data.content || "",
+                });
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.warn("Semantic recall failed:", err);
+      }
+    }
+  }
+
   for (const chain of chains) {
     const blocks = store.readChain(chain);
 
@@ -132,14 +194,41 @@ export function recall(store: Store, query: RecallQuery): RecallResult {
     }
   }
 
+  // Merge keyword + semantic with weighted scoring
+  const mergedHits = new Map<string, RecallHit>();
+  const keywordWeight = 1 - semanticWeight;
+
+  // First add all keyword candidates
+  for (const hit of candidates) {
+    const key = `${hit.chain}:${hit.index}`;
+    // Normalize keyword score to 0-1 range (max possible is ~10)
+    const normScore = keywordWeight > 0 ? (hit.score / 10) * keywordWeight : 0;
+    mergedHits.set(key, { ...hit, score: normScore });
+  }
+
+  // Then add/merge semantic hits
+  for (const hit of semanticHits) {
+    const key = `${hit.chain}:${hit.index}`;
+    const existing = mergedHits.get(key);
+    if (existing) {
+      // Merge: add semantic score
+      existing.score += hit.score * semanticWeight;
+    } else {
+      // New hit from semantic only
+      mergedHits.set(key, { ...hit, score: hit.score * semanticWeight });
+    }
+  }
+
+  const allHits = Array.from(mergedHits.values());
+
   // Sort: score desc, then timestamp desc
-  candidates.sort((a, b) => {
+  allHits.sort((a, b) => {
     if (b.score !== a.score) return b.score - a.score;
     return b.timestamp.localeCompare(a.timestamp);
   });
 
   // Apply limit
-  const hits = candidates.slice(0, limit);
+  const hits = allHits.slice(0, limit);
 
   return { query, hits };
 }

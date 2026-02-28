@@ -48,7 +48,7 @@ const sharePayloadSchema = z.object({
   index: z.number(),
   tags: z.array(z.string()).optional(),
   content: z.string().max(2048),
-  meta: z.record(z.any()).optional(),
+  meta: z.record(z.string(), z.any()).optional(),
 });
 
 export type SharePayload = z.infer<typeof sharePayloadSchema>;

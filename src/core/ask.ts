@@ -9,6 +9,68 @@ import { CodexProvider } from "../providers/codex.js";
 import { getProviderApiKey } from "../integrations/vault-providers.js";
 import { OpenClawProvider, isGatewayAvailable } from "../providers/openclaw.js";
 import type { LLMMessage, LLMResponse } from "../providers/index.js";
+import { existsSync, readFileSync } from "node:fs";
+import path from "node:path";
+import { homedir } from "node:os";
+import { fileURLToPath } from "node:url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+let cachedSoulPrompt: string | null | undefined;
+let cachedSoulSource: string | null = null;
+
+function loadSoulPrompt(): string | null {
+  if (cachedSoulPrompt !== undefined) {
+    return cachedSoulPrompt;
+  }
+
+  const debugSoul = process.env.MEMPHIS_SOUL_DEBUG === "1";
+  const config = loadConfig();
+  const candidates: string[] = [];
+
+  if (process.env.MEMPHIS_SOUL_PATH) {
+    candidates.push(process.env.MEMPHIS_SOUL_PATH);
+  }
+
+  if (config.memory?.path) {
+    candidates.push(path.join(config.memory.path, "SOUL.md"));
+  }
+
+  candidates.push(
+    path.join(homedir(), ".memphis", "SOUL.md"),
+    path.resolve(process.cwd(), "SOUL.md"),
+    path.resolve(__dirname, "../../SOUL.md")
+  );
+
+  for (const candidate of candidates) {
+    if (debugSoul && candidate) {
+      console.error(`[SOUL] Checking ${candidate}`);
+    }
+    try {
+      if (candidate && existsSync(candidate)) {
+        cachedSoulPrompt = readFileSync(candidate, "utf-8").trim();
+        cachedSoulSource = candidate;
+        if (debugSoul) {
+          console.error(`[SOUL] Loaded from ${candidate}`);
+        }
+        return cachedSoulPrompt;
+      }
+    } catch (err) {
+      if (debugSoul) {
+        console.error(`[SOUL] Failed to read ${candidate}: ${err}`);
+      }
+      // Ignore and try next candidate
+    }
+  }
+
+  cachedSoulPrompt = null;
+  cachedSoulSource = null;
+  if (debugSoul) {
+    console.error("[SOUL] No SOUL.md found");
+  }
+  return cachedSoulPrompt;
+}
 
 // Keywords that suggest user wants overview/summary
 const SUMMARY_TRIGGER_WORDS = [
@@ -170,7 +232,10 @@ export interface AskOptions {
   noSummaries?: boolean; // disable summaries
   summariesMax?: number; // max summaries to include (default: 2)
   explainContext?: boolean; // print why context was built this way
-  vaultPassword?: string; // password for vault decryption
+  // Semantic recall options
+  semanticWeight?: number;
+  semanticOnly?: boolean;
+  disableSemantic?: boolean;
 }
 
 export interface AskContextHit {
@@ -240,10 +305,21 @@ relevant information, say so honestly. Be concise and helpful.`;
     { role: "system", content: systemPrompt },
   ];
 
-  if (context) {
+  const soulPrompt = loadSoulPrompt();
+  let enrichedContext = context;
+  if (soulPrompt) {
+    const contextSuffix = context ? `\n\n${enrichedContext}` : "";
+    enrichedContext = `SOUL.md — Memphis identity & rules:
+${soulPrompt}${contextSuffix}`;
+    if (process.env.MEMPHIS_SOUL_DEBUG === "1") {
+      console.error(`SOUL prompt injected from ${cachedSoulSource ?? "unknown"}`);
+    }
+  }
+
+  if (enrichedContext) {
     messages.push({
       role: "system",
-      content: `Relevant memory context:\n${context}`,
+      content: `Relevant memory context:\n${enrichedContext}`,
     });
   }
 
@@ -401,7 +477,10 @@ export async function askWithContext(
     noSummaries = false,
     summariesMax = 2,
     explainContext = false,
-    vaultPassword,
+    // Semantic options
+    semanticWeight = 0.5,
+    semanticOnly = false,
+    disableSemantic = false,
   } = opts;
 
   // Step 1: Decide whether to use summaries
@@ -427,7 +506,11 @@ export async function askWithContext(
     recallQuery.tag = tags[0]; // Simple tag filter
   }
 
-  const recallResult = recall(store, recallQuery);
+      const recallResult = await recall(store, recallQuery, {
+        semanticWeight,
+        semanticOnly,
+        disableSemantic,
+      });
   const hits = recallResult.hits.slice(0, topK);
 
   // Step 3: Build context string (with or without summaries)
@@ -452,7 +535,7 @@ export async function askWithContext(
   // Step 4: Get provider
   let providerResult;
   try {
-    providerResult = await selectProvider(provider, includeVault, vaultPassword);
+    providerResult = await selectProvider(provider, includeVault);
   } catch (err) {
     // No provider - return fallback with recall results
     return {

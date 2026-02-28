@@ -19,6 +19,9 @@ export async function askCommand(question: string, options?: {
   noSummaries?: boolean;
   summariesMax?: number;
   explainContext?: boolean;
+  semanticWeight?: number;
+  semanticOnly?: boolean;
+  noSemantic?: boolean;
 }) {
   const config = loadConfig();
   const store = new Store(config.memory.path);
@@ -36,8 +39,13 @@ export async function askCommand(question: string, options?: {
     noSummaries: options?.noSummaries === true,
     summariesMax: options?.summariesMax || 2,
     explainContext: options?.explainContext,
-    vaultPassword: options?.vaultPassword || process.env.VAULT_PASSWORD,
+    semanticWeight: options?.semanticWeight,
+    semanticOnly: options?.semanticOnly,
+    disableSemantic: options?.noSemantic,
   };
+
+  // Pass vault password via special option (not in AskOptions interface)
+  const vaultPassword = options?.vaultPassword || process.env.VAULT_PASSWORD;
 
   try {
     const startTime = Date.now();

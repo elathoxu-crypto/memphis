@@ -41,11 +41,27 @@ const IntegrationsConfigSchema = z.object({
   pinata: PinataIntegrationSchema.optional(),
 }).catchall(z.any()).optional();
 
+const TelegramConfigSchema = z.object({
+  bot_token: z.string().optional(),
+}).optional();
+
+const EmbeddingsConfigSchema = z.object({
+  enabled: z.boolean().optional(),
+  backend: z.enum(["ollama", "openai", "mock"]).optional(),
+  model: z.string().optional(),
+  storage_path: z.string().optional(),
+  ollama_url: z.string().optional(),
+  top_k: z.number().int().positive().optional(),
+  semantic_weight: z.number().min(0).max(1).optional(),
+});
+
 const MemphisConfigSchema = z.object({
   providers: z.record(z.string(), ProviderSchema).optional(),
   memory: MemoryConfigSchema.optional(),
+  embeddings: EmbeddingsConfigSchema.optional(),
   agents: z.record(z.string(), AgentConfigSchema).optional(),
   integrations: IntegrationsConfigSchema,
+  telegram: TelegramConfigSchema,
 });
 
 export type MemphisConfig = z.infer<typeof MemphisConfigSchema> & typeof DEFAULT_CONFIG;
@@ -80,6 +96,10 @@ export function loadConfig(): MemphisConfig {
   // Resolve ~ in memory.path
   if (merged.memory?.path) {
     merged.memory.path = resolvePath(merged.memory.path);
+  }
+
+  if (merged.embeddings?.storage_path) {
+    merged.embeddings.storage_path = resolvePath(merged.embeddings.storage_path);
   }
   
   if (merged.providers) {

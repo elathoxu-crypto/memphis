@@ -44,6 +44,10 @@ import { botCommand } from "./commands/bot.js";
 import { runOpenClawCommands } from "../bridges/openclaw.js";
 import { MemphisTUI } from "../tui/index.js";
 import { shareSyncCommand } from "./share-sync.js";
+import { embedCommand } from "./commands/embed.js";
+import { shareReplicatorCommand } from "./commands/share-replicator.js";
+import { soulStatusCommand } from "./commands/soul-status.js";
+import { graphBuildCommand, graphShowCommand } from "./commands/graph.js";
 
 const program = new Command();
 
@@ -79,6 +83,9 @@ program
   .option("-t, --top <n>", "Number of context hits (default: 8)", "8")
   .option("--since <date>", "Only recall blocks newer than date (YYYY-MM-DD)")
   .option("--include-vault", "Include vault blocks in recall search")
+  .option("--semantic-only", "Use only semantic recall hits (requires embeddings)")
+  .option("--semantic-weight <ratio>", "Blend weight (0-1) between semantic and keyword recall")
+  .option("--no-semantic", "Disable semantic recall even if embeddings are enabled")
   .option("--no-save", "Don't save the answer to chain")
   .option("-j, --json", "Output JSON with answer + context")
   .option("--prefer-summaries", "Prefer summary context (for overview questions)")
@@ -99,6 +106,9 @@ program
       preferSummaries: options.preferSummaries,
       noSummaries: options.noSummaries,
       summariesMax: parseInt(options.summaries) || 2,
+      semanticOnly: options.semanticOnly,
+      semanticWeight: options.semanticWeight,
+      noSemantic: options.noSemantic,
       explainContext: options.explainContext,
     });
   });
@@ -271,6 +281,26 @@ program
 import { autosummarize, shouldTriggerAutosummary } from "../core/autosummarizer.js";
 
 program
+  .command("embed")
+  .description("Generate semantic embeddings for memory chains")
+  .option("-c, --chain <chain>", "Specific chain or comma list (default: all)")
+  .option("--since <time>", "Only blocks newer than date (YYYY-MM-DD)")
+  .option("-l, --limit <n>", "Max blocks to embed this run", "50")
+  .option("-f, --force", "Overwrite existing vectors")
+  .option("--dry-run", "Log blocks without embedding")
+  .option("--report", "Show coverage report and exit")
+  .action(async (opts) => {
+    await embedCommand({
+      chain: opts.chain,
+      since: opts.since,
+      limit: opts.limit ? parseInt(opts.limit, 10) : undefined,
+      force: opts.force,
+      dryRun: opts.dryRun,
+      report: opts.report,
+    });
+  });
+
+program
   .command("share-sync")
   .description("Sync share-tagged memory blocks via Pinata/IPFS")
   .option("--push", "Export local share blocks and pin to IPFS")
@@ -290,6 +320,88 @@ program
       since: opts.since,
       dryRun: opts.dryRun,
       pushDisabled: opts.pushDisabled,
+    });
+  });
+
+const shareProgram = program
+  .command("share")
+  .description("Share utilities");
+
+shareProgram
+  .command("replicator")
+  .description("Generate and manage share manifests")
+  .option("--plan", "Show pending manifest actions")
+  .option("--push", "Publish local manifest entries")
+  .option("--pull", "Import remote manifest entries")
+  .option("--file <path>", "Manifest JSONL file for --pull")
+  .option("--limit <n>", "Limit number of manifests per action", "25")
+  .option("--dry-run", "Log actions without mutating state")
+  .action(async (opts) => {
+    await shareReplicatorCommand({
+      plan: opts.plan,
+      push: opts.push,
+      pull: opts.pull,
+      file: opts.file,
+      limit: opts.limit ? parseInt(opts.limit, 10) : undefined,
+      dryRun: opts.dryRun,
+    });
+  });
+
+const graphProgram = program
+  .command("graph")
+  .description("Knowledge graph overlay");
+
+graphProgram
+  .command("build")
+  .description("Build knowledge graph from memory chains")
+  .option("-c, --chains <chains>", "Comma-separated chains to include")
+  .option("-t, --threshold <n>", "Similarity threshold (default: 0.75)")
+  .option("-l, --limit <n>", "Max nodes to process")
+  .option("--dry-run", "Compute without saving")
+  .option("-j, --json", "Output JSON")
+  .action(async (opts) => {
+    await graphBuildCommand({
+      chains: opts.chains,
+      threshold: opts.threshold,
+      limit: opts.limit,
+      dryRun: opts.dryRun,
+      json: opts.json,
+    });
+  });
+
+graphProgram
+  .command("show [nodeId]")
+  .description("Show graph nodes and edges")
+  .option("-c, --chain <chain>", "Filter by chain")
+  .option("--tag <tag>", "Filter by tag")
+  .option("-d, --depth <n>", "Traversal depth (default: 1)")
+  .option("--min-score <n>", "Min edge score")
+  .option("--stats", "Show graph stats only")
+  .option("-j, --json", "Output JSON")
+  .action(async (nodeId, opts) => {
+    await graphShowCommand(nodeId, {
+      chain: opts.chain,
+      tag: opts.tag,
+      depth: opts.depth,
+      minScore: opts.minScore,
+      stats: opts.stats,
+      json: opts.json,
+    });
+  });
+
+const soulProgram = program
+  .command("soul")
+  .description("SOUL utilities");
+
+soulProgram
+  .command("status")
+  .description("Show SOUL/autonomy status")
+  .option("--pretty", "Pretty-print output")
+  .option("--workspace <path>", "Workspace root override")
+  .action((opts) => {
+    soulStatusCommand({
+      pretty: opts.pretty,
+      workspace: opts.workspace,
     });
   });
 

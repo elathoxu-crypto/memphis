@@ -4,6 +4,7 @@ import { promisify } from "util";
 import { exec } from "child_process";
 import { createWriteStream, existsSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
+import { loadConfig } from "../../config/loader.js";
 
 const execAsync = promisify(exec);
 
@@ -227,7 +228,9 @@ class MemphisBot {
 
   private async runMemphis(args: string[]): Promise<string> {
     return new Promise((resolve) => {
-      const proc = spawn("memphis", args, {
+      // Use npx tsx to run memphis directly
+      const proc = spawn("npx", ["tsx", "src/cli/index.ts", ...args], {
+        cwd: process.cwd(),
         stdio: ["pipe", "pipe", "pipe"]
       });
       
@@ -238,14 +241,16 @@ class MemphisBot {
       proc.stderr.on("data", (data) => { stderr += data.toString(); });
       
       proc.on("close", (code) => {
-        if (code === 0) {
+        console.log(`[RUNMEMPHIS] code=${code} stdout=${stdout.slice(0,100)} stderr=${stderr.slice(0,100)}`);
+        if (code === 0 && stdout.trim()) {
           resolve(stdout);
         } else {
-          resolve(stderr || `Error: ${code}`);
+          resolve(stderr || `Error: ${code} stdout: ${stdout.slice(0,100)}`);
         }
       });
       
       proc.on("error", (err) => {
+        console.log(`[RUNMEMPHIS] error=${err.message}`);
         resolve(`Error: ${err.message}`);
       });
     });
@@ -451,11 +456,16 @@ class MemphisBot {
 }
 
 export async function botCommand(action?: string) {
-  const token = process.env.TELEGRAM_BOT_TOKEN;
+  // Try env first, then config
+  let token = process.env.TELEGRAM_BOT_TOKEN;
+  if (!token) {
+    const config = loadConfig();
+    token = config.telegram?.bot_token;
+  }
   
   if (!token) {
     console.log(chalk.red("❌ No bot token!"));
-    console.log(chalk.gray("Set TELEGRAM_BOT_TOKEN env"));
+    console.log(chalk.gray("Set TELEGRAM_BOT_TOKEN env or telegram.bot_token in config"));
     return;
   }
 

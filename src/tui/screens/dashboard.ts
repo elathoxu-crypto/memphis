@@ -6,9 +6,11 @@ import type { MemphisConfig } from "../../config/loader.js";
 import type { TUIState } from "../state.js";
 import { truncate, formatDate } from "../helpers.js";
 import { buildStatusReport } from "../../core/status.js";
+import { collectSoulStatus, DEFAULT_WORKSPACE_ROOT } from "../../soul/status.js";
 
 export function renderDashboard(store: Store, config: MemphisConfig, state: TUIState): string {
   const report = buildStatusReport(store, config);
+  const soul = collectSoulStatus({ workspaceRoot: process.env.MEMPHIS_WORKSPACE || DEFAULT_WORKSPACE_ROOT, touchHeartbeat: false });
 
   let content = `{bold}{cyan}⚡ Dashboard{/cyan}{/bold}\n\n`;
   content += `Witaj w Memphis! Twój lokalny mózg AI.\n\n`;
@@ -78,6 +80,11 @@ export function renderDashboard(store: Store, config: MemphisConfig, state: TUIS
     }
   }
   content += `\n`;
+
+  // SOUL summary
+  const soulColor = soul.ok ? "green" : "red";
+  content += `{bold}SOUL:{/bold} {${soulColor}}${soul.ok ? "OK" : "Needs attention"}{/${soulColor}}\n`;
+  content += `${soul.summary}\n\n`;
 
   // Recent
   content += `{bold}Ostatnia aktywność:{/bold}\n`;

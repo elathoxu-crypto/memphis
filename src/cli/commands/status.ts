@@ -75,6 +75,40 @@ export async function statusCommand(options: StatusOptions = {}) {
     }
   }
 
+  // Embeddings
+  console.log();
+  console.log(chalk.bold("  Embeddings:"));
+  const embeddings = report.embeddings;
+  if (!embeddings.enabled) {
+    console.log(chalk.gray("    disabled (set embeddings.enabled: true in ~/.memphis/config.yaml)"));
+    if (embeddings.chainsTracked > 0) {
+      console.log(chalk.gray(`    chains pending coverage: ${embeddings.chainsTracked}`));
+    }
+  } else if (embeddings.error) {
+    console.log(chalk.red(`    ✗ ${embeddings.error}`));
+  } else if (embeddings.summaries.length === 0) {
+    console.log(chalk.yellow("    ⚠ no embeddings stored yet. Run: memphis embed --chain journal"));
+  } else {
+    console.log(`    Backend: ${chalk.cyan(embeddings.backend || "ollama")} model=${embeddings.model || "nomic-embed-text-v1"}`);
+    console.log(`    Coverage: ${chalk.cyan(`${embeddings.summaries.length}/${embeddings.chainsTracked}`)} chains, ${chalk.cyan(embeddings.totalVectors.toString())} vectors`);
+    const summariesToShow = [...embeddings.summaries]
+      .sort((a, b) => (b.lastRun || "").localeCompare(a.lastRun || ""))
+      .slice(0, options.verbose ? embeddings.summaries.length : 5);
+    for (const summary of summariesToShow) {
+      console.log(`      • ${summary.chain.padEnd(12)} ${summary.vectors.toString().padStart(4)} vectors${summary.lastRun ? ` (last: ${summary.lastRun})` : ""}`);
+    }
+    if (!options.verbose && embeddings.summaries.length > summariesToShow.length) {
+      console.log(chalk.gray(`      … +${embeddings.summaries.length - summariesToShow.length} more`));
+    }
+    if (embeddings.missingChains.length > 0) {
+      const missingPreview = options.verbose
+        ? embeddings.missingChains
+        : embeddings.missingChains.slice(0, 3);
+      const suffix = embeddings.missingChains.length > missingPreview.length ? " …" : "";
+      console.log(chalk.yellow(`    Missing: ${missingPreview.join(", " )}${suffix}`));
+    }
+  }
+
   // Vault
   console.log();
   console.log(chalk.bold("  Vault:"));

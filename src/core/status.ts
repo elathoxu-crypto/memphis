@@ -1,7 +1,10 @@
+import { readdirSync, readFileSync, existsSync } from "node:fs";
+import path from "node:path";
 import { Store } from "../memory/store.js";
-import { verifyChain, type Block } from "../memory/chain.js";
+import { verifyChain } from "../memory/chain.js";
 import type { MemphisConfig } from "../config/loader.js";
 import { loadOfflineConfig } from "../offline/config.js";
+import { EMBEDDINGS_PATH } from "../config/defaults.js";
 
 export interface ChainStatus {
   name: string;
@@ -43,6 +46,26 @@ export interface RecentBlock {
   content: string;
 }
 
+export interface EmbeddingSummary {
+  chain: string;
+  vectors: number;
+  backend?: string;
+  model?: string;
+  lastRun?: string | null;
+}
+
+export interface EmbeddingStatus {
+  enabled: boolean;
+  backend?: string;
+  model?: string;
+  storagePath: string;
+  summaries: EmbeddingSummary[];
+  totalVectors: number;
+  chainsTracked: number;
+  missingChains: string[];
+  error?: string;
+}
+
 export interface StatusReport {
   ok: boolean;
   chains: ChainStatus[];
@@ -50,6 +73,31 @@ export interface StatusReport {
   vault: VaultStatus;
   recent: RecentBlock[];
   offline: OfflineStatusInfo;
+  embeddings: EmbeddingStatus;
+}
+
+function loadEmbeddingSummaries(root: string): EmbeddingSummary[] {
+  if (!existsSync(root)) return [];
+  const summaries: EmbeddingSummary[] = [];
+  const entries = readdirSync(root, { withFileTypes: true });
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue;
+    const metaPath = path.join(root, entry.name, "meta.json");
+    if (!existsSync(metaPath)) continue;
+    try {
+      const meta = JSON.parse(readFileSync(metaPath, "utf-8"));
+      summaries.push({
+        chain: entry.name,
+        vectors: meta.totalVectors ?? 0,
+        backend: meta.backend,
+        model: meta.model,
+        lastRun: meta.lastRun ?? null,
+      });
+    } catch {
+      // ignore malformed meta entries
+    }
+  }
+  return summaries;
 }
 
 /**
@@ -157,6 +205,38 @@ export function buildStatusReport(store: Store, config: MemphisConfig): StatusRe
   const allProvidersOk = providers.every(p => p.health === "ready");
   const ok = allChainsOk && allProvidersOk;
 
+  const embeddingsEnabled = config.embeddings?.enabled === true;
+  const embeddingsStorage = config.embeddings?.storage_path || EMBEDDINGS_PATH;
+  const candidateChains = chainNames.filter(chain => chain !== "vault" && chain !== "credential");
+  let embeddingSummaries: EmbeddingSummary[] = [];
+  let embeddingsError: string | undefined;
+
+  if (embeddingsEnabled) {
+    try {
+      embeddingSummaries = loadEmbeddingSummaries(embeddingsStorage);
+    } catch (err) {
+      embeddingsError = (err as Error).message;
+    }
+  }
+
+  const totalVectors = embeddingSummaries.reduce((sum, s) => sum + (s.vectors || 0), 0);
+  const coveredChains = new Set(embeddingSummaries.map(s => s.chain));
+  const missingChains = embeddingsEnabled
+    ? candidateChains.filter(chain => !coveredChains.has(chain))
+    : candidateChains;
+
+  const embeddings: EmbeddingStatus = {
+    enabled: embeddingsEnabled,
+    backend: config.embeddings?.backend,
+    model: config.embeddings?.model,
+    storagePath: embeddingsStorage,
+    summaries: embeddingSummaries,
+    totalVectors,
+    chainsTracked: candidateChains.length,
+    missingChains,
+    error: embeddingsError,
+  };
+
   const offlineConfig = loadOfflineConfig();
   const offline: OfflineStatusInfo = {
     enabled: offlineConfig.enabled,
@@ -172,5 +252,6 @@ export function buildStatusReport(store: Store, config: MemphisConfig): StatusRe
     vault,
     recent,
     offline,
+    embeddings,
   };
 }

@@ -1,7 +1,7 @@
 import { sha256 } from "../utils/hash.js";
 
 export interface BlockData {
-  type: "journal" | "build" | "adr" | "ops" | "ask" | "system" | "vault" | "credential" | "decision" | "project_task" | "break_task";
+  type: "journal" | "build" | "adr" | "ops" | "ask" | "system" | "vault" | "credential" | "decision" | "project_task" | "break_task" | "share_manifest";
   content: string;
   tags: string[];
   agent?: string;
@@ -13,6 +13,16 @@ export interface BlockData {
     index: number;
     score: number;
   }>;
+  manifest?: {
+    cid: string;
+    chain: string;
+    from: number;
+    to: number;
+    ttl_days: number;
+    created_at: string;
+    publisher: string;
+    signature?: string;
+  };
   // Source reference for decision blocks
   source_ref?: {
     chain: string;
@@ -60,7 +70,7 @@ export interface Block {
 }
 
 // SOUL - Self-Organizing Universal Ledger Rules
-const ALLOWED_TYPES = ["journal", "build", "adr", "ops", "ask", "system", "vault", "credential", "decision", "project_task", "break_task", "break_work", "project_task_complete"];
+const ALLOWED_TYPES = ["journal", "build", "adr", "ops", "ask", "system", "vault", "credential", "decision", "project_task", "break_task", "break_work", "project_task_complete", "share_manifest"];
 const GENESIS_HASH = "0".repeat(64);
 const SOUL_VERSION = "1.0.0";
 

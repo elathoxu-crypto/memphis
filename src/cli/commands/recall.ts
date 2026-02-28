@@ -61,7 +61,7 @@ export async function recallCommand(
     includeVault: options.includeVault,
   };
 
-  const result = recall(store, recallQuery);
+  const result = await recall(store, recallQuery);
 
   // JSON output
   if (options.json) {

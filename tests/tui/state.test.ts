@@ -37,8 +37,8 @@ describe("KEY_TO_SCREEN", () => {
     expect(KEY_TO_SCREEN["9"]).toBe("settings");
   });
 
-  it("has exactly 11 entries", () => {
-    expect(Object.keys(KEY_TO_SCREEN)).toHaveLength(11);
+  it("has exactly 13 entries", () => {
+    expect(Object.keys(KEY_TO_SCREEN)).toHaveLength(13);
   });
 
   it("all values are valid ScreenNames", () => {
@@ -49,12 +49,12 @@ describe("KEY_TO_SCREEN", () => {
 });
 
 describe("SCREEN_NAMES", () => {
-  it("has 11 screens", () => {
-    expect(SCREEN_NAMES).toHaveLength(11);
+  it("has 12 screens", () => {
+    expect(SCREEN_NAMES).toHaveLength(12);
   });
 
   it("contains expected screens", () => {
-    const expected = ["dashboard", "journal", "vault", "recall", "ask", "decisions", "summary", "openclaw", "cline", "offline", "settings"];
+    const expected = ["dashboard", "journal", "vault", "recall", "ask", "decisions", "summary", "openclaw", "cline", "offline", "settings", "soul"];
     for (const name of expected) {
       expect(SCREEN_NAMES).toContain(name);
     }

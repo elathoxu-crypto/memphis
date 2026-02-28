@@ -1,19 +1,48 @@
 import readline from "node:readline";
 
+function ensureTTY(kind: string) {
+  if (!process.stdin.isTTY || !process.stdout.isTTY) {
+    throw new Error(`Cannot prompt for ${kind}: not a TTY`);
+  }
+}
+
+function createInterface() {
+  return readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+    terminal: true,
+  });
+}
+
+/** Prompt for plain text input (echo on). */
+export async function promptLine(prompt: string): Promise<string> {
+  ensureTTY("input");
+  const rl = createInterface();
+  try {
+    return await new Promise<string>((resolve) => rl.question(prompt, resolve));
+  } finally {
+    rl.close();
+  }
+}
+
+/** Prompt for a yes/no answer (default provided). */
+export async function promptYesNo(prompt: string, defaultYes = false): Promise<boolean> {
+  if (!process.stdin.isTTY || !process.stdout.isTTY) {
+    return defaultYes;
+  }
+  const answer = (await promptLine(prompt)).trim().toLowerCase();
+  if (!answer) return defaultYes;
+  return ["y", "yes"].includes(answer);
+}
+
 /**
  * Prompt for sensitive input (e.g., passwords) without echoing characters.
  * Works in TTY terminals. For non-interactive use, prefer --password-stdin or --password-env.
  */
 export async function promptHidden(prompt: string): Promise<string> {
-  if (!process.stdin.isTTY || !process.stdout.isTTY) {
-    throw new Error("Cannot prompt for password: not a TTY");
-  }
+  ensureTTY("password");
 
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-    terminal: true,
-  }) as readline.Interface & { stdoutMuted?: boolean; _writeToOutput?: (s: string) => void; output: any };
+  const rl = createInterface() as readline.Interface & { stdoutMuted?: boolean; _writeToOutput?: (s: string) => void; output: any };
 
   // Mask typed characters
   rl.stdoutMuted = true;

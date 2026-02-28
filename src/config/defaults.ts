@@ -4,6 +4,7 @@ import { homedir } from "node:os";
 export const MEMPHIS_HOME = join(homedir(), ".memphis");
 export const CHAINS_PATH = join(MEMPHIS_HOME, "chains");
 export const CONFIG_PATH = join(MEMPHIS_HOME, "config.yaml");
+export const EMBEDDINGS_PATH = join(MEMPHIS_HOME, "embeddings");
 
 export const DEFAULT_CONFIG = {
   providers: {},
@@ -11,6 +12,14 @@ export const DEFAULT_CONFIG = {
     path: CHAINS_PATH,
     auto_git: false,
     auto_git_push: false,
+  },
+  embeddings: {
+    enabled: false,
+    backend: "ollama",
+    model: "nomic-embed-text-v1",
+    storage_path: EMBEDDINGS_PATH,
+    top_k: 8,
+    semantic_weight: 0.5,
   },
   agents: {
     journal: { chain: "journal", context_window: 20 },
