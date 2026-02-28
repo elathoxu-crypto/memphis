@@ -2,9 +2,7 @@ import { Store } from "../memory/store.js";
 import { loadConfig } from "../config/loader.js";
 import { log } from "../utils/logger.js";
 import { verifyChain } from "../memory/chain.js";
-import { execSync } from "child_process";
-import { cpus, totalmem, freemem, uptime } from "os";
-import { memoryUsage } from "process";
+import { captureSystemSnapshot, formatSystemSnapshot } from "../utils/system-stats.js";
 
 const DEFAULT_INTERVAL = 30 * 60 * 1000; // 30 minutes in ms
 const MAX_CONTENT_LENGTH = 500;
@@ -91,32 +89,13 @@ export class AutosaveAgent {
   }
 
   private getSystemStats(): string {
-    const parts: string[] = [];
-
-    const systemUptime = uptime();
-    const hours = Math.floor(systemUptime / 3600);
-    const minutes = Math.floor((systemUptime % 3600) / 60);
-    parts.push(`Uptime: ${hours}h ${minutes}m`);
-
-    const total = totalmem();
-    const free = freemem();
-    const used = total - free;
-    const usedMB = Math.round(used / 1024 / 1024);
-    parts.push(`RAM: ${usedMB}MB`);
-
-    parts.push(`CPU: ${cpus().length} cores`);
-
     try {
-      const gitStatus = execSync("git status --short 2>/dev/null | head -3", { encoding: "utf-8" }).trim();
-      if (gitStatus) {
-        const changed = gitStatus.split("\n").filter(l => l.trim()).length;
-        parts.push(`Git: ${changed}f`);
-      } else {
-        parts.push("Git: clean");
-      }
-    } catch {}
-
-    return parts.join(" | ");
+      const snapshot = captureSystemSnapshot();
+      return formatSystemSnapshot(snapshot);
+    } catch (error) {
+      log.warn(`System stats capture failed: ${error}`);
+      return "System stats unavailable";
+    }
   }
 
   private getMemphisStats(): { blocks: number; valid: boolean; lastBlock?: string } {

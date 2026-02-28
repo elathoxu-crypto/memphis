@@ -55,6 +55,16 @@ const EmbeddingsConfigSchema = z.object({
   semantic_weight: z.number().min(0).max(1).optional(),
 });
 
+const CollectorConfigSchema = z.object({
+  enabled: z.boolean().optional(),
+  interval: z.number().int().positive().optional(),
+}).passthrough();
+
+const DaemonConfigSchema = z.object({
+  interval: z.number().int().positive().optional(),
+  collectors: z.record(z.string(), CollectorConfigSchema).optional(),
+}).optional();
+
 const MemphisConfigSchema = z.object({
   providers: z.record(z.string(), ProviderSchema).optional(),
   memory: MemoryConfigSchema.optional(),
@@ -62,6 +72,7 @@ const MemphisConfigSchema = z.object({
   agents: z.record(z.string(), AgentConfigSchema).optional(),
   integrations: IntegrationsConfigSchema,
   telegram: TelegramConfigSchema,
+  daemon: DaemonConfigSchema,
 });
 
 export type MemphisConfig = z.infer<typeof MemphisConfigSchema> & typeof DEFAULT_CONFIG;

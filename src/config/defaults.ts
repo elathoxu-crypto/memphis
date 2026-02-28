@@ -5,6 +5,9 @@ export const MEMPHIS_HOME = join(homedir(), ".memphis");
 export const CHAINS_PATH = join(MEMPHIS_HOME, "chains");
 export const CONFIG_PATH = join(MEMPHIS_HOME, "config.yaml");
 export const EMBEDDINGS_PATH = join(MEMPHIS_HOME, "embeddings");
+export const DAEMON_PID_PATH = join(MEMPHIS_HOME, "daemon.pid");
+export const DAEMON_LOG_PATH = join(MEMPHIS_HOME, "daemon.log");
+export const DAEMON_STATE_PATH = join(MEMPHIS_HOME, "daemon-state.json");
 
 export const DEFAULT_CONFIG = {
   providers: {},
@@ -26,5 +29,13 @@ export const DEFAULT_CONFIG = {
     builder: { chain: "build", context_window: 30 },
     architect: { chain: "adr", context_window: 15 },
     ops: { chain: "ops", context_window: 10 },
+  },
+  daemon: {
+    interval: 60_000,
+    collectors: {
+      git: { enabled: true, interval: 60_000 },
+      shell: { enabled: true, interval: 60_000 },
+      heartbeat: { enabled: true, interval: 5 * 60_000 },
+    },
   },
 };

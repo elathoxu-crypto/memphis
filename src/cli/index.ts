@@ -51,8 +51,10 @@ import { graphBuildCommand, graphShowCommand } from "./commands/graph.js";
 import { reflectCommand } from "./commands/reflect.js";
 import { planCommand } from "./commands/plan.js";
 import { ingestCommand } from "./commands/ingest.js";
+import { DaemonManager } from "../daemon/index.js";
 
 const program = new Command();
+const daemonManager = new DaemonManager();
 
 program
   .name("memphis")
@@ -517,6 +519,47 @@ program
     } catch (err) {
       console.error("Summary failed:", err);
     }
+  });
+
+const daemonProgram = program
+  .command("daemon")
+  .description("Manage the Memphis background daemon");
+
+daemonProgram
+  .command("start")
+  .description("Start daemon in background")
+  .action(async () => {
+    await daemonManager.start();
+  });
+
+daemonProgram
+  .command("stop")
+  .description("Stop daemon")
+  .action(async () => {
+    await daemonManager.stop();
+  });
+
+daemonProgram
+  .command("status")
+  .description("Show daemon status")
+  .action(() => {
+    daemonManager.status();
+  });
+
+daemonProgram
+  .command("restart")
+  .description("Restart daemon")
+  .action(async () => {
+    await daemonManager.restart();
+  });
+
+daemonProgram
+  .command("logs")
+  .description("Tail daemon logs")
+  .option("-n, --lines <count>", "Lines to show", "50")
+  .action((opts) => {
+    const lines = Number.parseInt(opts.lines, 10) || 50;
+    daemonManager.logs(lines);
   });
 
 program.parse();
