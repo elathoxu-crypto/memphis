@@ -115,6 +115,47 @@ _Daemon-adjacent utilities_
 
 ---
 
+### Best Workflow
+
+Memphis grows over time. The more you feed it, the smarter it gets.
+
+**Week 1 — Just journal (no analysis yet)**
+```bash
+# Morning: set intention
+memphis journal "Today I want to..." --tags goal,focus
+
+# During work: capture decisions and insights
+memphis journal "Decided: X instead of Y because..." --tags decision
+memphis journal "Problem: ... Solution: ..." --tags bug,fix
+memphis journal "Insight: ..." --tags insight
+
+# Evening: end of day
+memphis journal "EOD: done X, tomorrow Y" --tags eod
+```
+
+**Week 2 — First embeddings and graph**
+```bash
+memphis embed                  # once a day (after journaling)
+memphis graph build            # after embed
+memphis reflect --weekly       # every Friday
+```
+
+**Week 3+ — Ask questions with context**
+```bash
+memphis ask "what decisions did I make about architecture?"
+memphis ask "what problems are still unresolved?"
+memphis recall decision --since 7d
+```
+
+**Always on — daemon in background**
+```bash
+memphis daemon start           # captures git commits + shell history automatically
+```
+
+> 💡 **Rule of thumb:** graph clusters appear after ~20 blocks. Real insights start at ~100. At 1000+ blocks Memphis becomes a map of your thinking.
+
+---
+
 ## Polski
 
 ### Opis
@@ -182,3 +223,44 @@ Memphis to lokalny silnik poznawczy: zapisuje każdy blok w łańcuchach z hashe
 | `memphis daemon <start|stop|status|restart|logs>` | Kontroluje proces demona. |
 
 Dbaj o zachowanie workflowu: smoke-test, `npm run build`, `npx vitest run`, a przed wydaniem wypchnij `share` oraz dziennik zmian.
+
+---
+
+### Najlepszy workflow
+
+Memphis rośnie z czasem. Im więcej karmisz, tym mądrzejszy staje się.
+
+**Tydzień 1 — sam journaling (bez analizy)**
+```bash
+# Rano: intencja
+memphis journal "Dziś chcę..." --tags cel,focus
+
+# W trakcie: decyzje i insighty
+memphis journal "Postanawiam: X zamiast Y bo..." --tags decyzja
+memphis journal "Problem: ... Rozwiązanie: ..." --tags bug,fix
+memphis journal "Insight: ..." --tags insight
+
+# Wieczór: koniec dnia
+memphis journal "EOD: zrobiłem X, jutro Y" --tags eod
+```
+
+**Tydzień 2 — pierwsze embeddingi i graf**
+```bash
+memphis embed                  # raz dziennie po journalowaniu
+memphis graph build            # po embed
+memphis reflect --weekly       # co piątek
+```
+
+**Tydzień 3+ — pytania z kontekstem**
+```bash
+memphis ask "jakie decyzje podjąłem o architekturze?"
+memphis ask "jakie problemy są nierozwiązane?"
+memphis recall decyzja --since 7d
+```
+
+**Zawsze — daemon w tle**
+```bash
+memphis daemon start           # łapie git commity i historię shella automatycznie
+```
+
+> 💡 **Zasada kciuka:** klastry w grafie pojawiają się po ~20 blokach. Prawdziwe insighty od ~100. Przy 1000+ blokach Memphis staje się mapą Twojego myślenia.
