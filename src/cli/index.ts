@@ -49,6 +49,7 @@ import { shareReplicatorCommand } from "./commands/share-replicator.js";
 import { soulStatusCommand } from "./commands/soul-status.js";
 import { graphBuildCommand, graphShowCommand } from "./commands/graph.js";
 import { reflectCommand } from "./commands/reflect.js";
+import { ingestCommand } from "./commands/ingest.js";
 
 const program = new Command();
 
@@ -345,6 +346,34 @@ shareProgram
       file: opts.file,
       limit: opts.limit ? parseInt(opts.limit, 10) : undefined,
       dryRun: opts.dryRun,
+    });
+  });
+
+program
+  .command("ingest <path>")
+  .description("Ingest external files or directories into Memphis memory")
+  .option("-c, --chain <chain>", "Target chain (default: journal)")
+  .option("-t, --tags <tags>", "Extra tags (comma-separated)")
+  .option("--max-tokens <n>", "Max tokens per chunk (default: 400)")
+  .option("--overlap <n>", "Overlap chars between chunks (default: 100)")
+  .option("--embed", "Also generate embeddings after ingestion")
+  .option("-r, --recursive", "Recurse into subdirectories")
+  .option("--dry-run", "Preview chunks without saving")
+  .option("-f, --force", "Skip duplicate detection")
+  .option("-v, --verbose", "Show block indices")
+  .option("-j, --json", "Output JSON stats")
+  .action(async (path, opts) => {
+    await ingestCommand(path, {
+      chain: opts.chain,
+      tags: opts.tags,
+      maxTokens: opts.maxTokens,
+      overlap: opts.overlap,
+      embed: opts.embed,
+      recursive: opts.recursive,
+      dryRun: opts.dryRun,
+      force: opts.force,
+      json: opts.json,
+      verbose: opts.verbose,
     });
   });
 
