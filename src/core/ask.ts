@@ -2,12 +2,7 @@ import { Store } from "../memory/store.js";
 import { recall, type RecallQuery, type RecallHit } from "./recall.js";
 import { loadConfig } from "../config/loader.js";
 import type { Block } from "../memory/chain.js";
-import { OpenRouterProvider } from "../providers/openrouter.js";
-import { OllamaProvider } from "../providers/ollama.js";
-import { OpenAIProvider } from "../providers/openai.js";
-import { CodexProvider } from "../providers/codex.js";
-import { getProviderApiKey } from "../integrations/vault-providers.js";
-import { OpenClawProvider, isGatewayAvailable } from "../providers/openclaw.js";
+import { resolveProvider } from "../providers/factory.js";
 import type { LLMMessage, LLMResponse } from "../providers/index.js";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
@@ -332,126 +327,14 @@ ${soulPrompt}${contextSuffix}`;
 }
 
 /**
- * Select provider based on config and options
+ * Select provider — delegates to centralized ProviderFactory
  */
 async function selectProvider(preferred?: string, useVault = false, vaultPassword?: string) {
-  const config = loadConfig();
-  
-  // Force specific provider
-  if (preferred) {
-    const lower = preferred.toLowerCase();
-    
-    if (lower === "ollama") {
-      const ollamaConfig = config.providers?.ollama;
-      if (ollamaConfig) {
-        const provider = new OllamaProvider();
-        if (provider.isConfigured()) {
-          return { provider, name: "Ollama", model: ollamaConfig?.model || "llama3.1" };
-        }
-      }
-      throw new Error("Ollama not configured");
-    }
-    
-    if (lower === "openai") {
-      let apiKey: string | undefined;
-      if (useVault && vaultPassword) {
-        apiKey = await getProviderApiKey("openai", { vaultPassword }) || undefined;
-      }
-      apiKey = apiKey || process.env.OPENAI_API_KEY;
-      if (apiKey) {
-        const provider = new OpenAIProvider();
-        return { provider, name: "OpenAI", model: config.providers?.openai?.model || "gpt-4o" };
-      }
-      throw new Error("OpenAI not configured");
-    }
-    
-    if (lower === "openrouter") {
-      let apiKey: string | undefined;
-      if (useVault && vaultPassword) {
-        apiKey = await getProviderApiKey("openrouter", { vaultPassword }) || undefined;
-      }
-      apiKey = apiKey || process.env.OPENROUTER_API_KEY;
-      if (apiKey) {
-        const provider = new OpenRouterProvider(apiKey);
-        return { provider, name: "OpenRouter", model: config.providers?.openrouter?.model || "anthropic/claude-sonnet-4" };
-      }
-      throw new Error("OpenRouter not configured");
-    }
-    
-    if (lower === "codex") {
-      const codexProvider = new CodexProvider();
-      if (codexProvider.isConfigured()) {
-        const hasKey = await codexProvider.checkApiKey();
-        if (hasKey) {
-          return { provider: codexProvider, name: "Codex", model: "gpt-5.2-codex" };
-        }
-      }
-      throw new Error("Codex not configured");
-    }
-    
-    if (lower === "openclaw") {
-      if (await isGatewayAvailable()) {
-        const ocProvider = new OpenClawProvider();
-        if (ocProvider.isConfigured()) {
-          return { provider: ocProvider, name: "OpenClaw (MiniMax)", model: "MiniMax-M2.5" };
-        }
-      }
-      // Fallback to local Ollama qwen3:8b if OpenClaw gateway not available
-      const ollama = new OllamaProvider();
-      if (ollama.isConfigured()) {
-        return { provider: ollama, name: "Ollama (qwen3:8b)", model: "qwen3:8b" };
-      }
-      throw new Error("OpenClaw not available");
-    }
-    
-    throw new Error(`Unknown provider: ${preferred}`);
-  }
-
-  // Priority: OpenClaw > Codex > Ollama > OpenAI > OpenRouter
-  if (await isGatewayAvailable()) {
-    const ocProvider = new OpenClawProvider();
-    if (ocProvider.isConfigured()) {
-      return { provider: ocProvider, name: "OpenClaw (MiniMax)", model: "MiniMax-M2.5" };
-    }
-  }
-
-  const codexProvider = new CodexProvider();
-  if (codexProvider.isConfigured()) {
-    const hasKey = await codexProvider.checkApiKey();
-    if (hasKey) {
-      return { provider: codexProvider, name: "Codex", model: "gpt-5.2-codex" };
-    }
-  }
-
-  const ollamaConfig = config.providers?.ollama;
-  if (ollamaConfig) {
-    const provider = new OllamaProvider();
-    if (provider.isConfigured()) {
-      // Try configured model first, fallback to qwen3:8b
-      const model = ollamaConfig?.model || "llama3.1";
-      return { provider, name: "Ollama", model };
-    }
-  } else {
-    // No config - try qwen3:8b as default (common case)
-    const provider = new OllamaProvider();
-    if (provider.isConfigured()) {
-      return { provider, name: "Ollama (qwen3:8b)", model: "qwen3:8b" };
-    }
-  }
-
-  let apiKey = process.env.OPENAI_API_KEY;
-  if (apiKey) {
-    const provider = new OpenAIProvider();
-    return { provider, name: "OpenAI", model: config.providers?.openai?.model || "gpt-4o" };
-  }
-
-  apiKey = process.env.OPENROUTER_API_KEY;
-  if (apiKey) {
-    const provider = new OpenRouterProvider(apiKey);
-    return { provider, name: "OpenRouter", model: config.providers?.openrouter?.model || "anthropic/claude-sonnet-4" };
-  }
-
-  throw new Error("No provider available");
+  const resolved = await resolveProvider({
+    provider: preferred,
+    vaultPassword: useVault ? vaultPassword : undefined,
+  });
+  return { provider: resolved.provider, name: resolved.name, model: resolved.model };
 }
 
 /**
@@ -602,8 +485,8 @@ export async function askWithContext(
   // Step 6: Return result
   return {
     answer,
-    provider: providerResult.name,
-    model: providerResult.model,
+    provider: String(providerResult.name),
+    model: providerResult.model ?? "",
     tokens_used: response.usage?.total_tokens,
     context: {
       hits: hits.map(h => ({

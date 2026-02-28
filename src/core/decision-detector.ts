@@ -2,12 +2,8 @@ import chalk from "chalk";
 import { Store } from "../memory/store.js";
 import { loadConfig } from "../config/loader.js";
 import type { Block } from "../memory/chain.js";
-import { OllamaProvider } from "../providers/ollama.js";
-import { OpenAIProvider } from "../providers/openai.js";
-import { OpenRouterProvider } from "../providers/openrouter.js";
-import { CodexProvider } from "../providers/codex.js";
-import { OpenClawProvider, isGatewayAvailable } from "../providers/openclaw.js";
-import type { LLMMessage, LLMResponse } from "../providers/index.js";
+import { resolveProvider } from "../providers/factory.js";
+import type { LLMMessage } from "../providers/index.js";
 
 export interface DecisionResult {
   isDecision: boolean;
@@ -122,46 +118,7 @@ async function detectWithLLM(
   content: string,
   provider?: string
 ): Promise<DecisionResult> {
-  const config = loadConfig();
-  
-  // Select provider
-  let llm: any;
-  let model: string;
-  let providerName: string;
-
-  if (provider === "ollama" || !provider) {
-    const ollama = new OllamaProvider();
-    if (ollama.isConfigured()) {
-      llm = ollama;
-      model = config.providers?.ollama?.model || "llama3.1";
-      providerName = "Ollama";
-    } else {
-      throw new Error("Ollama not available");
-    }
-  } else if (provider === "openai") {
-    llm = new OpenAIProvider();
-    model = config.providers?.openai?.model || "gpt-4o";
-    providerName = "OpenAI";
-  } else if (provider === "openrouter") {
-    const apiKey = process.env.OPENROUTER_API_KEY;
-    if (!apiKey) throw new Error("OpenRouter not configured");
-    llm = new OpenRouterProvider(apiKey);
-    model = config.providers?.openrouter?.model || "anthropic/claude-sonnet-4";
-    providerName = "OpenRouter";
-  } else if (provider === "openclaw") {
-    if (!await isGatewayAvailable()) throw new Error("OpenClaw not available");
-    llm = new OpenClawProvider();
-    model = "MiniMax-M2.5";
-    providerName = "OpenClaw";
-  } else if (provider === "codex") {
-    const codex = new CodexProvider();
-    if (!codex.isConfigured()) throw new Error("Codex not configured");
-    llm = codex;
-    model = "gpt-5.2-codex";
-    providerName = "Codex";
-  } else {
-    throw new Error(`Unknown provider: ${provider}`);
-  }
+  const { provider: llm, name: providerName } = await resolveProvider({ provider });
 
   const messages: LLMMessage[] = [
     {
@@ -186,7 +143,7 @@ Only respond with valid JSON, no other text.`
   ];
 
   try {
-    const response = await llm.chat(messages, { model, temperature: 0.3 });
+    const response = await llm.chat(messages, { temperature: 0.3 });
     const text = response.content;
     
     // Parse JSON from response

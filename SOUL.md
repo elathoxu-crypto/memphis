@@ -25,7 +25,7 @@ This document defines the immutable rules that every block in the Memphis chain 
 
 ### 4. Data Validation
 - content MUST be non-empty string
-- type MUST be one of: journal, build, adr, ops, ask, system, vault, credential
+- type MUST be one of: journal, build, adr, ops, ask, system, vault, credential, decision, project_task, break_task, break_work, project_task_complete, share_manifest
 - tags MUST be array of strings (can be empty)
 
 ### 5. Index Sequentiality
@@ -75,8 +75,8 @@ When verifying a block against SOUL:
 
 ## Version
 
-Current SOUL Version: 1.0.0
-Last Updated: 2026-02-17
+Current SOUL Version: 1.1.0
+Last Updated: 2026-02-28
 
 ---
 
