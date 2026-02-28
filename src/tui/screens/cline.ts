@@ -50,12 +50,12 @@ export function setupClineInput(
     inputField.readInput((_err: any, value: any) => {
       if (validateInput(value)) {
         // Log command to journal chain (no require() needed - use store directly)
-        store.addBlock("journal", {
+        store.appendBlock("journal", {
           type: "journal",
           content: `[cline] cmd:exec ${value.trim()} → pending`,
           tags: ["auto", "agent", "cline"],
           agent: "cline",
-        });
+        }).catch(() => {});
 
         contentBox.setContent(
           `{white}Komenda:{/white} ${value.trim()}\n\n` +

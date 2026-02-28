@@ -51,13 +51,13 @@ export function setupVaultInput(
 
           try {
             const encrypted = encrypt(secretValue.trim(), password.trim());
-            store.addBlock("vault", {
+            store.appendBlock("vault", {
               type: "vault",
               content: keyName.trim(),
               tags: ["secret", keyName.trim()],
               encrypted,
               key_id: keyName.trim(),
-            });
+            }).catch(() => {});
             contentBox.setContent(
               `{green}✅ Sekret "${keyName.trim()}" dodany pomyślnie!{/green}\n\nNaciśnij dowolny klawisz, aby wrócić...`
             );

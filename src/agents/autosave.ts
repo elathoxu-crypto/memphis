@@ -58,9 +58,9 @@ export class AutosaveAgent {
     this.selfStats.startTime = new Date();
     log.info(`🟢 Autosave agent started (every ${this.interval / 60000} min)`);
 
-    this.save();
+    this.save().catch(err => log.error(`Autosave error: ${err}`));
     this.timer = setInterval(() => {
-      this.save();
+      this.save().catch(err => log.error(`Autosave error: ${err}`));
     }, this.interval);
   }
 
@@ -153,7 +153,7 @@ export class AutosaveAgent {
     return content;
   }
 
-  private save(): void {
+  private async save(): Promise<void> {
     const startTime = Date.now();
     
     try {
@@ -178,7 +178,7 @@ export class AutosaveAgent {
       // Self-optimization: compact if needed
       content = this.optimizeContent(content);
 
-      const block = this.store.addBlock(this.chain, {
+      const block = await this.store.appendBlock(this.chain, {
         type: "journal",
         content,
         tags: ["autosave", "self", "system"],

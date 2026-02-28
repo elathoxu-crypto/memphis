@@ -25,11 +25,11 @@ export function setupJournalInput(
     inputField.focus();
     inputField.readInput((_err: any, value: any) => {
       if (validateInput(value)) {
-        store.addBlock("journal", {
+        store.appendBlock("journal", {
           type: "journal",
           content: value.trim(),
           tags: [],
-        });
+        }).catch(() => {});
         contentBox.setContent(
           `{green}✅ Wpis dodany pomyślnie!{/green}\n\nNaciśnij dowolny klawisz, aby wrócić...`
         );

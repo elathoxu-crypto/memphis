@@ -50,12 +50,13 @@ export function agentLog(entry: Omit<AgentLogEntry, "tags">): void {
   const store = getStore();
   const content = formatEntry(fullEntry);
   
-  store.addBlock("journal", {
+  // Fire-and-forget — logging must not block callers
+  store.appendBlock("journal", {
     type: "journal",
     content,
     tags: fullEntry.tags,
     agent: "agent-logger",
-  });
+  }).catch(() => { /* non-fatal */ });
 }
 
 /**

@@ -63,7 +63,7 @@ export class MemphisBridge {
    */
   async journal(entry: JournalEntry): Promise<{ index: number; hash: string }> {
     const chain = entry.chain ?? "journal";
-    const block = this.store.addBlock(chain, {
+    const block = await this.store.appendBlock(chain, {
       type: "journal",
       content: entry.content,
       tags: entry.tags ?? [],

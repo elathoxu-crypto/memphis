@@ -79,7 +79,7 @@ export async function reviseCommand(decisionId: string, opts: { reason: string; 
     },
   };
 
-  store.addBlock("decisions", {
+  await store.appendBlock("decisions", {
     type: "decision" as any,
     content: JSON.stringify(revised),
     tags: ["decision", revised.mode, revised.scope, revised.status].filter(Boolean),
