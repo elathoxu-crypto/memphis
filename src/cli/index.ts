@@ -48,6 +48,7 @@ import { embedCommand } from "./commands/embed.js";
 import { shareReplicatorCommand } from "./commands/share-replicator.js";
 import { soulStatusCommand } from "./commands/soul-status.js";
 import { graphBuildCommand, graphShowCommand } from "./commands/graph.js";
+import { reflectCommand } from "./commands/reflect.js";
 
 const program = new Command();
 
@@ -344,6 +345,30 @@ shareProgram
       file: opts.file,
       limit: opts.limit ? parseInt(opts.limit, 10) : undefined,
       dryRun: opts.dryRun,
+    });
+  });
+
+program
+  .command("reflect")
+  .description("Generate a self-reflection report from memory")
+  .option("--daily", "Light daily check-in (last 24h)")
+  .option("--weekly", "Weekly reflection (last 7d, default)")
+  .option("--deep", "Deep dive (last 30d)")
+  .option("--since <date>", "Custom window start (YYYY-MM-DD or e.g. 14d)")
+  .option("-c, --chain <chain>", "Focus on specific chain")
+  .option("--save", "Save reflection summary to journal")
+  .option("--dry-run", "Generate without saving")
+  .option("-j, --json", "Output raw JSON report")
+  .action(async (opts) => {
+    await reflectCommand({
+      daily: opts.daily,
+      weekly: opts.weekly,
+      deep: opts.deep,
+      since: opts.since,
+      chain: opts.chain,
+      save: opts.save,
+      dryRun: opts.dryRun,
+      json: opts.json,
     });
   });
 
