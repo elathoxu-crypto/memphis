@@ -1,6 +1,6 @@
 # Memphis 🧠
 
-**Local-first AI brain with persistent memory chains — cognitive loop for personal knowledge management.**
+**Local-first cognitive engine that captures, links, and reflects on everything you build.**
 
 [English](#english) | [Polski](#polski)
 
@@ -8,300 +8,177 @@
 
 ## English
 
-### What is Memphis?
+### Overview
+Memphis is a self-hosted AI brain that keeps append-only chains for every action (journal, ask, decisions, summaries, share). It blends keyword + semantic recall, grows a knowledge graph, runs daily reflections, and keeps a daemon watching repos so you can summon the right context instantly.
 
-Memphis is a **personal AI brain** that remembers everything you tell it. It's built on the principle that AI should augment human memory, not replace it — with full ownership, offline-first architecture, and cryptographically verified chains.
-
-### Core Features
-
-| Feature | Description |
-|---------|-------------|
-| **Memory Chains** | Append-only blocks with SHA256 linking — tamper-evident |
-| **Ask v2.2** | LLM-powered Q&A with context from recall + summaries |
-| **Decision Detector** | Auto-detects decisions from journal/ask entries |
-| **Autosummarizer** | Deterministic summaries every 50 blocks |
-| **TUI** | Terminal UI with Dashboard, Journal, Recall, Ask, Decisions, Summary |
-| **Multiple Providers** | OpenClaw (MiniMax), Ollama, OpenAI, OpenRouter, Codex |
-| **Offline-first** | Works without internet (Ollama) |
-| **Vault** | Encrypted secrets with AES-256-GCM |
-
-### Installation
-
-Requirements:
-- Node.js 20+ (tested on 20.11 / 20.12)
-- npm 10+
-- Optional: Pinata account (for IPFS share-sync)
-
-```bash
-# Clone & install dependencies
-git clone https://github.com/elathoxu-crypto/memphis.git
-cd memphis
-npm install
-
-# Build TypeScript once (creates dist/)
-npm run build
-
-# Optional: expose CLI globally
-npm link
+### ASCII Architecture
+```
+                 ┌────────────┐        ┌────────────┐
+  Files / Git ──▶│  ingest    │──┬────▶│  chains    │◀─────┐   Local CLI
+  Plans / LLM ──▶│  journal   │  │     │ (SHA256)   │      │   (ask/tui)
+                 └────┬───────┘  │     └────┬───────┘      │
+                      │          │          │              │
+                      │          │    ┌─────▼────┐   ┌─────▼────┐
+                      │          └───▶│  recall  │   │  reflect │
+                      │               └────┬─────┘   └────┬─────┘
+                      │                    │              │
+                      │               ┌────▼────┐   ┌─────▼────┐
+                      └──────────────▶│  graph  │──▶│   ask    │
+                                       └────┬───┘   └──────────┘
+                                            │
+                                      ┌─────▼─────┐
+                                      │  daemon   │ (watchers, share-sync, autosummary)
+                                      └───────────┘
 ```
 
-After linking you can call `memphis` from anywhere. For a clean slate remove `~/.memphis` before running `memphis init`.
+### Install, Upgrade, and Smoke Test
+1. **Clone & install**
+   ```bash
+   git clone https://github.com/elathoxu-crypto/memphis.git
+   cd memphis
+   npm install
+   ```
+2. **Build CLI** – `npm run build` (outputs `dist/`).
+3. **Initialize data home** – `node dist/cli/index.js init` (recreates `~/.memphis`).
+4. **Run the mandatory smoke** – the repo ships `scripts/smoke-test.sh`:
+   ```bash
+   chmod +x scripts/smoke-test.sh
+   bash scripts/smoke-test.sh
+   ```
+   It checks status, journals a tagged entry, exercises recall, reflections, graph, ingest dry-run, and daemon status—mirroring real workflows.
+5. **Regression tests** – `npm run build && npx vitest run` must stay green (currently 163 tests).
 
-### Quick Start
+### Command Handbook (All Commands)
+_Core memory_
 
-```bash
-# Clone & build
-git clone https://github.com/elathoxu-crypto/memphis.git
-cd memphis
-npm install
-npm run build
+| Command | What it does / key flags |
+| --- | --- |
+| `memphis init` | Bootstrap `~/.memphis` store and config. |
+| `memphis journal <text> [--tags --force]` | Append entries; `--force` triggers autosummary. |
+| `memphis recall <scopeOrKeyword> [query]` | Keyword + semantic recall with `--chain`, `--tag`, `--since`, `--json`. |
+| `memphis ask <question>` | Pull recall context, knowledge graph, summaries; supports `--provider`, `--model`, `--graph`, `--no-save`. |
+| `memphis status [--json --verbose]` | Inspect providers, chain counts, daemon heartbeat. |
+| `memphis reflect [--daily|--weekly|--deep]` | Generate reflection summaries; `--save` stores outputs. |
+| `memphis summarize [--dry-run --force --llm]` | Manual autosummary trigger with block thresholds. |
 
-# Fresh install / reset (recommended)
-rm -rf ~/.memphis            # remove old chains & config
-node dist/cli/index.js init  # create clean ~/.memphis
+_Knowledge graph & ingestion_
 
-# (Optional) expose CLI globally
-npm link
+| Command | What it does / key flags |
+| --- | --- |
+| `memphis embed [--chain --since --limit --force]` | Build embeddings for recall/graph. |
+| `memphis ingest <path> [--chain --tags --embed --recursive --dry-run]` | Chunk + ingest docs or folders. |
+| `memphis watch [path] [--chain --no-embed --quiet]` | File watcher that ingests on change. |
+| `memphis graph build [--chains --threshold --limit --dry-run]` | Materialize triples into `graph` chain. |
+| `memphis graph show [nodeId] [--depth --tag --stats]` | Explore nodes, edges, and stats. |
 
-# Daily usage
-memphis journal "Working on Memphis AI brain today"
-memphis ask "what was I working on?"
-memphis recall "memphis"
+_Decisions, plans, agents_
 
-# Decision tracking (auto-detected)
-memphis journal "Postanawiam, że używamy TypeScript"
-→ Decision detected → saved to decision chain
-```
+| Command | What it does / key flags |
+| --- | --- |
+| `memphis decide <title> <chosen>` | Record decisions with `--options`, `--scope`, `--mode`, `--confidence`. |
+| `memphis show decision <id>` | Display decision or record details. |
+| `memphis revise <decisionId> [--reasoning]` | Append a revision referencing the original decision. |
+| `memphis plan [--focus --goal --since --output --exec --yolo]` | Emit Codex-ready plans or JSON tasks. |
+| `memphis agent <start|stop|status|openclaw|collab> [options]` | Control automation agents, OpenClaw bridge. |
+| `memphis bot [start|webhook]` | Launch or configure the Telegram bot. |
+| `memphis tui [--screen]` | Start the terminal UI dashboard. |
 
-### Commands
+_Share, sync, vault_
 
-| Command | Description |
-|---------|-------------|
-| `memphis init` | Initialize Memphis in ~/.memphis |
-| `memphis journal "text"` | Add journal entry |
-| `memphis journal "text" --tags tag1,tag2` | Add with tags |
-| `memphis ask "question"` | Ask with context (uses recall + summaries) |
-| `memphis ask "question" --prefer-summaries` | Prefer summary context |
-| `memphis ask "question" --no-summaries` | Skip summaries |
-| `memphis ask "question" --explain-context` | Show context reasoning |
-| `memphis recall "keyword"` | Search by keyword |
-| `memphis recall --chain decision` | Search specific chain |
-| `memphis recall --tag friction` | Search by tag |
-| `memphis status` | Show chains, providers, stats |
-| `memphis summarize` | Create/force autosummary |
-| `memphis summarize --dry-run` | Preview without saving |
-| `memphis tui` | Launch terminal UI |
-| `memphis share-sync [flags]` | Sync share-tagged blocks via Pinata/IPFS |
-| `memphis vault init` | Initialize encrypted vault |
-| `memphis vault add <key> <value>` | Add secret |
-| `memphis vault list` | List secrets |
+| Command | What it does / key flags |
+| --- | --- |
+| `memphis share-sync [--push --pull --all --limit --since --dry-run --push-disabled]` | Push/pull `share` chain blocks through Pinata/IPFS. |
+| `memphis share replicator [--plan --push --pull --file --limit --dry-run]` | Manage share manifests between Watra ↔ Style setups. |
+| `memphis vault <action> [key] [value] [--password-env --password-stdin]` | Initialize, list, add, fetch, or delete encrypted secrets. |
+| `memphis soul status [--pretty --workspace]` | Report SOUL/autonomy status for the workspace. |
 
-### Share Sync (IPFS + Pinata)
+_Ops & safety_
 
-Memphis potrafi publikować i importować wpisy oznaczone tagiem `share` przez Pinata/IPFS. Szczegóły architektury znajdziesz w [`docs/ipfs-shared-memory-plan.md`](./docs/ipfs-shared-memory-plan.md) oraz drabince zadań [`docs/ipfs-share-sync-codex.md`](./docs/ipfs-share-sync-codex.md).
+| Command | What it does / key flags |
+| --- | --- |
+| `memphis verify [--chain --json --verbose]` | Validate chain integrity. |
+| `memphis repair [--chain --dry-run --json]` | Quarantine or fix corrupted blocks. |
+| `memphis embed ...` | (see above) often rerun post-repair. |
+| `memphis share-sync ...` | (see above) ties into release gating. |
+| `memphis daemon <start|stop|status|restart|logs>` | Manage the background daemon / collectors. |
 
-#### Konfiguracja (\~/\.memphis/config.yaml)
+_Daemon-adjacent utilities_
 
-```yaml
-integrations:
-  pinata:
-    # Najprościej JWT – ustaw w configu lub przez env PINATA_JWT
-    jwt: ${PINATA_JWT}
-    # Alternatywnie para API key + secret
-    # apiKey: ${PINATA_API_KEY}
-    # apiSecret: ${PINATA_SECRET}
-```
+| Command | What it does / key flags |
+| --- | --- |
+| `memphis reflect ...` | (see above) run scheduled reflections on demand. |
+| `memphis plan ...` | (see above) ensures Codex/self-coding feedback loop. |
+| `memphis share-sync ...` | (see above) replicates share-tagged payloads. |
+| `memphis ingest ...` | (see above) is your ingestion surface for daemon + manual flows. |
 
-Możesz też pominąć wpis w pliku i polegać tylko na zmiennych środowiskowych (`PINATA_JWT` albo `PINATA_API_KEY` + `PINATA_SECRET`).
-
-#### Użycie CLI
-
-```bash
-# Wypchnięcie lokalnych bloków share
-memphis share-sync --push
-
-# Pobranie nowych CIDów i import do łańcucha `share`
-memphis share-sync --pull
-
-# Push+pull w jednym kroku (z limitem 5 wpisów)
-memphis share-sync --all --limit 5
-
-# Symulacja bez zmian
-memphis share-sync --all --dry-run
-
-# Czyszczenie starych pinów / wpisów sieciowych
-memphis share-sync --cleanup
-
-# Gdy agent nie może uploadować (np. Watra)
-memphis share-sync --all --push-disabled
-```
-
-Polecenia zapisują log `~/.memphis/network-chain.jsonl`, więc łatwo śledzić historię CIDów.
-
-#### Automatyzacja (cron / Heartbeat)
-
-- **Cron** – przykładowy wpis (co 30 minut, log do pliku):
-  ```bash
-  */30 * * * * /usr/bin/env -S bash -lc 'memphis share-sync --all --limit 5 >> ~/memphis-share-sync.log 2>&1'
-  ```
-- **Heartbeat** – dodaj do `HEARTBEAT.md` w workspace polecenie typu `memphis share-sync --all --limit 3 --push-disabled` i agent uruchomi je przy każdym pulsu.
-
-Pamiętaj o flagach `--dry-run` przy testach oraz `--push-disabled` na węzłach zablokowanych do uploadu.
-
-
-### Architecture
-
-```
-┌─────────────────────────────────────────────┐
-│                  Memphis                     │
-│         (Cognitive Loop Engine)              │
-├─────────────────────────────────────────────┤
-│  write → appendBlock (SOUL validation)      │
-│  recall → search (keyword + tags)            │
-│  ask → recall + LLM + summaries             │
-│  decide → decision detector                 │
-│  summarize → autosummarizer                │
-├─────────────────────────────────────────────┤
-│  Chains:                                    │
-│  - journal: daily entries                    │
-│  - ask: Q&A history                         │
-│  - decision: detected decisions             │
-│  - summary: autosummaries                   │
-│  - vault: encrypted secrets                 │
-└─────────────────────────────────────────────┘
-```
-
-### Providers
-
-Priority order (fallback chain):
-1. **OpenClaw** (MiniMax-M2.5) — your LLM
-2. **Codex** — coding agent
-3. **Ollama** — local (qwen3:8b, llama3.1)
-4. **OpenAI** — GPT-4o
-5. **OpenRouter** — Claude, etc.
-
-➡️ See [`docs/openclaw-integration.md`](./docs/openclaw-integration.md) for full instructions on wiring Memphis into OpenClaw/Style, offline toggle usage, vault policy, deployment on a second PC, and monitoring commands.
-
-### Use Cases
-
-- **Daily journaling** — capture thoughts, decisions, progress
-- **Context for AI** — ask questions with full memory context
-- **Decision tracking** — auto-detected decisions with source refs
-- **Weekly reviews** — autosummaries provide overview
-- **Knowledge base** — searchable, verifiable memory
-
-### Documentation
-
-- [`docs/openclaw-integration.md`](./docs/openclaw-integration.md) — Style/OpenClaw setup, offline toggle, vault policy, monitoring
-- [`docs/deployment-second-pc.md`](./docs/deployment-second-pc.md) — instrukcja instalacji na Ubuntu + GTX 1060
-- [`docs/offline-toggle-checklist.md`](./docs/offline-toggle-checklist.md) — wymagania dla TUI offline
-- [`docs/vault-policy.md`](./docs/vault-policy.md) — polityka dostępu do sekretów
-
-### Troubleshooting
-
-| Problem | Rozwiązanie |
-|---------|-------------|
-| `Pinata credentials missing` | Dodaj `integrations.pinata` w configu albo ustaw `PINATA_JWT` / `PINATA_API_KEY` + `PINATA_SECRET`. Możesz szybko przetestować `memphis share-sync --push --dry-run`. |
-| `process.exit` podczas testów | Upewnij się, że moduł Pinaty nie jest uruchamiany jako skrypt (w repo zastosowaliśmy already guard). Przy własnych testach mockuj `createPinataBridge`. |
-| `Failed to fetch CID` / `payload exceeds 4KB` | CID prawdopodobnie jest uszkodzony lub zawiera za duży JSON. Sprawdź `~/.memphis/network-chain.jsonl`, oznacz wpis jako `ignored` albo usuń go. |
-| Brak nowych bloków do push | Dodaj tag `share` w dowolnym łańcuchu (journal/ask/decision). Eksporter pomija `vault` i `share`. |
-| Cleanup nic nie usuwa | Domyślny TTL to 7 dni i dotyczy tylko wpisów ze statusem `imported` / `unavailable`. W razie potrzeby usuń ręcznie plik `network-chain.jsonl`. |
-
-### Tech Stack
-
-- TypeScript
-- Node.js 20+
-- SHA256 (node:crypto)
-- Commander.js
-- Blessed (TUI)
-- Vitest
-
-### License
-
-MIT
+> **Tip:** call commands either via `node dist/cli/index.js <cmd>` (direct) or install globally and use the `memphis` binary.
 
 ---
 
 ## Polski
 
-### Co to jest Memphis?
+### Opis
+Memphis to lokalny silnik poznawczy: zapisuje każdy blok w łańcuchach z hashem SHA256, miesza wyszukiwanie słowne z embeddingami, buduje graf wiedzy, prowadzi automatyczne refleksje i posiada demona pilnującego repozytoriów.
 
-Memphis to **osobisty mózg AI** — zapamiętuje wszystko, co mu powiesz. Zbudowany na zasadzie, że AI powinien wspierać ludzką pamięć, nie ją zastępować — z pełną własnością, architekturą offline-first i kryptograficznie weryfikowanymi łańcuchami.
-
-### Główne Funkcje
-
-| Funkcja | Opis |
-|---------|------|
-| **Łańcuchy Pamięci** | Append-only bloki z linkowaniem SHA256 |
-| **Ask v2.2** | Q&A z kontekstem z recall + podsumowań |
-| **Detector Decyzji** | Auto-wykrywanie decyzji z wpisów |
-| **Autosummarizer** | Deterministic podsumowania co 50 bloków |
-| **TUI** | Interfejs terminalowy |
-| **Wielu Providerów** | OpenClaw, Ollama, OpenAI, OpenRouter |
-| **Offline-first** | Działa bez internetu |
-| **Vault** | Szyfrowane sekrety |
-
-### Szybki Start
-
-```bash
-# Klonowanie i budowanie
-git clone https://github.com/elathoxu-crypto/memphis.git
-cd memphis
-npm install
-npm run build
-npm link
-
-# Inicjalizacja
-memphis init
-
-# Codzienne użycie
-memphis journal "Pracuję nad Memphis AI brain"
-memphis ask "nad czym pracowałem?"
-memphis recall "memphis"
-
-# Śledzenie decyzji (auto-wykrywanie)
-memphis journal "Postanawiam, że używamy TypeScript"
-→ Decision detected → zapisane do łańcucha decision
+### Architektura ASCII
+```
+                 ┌────────────┐        ┌────────────┐
+  Pliki / Git ──▶│  ingest    │──┬────▶│  chains    │◀─────┐   CLI lokalne
+  Plany / LLM ──▶│  journal   │  │     │ (SHA256)   │      │   (ask/tui)
+                 └────┬───────┘  │     └────┬───────┘      │
+                      │          │          │              │
+                      │          │    ┌─────▼────┐   ┌─────▼────┐
+                      │          └───▶│  recall  │   │  reflect │
+                      │               └────┬─────┘   └────┬─────┘
+                      │                    │              │
+                      │               ┌────▼────┐   ┌─────▼────┐
+                      └──────────────▶│  graph  │──▶│   ask    │
+                                       └────┬───┘   └──────────┘
+                                            │
+                                      ┌─────▼─────┐
+                                      │  daemon   │ (watchers, share-sync, autosummary)
+                                      └───────────┘
 ```
 
-### Struktura Projektu
+### Szybki start + smoke test
+1. `git clone … && cd memphis && npm install`.
+2. `npm run build` aby wygenerować `dist/`.
+3. `node dist/cli/index.js init` – tworzy świeże `~/.memphis`.
+4. Test dymny:
+   ```bash
+   chmod +x scripts/smoke-test.sh
+   bash scripts/smoke-test.sh
+   ```
+5. Regressje: `npm run build && npx vitest run` (163 testów powinno przejść).
 
-```
-src/
-├── cli/              # Command-line interface
-│   └── commands/     # journal, ask, recall, status, etc.
-├── core/             # Business logic
-│   ├── ask.ts        # Ask with context
-│   ├── recall.ts     # Search engine
-│   ├── decision-detector.ts  # Auto-decision
-│   └── autosummarizer.ts    # Summaries
-├── memory/           # Chain storage
-│   ├── store.ts      # Atomic writes
-│   └── chain.ts      # Block validation
-├── providers/        # LLM integrations
-│   ├── ollama.ts     # Local models
-│   ├── openai.ts     # OpenAI
-│   └── openclaw.ts   # Gateway
-└── tui/              # Terminal UI
-    └── screens/      # Dashboard, Journal, Ask, etc.
-```
+### Tabela komend (pełna)
+| Komenda | Opis |
+| --- | --- |
+| `memphis init` | Inicjuje katalog domowy Memphis. |
+| `memphis journal <tekst> [--tags --force]` | Dodaje wpis do łańcucha journal, `--force` wymusza autosummary. |
+| `memphis recall <zakres|słowo> [query]` | Szuka po słowach, tagach, czasie, z opcją `--json`. |
+| `memphis ask <pytanie>` | Zadaje pytanie z kontekstem recall/graph; wybierz model i providera. |
+| `memphis status [--json --verbose]` | Stan łańcuchów, providerów i demona. |
+| `memphis reflect [--daily|--weekly|--deep]` | Generuje refleksje i (opcjonalnie) zapisuje je. |
+| `memphis summarize [--dry-run --force --llm]` | Ręczne wyzwolenie autosummaries. |
+| `memphis embed [...]` | Buduje embeddingi dla wybranych łańcuchów. |
+| `memphis ingest <ścieżka> [...]` | Wczytuje pliki/katalogi do pamięci, może od razu embedować. |
+| `memphis watch [ścieżka] [...]` | Nasłuchuje zmian i wywołuje ingest. |
+| `memphis graph build [...]` | Buduje graf wiedzy z progami podobieństwa. |
+| `memphis graph show [nodeId] [...]` | Pokazuje węzły, krawędzie lub statystyki grafu. |
+| `memphis decide <tytuł> <wybór>` | Rejestruje decyzję wraz z kontekstem. |
+| `memphis show decision <id>` | Wyświetla konkretną decyzję/blok. |
+| `memphis revise <decisionId>` | Dodaje rewizję dla wcześniejszej decyzji. |
+| `memphis plan [...]` | Buduje plan dla agenta Codex/self-coding. |
+| `memphis agent <akcja>` | Steruje agentami (start/stop/status/openclaw/collab). |
+| `memphis bot [start|webhook]` | Bot telegramowy. |
+| `memphis tui [--screen]` | Uruchamia TUI. |
+| `memphis share-sync [...]` | Push/pull łańcucha `share` (IPFS/Pinata). |
+| `memphis share replicator [...]` | Zarządza manifestami Watra ↔ Style. |
+| `memphis vault <akcja>` | Szyfruje sekret (`init/add/list/get/delete`). |
+| `memphis soul status [...]` | Status SOUL/autonomy dla workspace. |
+| `memphis verify [...]` | Sprawdza integralność łańcucha. |
+| `memphis repair [...]` | Naprawia / izoluje uszkodzone bloki. |
+| `memphis daemon <start|stop|status|restart|logs>` | Kontroluje proces demona. |
 
-### Roadmap
-
-- [x] Łańcuchy pamięci z SHA256
-- [x] CLI (journal, ask, recall, status)
-- [x] Vault (szyfrowane sekrety)
-- [x] Decision detector
-- [x] Autosummarizer
-- [x] TUI (Dashboard, Decisions, Summary)
-- [ ] Decision lifecycle (active/superseded)
-- [ ] Agent loop (automatyzacje)
-- [ ] Memory compression (hierarchiczne)
-
-### License
-
-MIT
-
----
-
-Built by Memphis for the Oswobodzeni community.
+Dbaj o zachowanie workflowu: smoke-test, `npm run build`, `npx vitest run`, a przed wydaniem wypchnij `share` oraz dziennik zmian.
