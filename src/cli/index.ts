@@ -49,6 +49,7 @@ import { shareReplicatorCommand } from "./commands/share-replicator.js";
 import { soulStatusCommand } from "./commands/soul-status.js";
 import { graphBuildCommand, graphShowCommand } from "./commands/graph.js";
 import { reflectCommand } from "./commands/reflect.js";
+import { planCommand } from "./commands/plan.js";
 import { ingestCommand } from "./commands/ingest.js";
 
 const program = new Command();
@@ -346,6 +347,28 @@ shareProgram
       file: opts.file,
       limit: opts.limit ? parseInt(opts.limit, 10) : undefined,
       dryRun: opts.dryRun,
+    });
+  });
+
+program
+  .command("plan")
+  .description("Generate a coding task from Memphis memory → codex exec")
+  .option("-f, --focus <file>", "Focus on specific file or module")
+  .option("-g, --goal <text>", "Override goal description")
+  .option("--since <date>", "Memory window (e.g. 7d, 2026-02-01)")
+  .option("--output <format>", "Output format: prompt|shell|json (default: prompt)")
+  .option("--exec", "Auto-launch codex with the generated prompt")
+  .option("--yolo", "Use codex --yolo instead of --full-auto (faster, no sandbox)")
+  .option("-j, --json", "Output raw JSON task")
+  .action(async (opts) => {
+    await planCommand({
+      focus: opts.focus,
+      goal: opts.goal,
+      since: opts.since,
+      output: opts.output,
+      exec: opts.exec,
+      yolo: opts.yolo,
+      json: opts.json,
     });
   });
 
