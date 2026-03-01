@@ -92,9 +92,16 @@ export class OpenClawProvider extends BaseProvider {
 
 /**
  * Check if OpenClaw gateway is available
+ * 
+ * Two-stage verification:
+ * 1. Check if port 18789 is open
+ * 2. Verify API returns JSON (not web UI HTML)
+ * 
+ * This prevents false positives when gateway port is open but API is unavailable.
  */
 export async function isGatewayAvailable(): Promise<boolean> {
-  return new Promise((resolve) => {
+  // Stage 1: Check if port is open
+  const portOpen = await new Promise<boolean>((resolve) => {
     import("net").then(net => {
       const socket = new net.Socket();
       
@@ -117,6 +124,29 @@ export async function isGatewayAvailable(): Promise<boolean> {
       socket.connect(18789, "127.0.0.1");
     }).catch(() => resolve(false));
   });
+
+  if (!portOpen) {
+    return false;
+  }
+
+  // Stage 2: Verify API actually works (not just web UI)
+  try {
+    const response = await fetch("http://localhost:18789/v1/models", {
+      method: "GET",
+      signal: AbortSignal.timeout(3000),
+    });
+    
+    const contentType = response.headers.get("content-type") || "";
+    
+    // Must be JSON API, not web UI (which returns HTML)
+    if (!contentType.includes("application/json")) {
+      return false;
+    }
+    
+    return response.ok;
+  } catch {
+    return false;
+  }
 }
 
 /**
