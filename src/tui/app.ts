@@ -33,6 +33,7 @@ import { renderSummaryStatic, setupSummaryInput } from "./screens/summary.js";
 import { renderOpenClaw, setupOpenClawInput } from "./screens/openclaw.js";
 import { renderCline, setupClineInput } from "./screens/cline.js";
 import { renderOffline, setupOfflineInput } from "./screens/offline.js";
+import { renderNetwork, setupNetworkInput } from "./screens/network.js";
 import { renderSettings } from "./screens/settings.js";
 import { renderSoulScreen } from "./screens/soul.js";
 
@@ -337,11 +338,12 @@ export class MemphisTUI {
   private buildSidebar(): string {
     const keyMap: Record<number, string> = {
       1: "1", 2: "2", 3: "3", 4: "4", 5: "5",
-      6: "6", 7: "7", 8: "8", 9: "9", 10: "0", 11: "-", 12: "=" ,
+      6: "6", 7: "7", 8: "8", 9: "9", 10: "0", 11: "-", 12: "=", 13: "+",
     };
     const nameMap: Record<number, ScreenName> = {
       1: "dashboard", 2: "journal", 3: "vault", 4: "recall", 5: "ask",
-      6: "decisions", 7: "summary", 8: "openclaw", 9: "cline", 10: "offline", 11: "settings", 12: "soul",
+      6: "openclaw", 7: "cline", 8: "offline", 9: "network", 10: "summary",
+      11: "decisions", 12: "settings", 13: "soul",
     };
 
     let content = `{bold}Nawigacja{/bold}\n\n`;
@@ -447,6 +449,11 @@ export class MemphisTUI {
           };
           if (nameByNum[n]) this.navigateTo(nameByNum[n]);
         }, onDone);
+        break;
+
+      case "network":
+        this.contentBox.setContent(renderNetwork(this.store, this.state));
+        setupNetworkInput(this.store, this.widgets, this.state, (name) => this.navigateTo(name), onDone);
         break;
 
       case "settings":

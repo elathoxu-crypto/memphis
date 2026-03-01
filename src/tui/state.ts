@@ -15,6 +15,7 @@ export type ScreenName =
   | "openclaw"
   | "cline"
   | "offline"
+  | "network"
   | "settings"
   | "soul";
 
@@ -29,6 +30,7 @@ export const SCREEN_NAMES: ScreenName[] = [
   "openclaw",
   "cline",
   "offline",
+  "network",
   "settings",
   "soul",
 ];
@@ -43,10 +45,10 @@ export const KEY_TO_SCREEN: Record<string, ScreenName> = {
   "6": "openclaw",
   "7": "cline",
   "8": "offline",
-  "9": "settings",
+  "9": "network",
   "0": "summary",
   "-": "decisions",
-  "=": "soul",
+  "=": "settings",
   "+": "soul",
 };
 
@@ -62,6 +64,7 @@ export const SCREEN_LABELS: Record<ScreenName, string> = {
   openclaw:  " OpenClaw",
   cline:     " Cline",
   offline:   " Offline",
+  network:   " Network",
   settings:  " Settings",
   soul:      " SOUL",
 };
