@@ -161,10 +161,10 @@ Tasks:
 - ✅ Performance optimization (1h)
 - ✅ E2E tests (30 min)
 - ✅ Error messages (20 min)
-- ⏳ CLI simplification (next)
+- ✅ CLI simplification (1h)
 
 **Week 2 (Mar 8-14, 2026):**
-- ⏳ CLI simplification
+- ✅ CLI simplification
 - ⏳ TUI improvements
 
 **Week 3 (Mar 15-21, 2026):**
