@@ -9,6 +9,7 @@ export const DEFAULT_ALLOWED_CHAINS = [
   "summary",
   "vault",
   "share",
+  "trade",
   "graph",
   "reflection",
   "ingest",

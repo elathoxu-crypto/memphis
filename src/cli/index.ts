@@ -47,6 +47,7 @@ import { MemphisTUI } from "../tui/index.js";
 import { shareSyncCommand } from "./share-sync.js";
 import { embedCommand } from "./commands/embed.js";
 import { shareReplicatorCommand } from "./commands/share-replicator.js";
+import { registerTradeCommand } from "./commands/trade.js";
 import { soulStatusCommand } from "./commands/soul-status.js";
 import { graphBuildCommand, graphShowCommand } from "./commands/graph.js";
 import { createWorkspaceStore } from "./utils/workspace-store.js";
@@ -411,6 +412,8 @@ shareProgram
       dryRun: opts.dryRun,
     });
   });
+
+registerTradeCommand(program);
 
 program
   .command("plan")
