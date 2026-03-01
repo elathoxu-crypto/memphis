@@ -74,6 +74,15 @@ export interface TUIState {
   usbStatus: string;
   /** Current guarded terminal state */
   guardedMode: GuardedMode;
+  /** Timestamp of last journal entry (ms) */
+  lastJournalTime?: number;
+  /** Active suggestions from intelligence engine */
+  activeSuggestions?: Array<{
+    type: 'journal' | 'reflect' | 'summarize';
+    message: string;
+    priority: 'low' | 'medium' | 'high';
+    trigger: string;
+  }>;
 }
 
 export function createInitialState(): TUIState {
@@ -88,5 +97,7 @@ export function createInitialState(): TUIState {
     lastBackup: undefined,
     usbStatus: "unknown",
     guardedMode: "locked",
+    lastJournalTime: undefined,
+    activeSuggestions: [],
   };
 }

@@ -7,10 +7,27 @@ import type { TUIState } from "../state.js";
 import { truncate, formatDate } from "../helpers.js";
 import { buildStatusReport } from "../../core/status.js";
 import { collectSoulStatus, DEFAULT_WORKSPACE_ROOT } from "../../soul/status.js";
+import { checkTimeTriggers } from "../../intelligence/suggestions.js";
 
 export function renderDashboard(store: Store, config: MemphisConfig, state: TUIState): string {
   const report = buildStatusReport(store, config);
   const soul = collectSoulStatus({ workspaceRoot: process.env.MEMPHIS_WORKSPACE || DEFAULT_WORKSPACE_ROOT, touchHeartbeat: false });
+
+  // Update suggestions based on time triggers
+  try {
+    const journalChain = store.readChain('journal');
+    const lastBlock = journalChain[journalChain.length - 1];
+    const lastJournalTime = lastBlock?.timestamp ? new Date(lastBlock.timestamp).getTime() : 0;
+
+    // Only update if enough time has passed (avoid constant recalculation)
+    if (!state.lastJournalTime || Math.abs(lastJournalTime - state.lastJournalTime) > 60000) {
+      state.lastJournalTime = lastJournalTime;
+      state.activeSuggestions = checkTimeTriggers(lastJournalTime);
+    }
+  } catch (err: any) {
+    // Graceful fallback if suggestions module not available
+    console.error('Suggestions error:', err.message);
+  }
 
   let content = `{bold}{cyan}⚡ Dashboard{/cyan}{/bold}\n\n`;
   content += `Witaj w Memphis! Twój lokalny mózg AI.\n\n`;
@@ -128,6 +145,27 @@ export function renderDashboard(store: Store, config: MemphisConfig, state: TUIS
     content += `  {gray}—{/gray}\n`;
   }
   content += `\n`;
+
+  // Suggestions Widget (Time-Based)
+  if (state.activeSuggestions && state.activeSuggestions.length > 0) {
+    content += `{bold}💡 Suggestions:{/bold}\n`;
+    for (const suggestion of state.activeSuggestions) {
+      const icons = {
+        journal: '📝',
+        reflect: '💭',
+        summarize: '📊'
+      };
+      const icon = icons[suggestion.type];
+      const priorityColor = {
+        high: 'red',
+        medium: 'yellow',
+        low: 'gray'
+      }[suggestion.priority];
+
+      content += `  {${priorityColor}}${icon} ${suggestion.message}{/${priorityColor}}\n`;
+    }
+    content += `\n`;
+  }
 
   // Overall status
   content += `{bold}Status:{/bold} `;

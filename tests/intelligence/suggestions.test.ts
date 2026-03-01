@@ -38,10 +38,10 @@ describe('Time-Based Suggestions', () => {
     });
 
     it('should trigger end-of-day at 17:00 if >4h since journal', () => {
-      const lastJournal = Date.now() - 5 * 60 * 60 * 1000; // 5h ago
       const now = new Date();
       now.setHours(17, 0, 0, 0);
 
+      const lastJournal = now.getTime() - 5 * 60 * 60 * 1000; // 5h ago from "now"
       const suggestions = checkTimeTriggers(lastJournal, now);
 
       const eodSuggestion = suggestions.find(s => s.trigger === 'end-of-day');
@@ -97,10 +97,10 @@ describe('Time-Based Suggestions', () => {
     });
 
     it('should return multiple suggestions when applicable', () => {
-      const lastJournal = Date.now() - 7 * 60 * 60 * 1000; // 7h ago
       const now = new Date();
       now.setHours(17, 0, 0, 0);
 
+      const lastJournal = now.getTime() - 7 * 60 * 60 * 1000; // 7h ago from "now"
       const suggestions = checkTimeTriggers(lastJournal, now);
 
       expect(suggestions.length).toBeGreaterThan(1);
