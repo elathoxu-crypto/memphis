@@ -340,7 +340,7 @@ program
 program
   .command("tui")
   .description("Launch the terminal UI")
-  .option("-s, --screen <screen>", "Open specific screen (dashboard, journal, vault, recall, ask, openclaw, network, settings)")
+  .option("-s, --screen <screen>", "Open specific screen (dashboard, journal, vault, recall, ask, decisions, summary, network)")
   .action((opts) => {
     const tui = new MemphisTUI();
     // If screen specified, navigate to it after a brief delay
@@ -352,14 +352,9 @@ program
           vault: "vault",
           recall: "recall",
           ask: "ask",
-          openclaw: "openclaw",
-          network: "network",
-          settings: "settings",
-          cline: "cline",
-          offline: "offline",
-          summary: "summary",
           decisions: "decisions",
-          soul: "soul",
+          summary: "summary",
+          network: "network",
         };
         const screenName = screenMap[opts.screen.toLowerCase()];
         if (screenName) {

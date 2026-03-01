@@ -12,12 +12,7 @@ export type ScreenName =
   | "ask"
   | "decisions"
   | "summary"
-  | "openclaw"
-  | "cline"
-  | "offline"
-  | "network"
-  | "settings"
-  | "soul";
+  | "network";
 
 export const SCREEN_NAMES: ScreenName[] = [
   "dashboard",
@@ -27,12 +22,7 @@ export const SCREEN_NAMES: ScreenName[] = [
   "ask",
   "decisions",
   "summary",
-  "openclaw",
-  "cline",
-  "offline",
   "network",
-  "settings",
-  "soul",
 ];
 
 /** Maps keyboard keys to ScreenName */
@@ -42,14 +32,9 @@ export const KEY_TO_SCREEN: Record<string, ScreenName> = {
   "3": "vault",
   "4": "recall",
   "5": "ask",
-  "6": "openclaw",
-  "7": "cline",
-  "8": "offline",
-  "9": "network",
-  "0": "summary",
-  "-": "decisions",
-  "=": "settings",
-  "+": "soul",
+  "6": "decisions",
+  "7": "summary",
+  "8": "network",
 };
 
 /** Maps ScreenName to sidebar label */
@@ -61,12 +46,7 @@ export const SCREEN_LABELS: Record<ScreenName, string> = {
   ask:       " Ask",
   decisions: " Decisions",
   summary:   " Summary",
-  openclaw:  " OpenClaw",
-  cline:     " Cline",
-  offline:   " Offline",
   network:   " Network",
-  settings:  " Settings",
-  soul:      " SOUL",
 };
 
 export type GuardedMode = "locked" | "armed" | "open";

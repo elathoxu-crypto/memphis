@@ -9,7 +9,6 @@ import os from "node:os";
 import { Store } from "../memory/store.js";
 import { loadConfig } from "../config/loader.js";
 import type { MemphisConfig } from "../config/loader.js";
-import { OpenClawBridge } from "../bridges/openclaw.js";
 import { OllamaProvider } from "../providers/ollama.js";
 import { OpenAIProvider } from "../providers/openai.js";
 
@@ -30,12 +29,7 @@ import { renderRecallStatic, setupRecallInput } from "./screens/recall.js";
 import { renderAskStatic, setupAskInput } from "./screens/ask.js";
 import { renderDecisionsStatic, setupDecisionsInput } from "./screens/decisions.js";
 import { renderSummaryStatic, setupSummaryInput } from "./screens/summary.js";
-import { renderOpenClaw, setupOpenClawInput } from "./screens/openclaw.js";
-import { renderCline, setupClineInput } from "./screens/cline.js";
-import { renderOffline, setupOfflineInput } from "./screens/offline.js";
 import { renderNetwork, setupNetworkInput } from "./screens/network.js";
-import { renderSettings } from "./screens/settings.js";
-import { renderSoulScreen } from "./screens/soul.js";
 
 // ─── Colours ─────────────────────────────────────────────────────────────────
 const COLORS = {
@@ -66,7 +60,6 @@ export class MemphisTUI {
 
   private store:         Store;
   private config:        MemphisConfig;
-  private openclawBridge: OpenClawBridge;
   private llmProvider:   any = null;
   private state:         TUIState;
   private statusMessage = "";
@@ -85,7 +78,6 @@ export class MemphisTUI {
   constructor() {
     this.config        = loadConfig();
     this.store         = new Store(this.config.memory?.path ?? `${process.env.HOME}/.memphis/chains`);
-    this.openclawBridge = new OpenClawBridge();
     this.state         = createInitialState();
 
     this.initLLM();
@@ -309,10 +301,6 @@ export class MemphisTUI {
     });
 
     // Shortcut aliases
-    this.screen.key(["c"], () => this.navigateTo("cline"));
-    this.screen.key(["o"], () => this.navigateTo("offline"));
-
-    // Quick actions
     this.screen.key(["n"], () => void this.handleNexusEcho());
     this.screen.key(["r"], () => void this.handleRoleSwitch());
     this.screen.key(["s"], () => void this.handleSyncChains());
@@ -338,12 +326,11 @@ export class MemphisTUI {
   private buildSidebar(): string {
     const keyMap: Record<number, string> = {
       1: "1", 2: "2", 3: "3", 4: "4", 5: "5",
-      6: "6", 7: "7", 8: "8", 9: "9", 10: "0", 11: "-", 12: "=", 13: "+",
+      6: "6", 7: "7", 8: "8",
     };
     const nameMap: Record<number, ScreenName> = {
       1: "dashboard", 2: "journal", 3: "vault", 4: "recall", 5: "ask",
-      6: "openclaw", 7: "cline", 8: "offline", 9: "network", 10: "summary",
-      11: "decisions", 12: "settings", 13: "soul",
+      6: "decisions", 7: "summary", 8: "network",
     };
 
     let content = `{bold}Nawigacja{/bold}\n\n`;
@@ -431,37 +418,9 @@ export class MemphisTUI {
         setupSummaryInput(this.store, this.widgets, onDone);
         break;
 
-      case "openclaw":
-        this.contentBox.setContent(renderOpenClaw(this.openclawBridge));
-        setupOpenClawInput(this.store, this.openclawBridge, this.widgets, onDone);
-        break;
-
-      case "cline":
-        this.contentBox.setContent(renderCline(this.store));
-        setupClineInput(this.store, this.widgets, onDone);
-        break;
-
-      case "offline":
-        this.contentBox.setContent(renderOffline(this.store, this.state));
-        setupOfflineInput(this.store, this.widgets, this.state, (n) => {
-          const nameByNum: Record<number, ScreenName> = {
-            2: "journal", 4: "recall", 5: "ask", 6: "openclaw",
-          };
-          if (nameByNum[n]) this.navigateTo(nameByNum[n]);
-        }, onDone);
-        break;
-
       case "network":
         this.contentBox.setContent(renderNetwork(this.store, this.state));
         setupNetworkInput(this.store, this.widgets, this.state, (name) => this.navigateTo(name), onDone);
-        break;
-
-      case "settings":
-        this.contentBox.setContent(renderSettings(this.config, this.state));
-        break;
-
-      case "soul":
-        this.contentBox.setContent(renderSoulScreen(process.env.MEMPHIS_WORKSPACE));
         break;
     }
 

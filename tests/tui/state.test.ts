@@ -33,8 +33,8 @@ describe("KEY_TO_SCREEN", () => {
     expect(KEY_TO_SCREEN["1"]).toBe("dashboard");
   });
 
-  it("maps '9' to settings", () => {
-    expect(KEY_TO_SCREEN["9"]).toBe("settings");
+  it("maps '9' to network", () => {
+    expect(KEY_TO_SCREEN["9"]).toBeUndefined();
   });
 
   it("all values are valid ScreenNames", () => {
@@ -55,7 +55,7 @@ describe("KEY_TO_SCREEN", () => {
 
 describe("SCREEN_NAMES", () => {
   it("contains all required core screens", () => {
-    const required = ["dashboard", "journal", "vault", "recall", "ask", "openclaw", "cline", "offline", "settings"];
+    const required = ["dashboard", "journal", "vault", "recall", "ask", "decisions", "summary", "network"];
     for (const name of required) {
       expect(SCREEN_NAMES).toContain(name);
     }
