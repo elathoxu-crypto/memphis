@@ -1,0 +1,195 @@
+{
+  "description": "Benchmark dataset for Phase 6 auto-categorization accuracy testing",
+  "version": "1.0.0",
+  "created": "2026-03-01T20:30:00Z",
+  "totalEntries": 30,
+  "entries": [
+    {
+      "id": 1,
+      "content": "Meeting with John about Project X",
+      "expectedTags": ["meeting", "person", "project-x"],
+      "category": "type:meeting"
+    },
+    {
+      "id": 2,
+      "content": "Decided to use PostgreSQL instead of MongoDB",
+      "expectedTags": ["decision", "tech:database"],
+      "category": "type:decision"
+    },
+    {
+      "id": 3,
+      "content": "Bug: Login button crashes on mobile",
+      "expectedTags": ["bug", "mobile"],
+      "category": "type:bug"
+    },
+    {
+      "id": 4,
+      "content": "Feature: Added dark mode support",
+      "expectedTags": ["feature"],
+      "category": "type:feature"
+    },
+    {
+      "id": 5,
+      "content": "Learned that React hooks are more powerful than I thought",
+      "expectedTags": ["learning", "tech:react"],
+      "category": "type:learning"
+    },
+    {
+      "id": 6,
+      "content": "Insight: Premature optimization is the root of all evil",
+      "expectedTags": ["insight"],
+      "category": "type:insight"
+    },
+    {
+      "id": 7,
+      "content": "Question: How do I handle async errors?",
+      "expectedTags": ["question"],
+      "category": "type:question"
+    },
+    {
+      "id": 8,
+      "content": "Idea: Use websockets for real-time updates",
+      "expectedTags": ["idea", "tech:api"],
+      "category": "type:idea"
+    },
+    {
+      "id": 9,
+      "content": "Goal: Launch v2.0 by end of month",
+      "expectedTags": ["goal"],
+      "category": "type:goal"
+    },
+    {
+      "id": 10,
+      "content": "Progress: Finished the login flow",
+      "expectedTags": ["progress"],
+      "category": "type:progress"
+    },
+    {
+      "id": 11,
+      "content": "Problem: CI/CD pipeline is too slow",
+      "expectedTags": ["problem"],
+      "category": "type:problem"
+    },
+    {
+      "id": 12,
+      "content": "Solution: Use connection pooling",
+      "expectedTags": ["solution", "tech:database"],
+      "category": "type:solution"
+    },
+    {
+      "id": 13,
+      "content": "Review: PR #42 - Add authentication",
+      "expectedTags": ["review"],
+      "category": "type:review"
+    },
+    {
+      "id": 14,
+      "content": "Docs: Added API reference",
+      "expectedTags": ["docs"],
+      "category": "type:docs"
+    },
+    {
+      "id": 15,
+      "content": "Test: Added unit tests for auth module",
+      "expectedTags": ["test"],
+      "category": "type:test"
+    },
+    {
+      "id": 16,
+      "content": "Refactor: Simplified the auth logic",
+      "expectedTags": ["refactor"],
+      "category": "type:refactor"
+    },
+    {
+      "id": 17,
+      "content": "Urgent: Fix the production bug",
+      "expectedTags": ["bug", "high"],
+      "category": "type:bug+priority:high"
+    },
+    {
+      "id": 18,
+      "content": "Nice to have: Dark mode",
+      "expectedTags": ["feature", "low"],
+      "category": "type:feature+priority:low"
+    },
+    {
+      "id": 19,
+      "content": "Great progress on the project!",
+      "expectedTags": ["progress", "positive"],
+      "category": "type:progress+mood:positive"
+    },
+    {
+      "id": 20,
+      "content": "Frustrated with the build errors",
+      "expectedTags": ["problem", "negative"],
+      "category": "type:problem+mood:negative"
+    },
+    {
+      "id": 21,
+      "content": "Using TypeScript strict mode",
+      "expectedTags": ["tech:typescript"],
+      "category": "tech:typescript"
+    },
+    {
+      "id": 22,
+      "content": "React hooks for state management",
+      "expectedTags": ["tech:react"],
+      "category": "tech:react"
+    },
+    {
+      "id": 23,
+      "content": "Python data processing scripts",
+      "expectedTags": ["tech:python"],
+      "category": "tech:python"
+    },
+    {
+      "id": 24,
+      "content": "Docker container setup",
+      "expectedTags": ["tech:docker"],
+      "category": "tech:docker"
+    },
+    {
+      "id": 25,
+      "content": "Git workflow best practices",
+      "expectedTags": ["tech:git"],
+      "category": "tech:git"
+    },
+    {
+      "id": 26,
+      "content": "API design principles",
+      "expectedTags": ["tech:api"],
+      "category": "tech:api"
+    },
+    {
+      "id": 27,
+      "content": "The codebase architecture needs refactoring",
+      "expectedTags": ["refactor"],
+      "category": "type:refactor"
+    },
+    {
+      "id": 28,
+      "content": "Sync with team about roadmap",
+      "expectedTags": ["meeting"],
+      "category": "type:meeting"
+    },
+    {
+      "id": 29,
+      "content": "PostgreSQL vs MySQL comparison",
+      "expectedTags": ["decision", "tech:database"],
+      "category": "type:decision+tech:database"
+    },
+    {
+      "id": 30,
+      "content": "Critical security vulnerability found",
+      "expectedTags": ["bug", "high"],
+      "category": "type:bug+priority:high"
+    }
+  ],
+  "notes": [
+    "Each entry has 'expectedTags' - tags that should be suggested",
+    "Category is for grouping results",
+    "Expected accuracy: 80%+ (24/30 minimum)",
+    "High-confidence tags (>70%) should match expected tags",
+    "Some entries may have additional valid tags not listed"
+  ]
+}

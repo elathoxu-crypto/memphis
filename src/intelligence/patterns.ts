@@ -78,7 +78,7 @@ export const PATTERN_DATABASE: TagPattern[] = [
     tag: 'bug',
     category: 'type',
     patterns: [
-      /bug:\s*/i,
+      /bugs?:\s*/i,
       /fix:\s*/i,
       /fixing\s+/i,
       /fixed\s+/i,
@@ -95,12 +95,16 @@ export const PATTERN_DATABASE: TagPattern[] = [
       /bug\s+report/i,
       /bugfix/i,
       /hotfix/i,
-      /patch\s+for/i
+      /patch\s+for/i,
+      /vulnerability/i,
+      /security\s+issue/i,
+      /\bcritical\b/i
     ],
     examples: [
       'Bug: Login button not working',
       'Fixed the crash on startup',
-      'Error: NullReferenceException'
+      'Error: NullReferenceException',
+      'Critical security vulnerability found'
     ],
     priority: 100
   },
@@ -283,12 +287,15 @@ export const PATTERN_DATABASE: TagPattern[] = [
       /MVP\s+(done|complete|ready)/i,
       /milestone\s+(reached|complete)/i,
       /checkpoint:\s*/i,
-      /wrap(ped)?\s+up/i
+      /wrap(ped)?\s+up/i,
+      /\bprogress\b/i,
+      /\bgreat\s+progress\b/i
     ],
     examples: [
       'Progress: Finished the login flow',
       'Completed the API refactoring',
-      'Deployed v1.2.0 to production'
+      'Deployed v1.2.0 to production',
+      'Great progress on the project!'
     ],
     priority: 80
   },
@@ -378,18 +385,13 @@ export const PATTERN_DATABASE: TagPattern[] = [
       /docs?:\s*/i,
       /documented?\s+/i,
       /documentation\s+(for|about)/i,
-      /readme/i,
-      /guide:\s*/i,
-      /tutorial:\s*/i,
-      /how-to:\s*/i,
-      /instructions?\s+(for|on)/i,
-      /wrote\s+(up\s+)?(docs|documentation|guide)/i,
-      /updated?\s+(the\s+)?docs/i
+      /^docs\s+/i,
+      /\bdocs\b/i
     ],
     examples: [
       'Docs: Added API reference',
       'Documented the build process',
-      'Tutorial: Getting started guide'
+      'Documentation for the API'
     ],
     priority: 70
   },
@@ -399,22 +401,16 @@ export const PATTERN_DATABASE: TagPattern[] = [
     tag: 'test',
     category: 'type',
     patterns: [
-      /test(s|ing)?:\s*/i,
+      /tests?:\s*/i,
       /tested?\s+/i,
       /unit\s+test/i,
-      /integration\s+test/i,
-      /e2e\s+test/i,
-      /test\s+coverage/i,
-      /wrote\s+(tests?|test\s+for)/i,
-      /added?\s+tests?\s+(for|to)/i,
-      /testing\s+(strategy|approach)/i,
-      /QA/i,
-      /quality\s+assurance/i
+      /\btests?\b/i,
+      /test\s+(suite|case|coverage)/i
     ],
     examples: [
       'Test: Added unit tests for auth module',
-      'Testing: Integration tests for API',
-      'Wrote tests for the payment flow'
+      'Tests for the API',
+      'Unit test coverage'
     ],
     priority: 70
   },
@@ -424,24 +420,17 @@ export const PATTERN_DATABASE: TagPattern[] = [
     tag: 'refactor',
     category: 'type',
     patterns: [
-      /refactor:\s*/i,
+      /refactors?:\s*/i,
       /refactored?\s+/i,
-      /restructure:\s*/i,
-      /restructured?\s+/i,
-      /cleanup:\s*/i,
+      /restructure/i,
+      /\brefactor\b/i,
       /cleaned?\s+up\s+/i,
-      /simplified?\s+/i,
-      /improved?\s+(code|structure|architecture)/i,
-      /optimized?\s+/i,
-      /rewrote?\s+/i,
-      /revamp(ed)?\s+/i,
-      /overhaul(ed)?\s+/i,
-      /modernized?\s+/i
+      /simplified?\s+/i
     ],
     examples: [
       'Refactor: Simplified the auth logic',
-      'Cleaned up the database queries',
-      'Optimized the rendering pipeline'
+      'Refactored the database layer',
+      'Restructure the codebase'
     ],
     priority: 70
   },
@@ -550,7 +539,9 @@ export const PATTERN_DATABASE: TagPattern[] = [
       /backlog:\s*/i,
       /maybe\s+later/i,
       /not\s+urgent/i,
-      /no\s+rush/i
+      /no\s+rush/i,
+      /wishlist/i,
+      /would\s+be\s+nice/i
     ],
     examples: [
       'Nice to have: Dark mode',
@@ -585,7 +576,10 @@ export const PATTERN_DATABASE: TagPattern[] = [
       /win:\s*/i,
       /victory/i,
       /:\)/,
-      /🎉|✅|💪|🔥|🚀/
+      /🎉|✅|💪|🔥|🚀/,
+      /\bgood\b/i,
+      /\bgreat\b/i,
+      /\bwon(derful)?\b/i
     ],
     examples: [
       'Great progress on the project!',
@@ -595,6 +589,7 @@ export const PATTERN_DATABASE: TagPattern[] = [
     priority: 60
   },
   
+  // Negative mood patterns
   {
     tag: 'negative',
     category: 'mood',
@@ -613,7 +608,8 @@ export const PATTERN_DATABASE: TagPattern[] = [
       /oops/i,
       /ugh/i,
       /:\(/,
-      /😢|😞|😤|😠/
+      /😢|😞|😤|😠/,
+      /\bfrustrated\b/i
     ],
     examples: [
       'Frustrated with the build errors',
