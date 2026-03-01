@@ -31,12 +31,16 @@ import { renderDecisionsStatic, setupDecisionsInput } from "./screens/decisions.
 import { renderSummaryStatic, setupSummaryInput } from "./screens/summary.js";
 import { renderNetwork, setupNetworkInput } from "./screens/network.js";
 
-// ─── Colours ─────────────────────────────────────────────────────────────────
+// ─── Theme Support ───────────────────────────────────────────────────────────
+import { getTheme, detectTerminalTheme, type Theme } from "./themes.js";
+
+// ─── Colours (theme-aware) ───────────────────────────────────────────────────
+let currentTheme = getTheme(detectTerminalTheme());
 const COLORS = {
-  primary:   "cyan",
-  secondary: "magenta",
-  text:      "white",
-  bg:        "black",
+  primary:   currentTheme.primary,
+  secondary: currentTheme.secondary,
+  text:      currentTheme.text,
+  bg:        currentTheme.background,
 };
 
 // ─── Public widget bag (passed to screens that need input) ────────────────────
@@ -308,6 +312,7 @@ export class MemphisTUI {
     this.screen.key(["g"], () => void this.handleGuardedTerminal());
     this.screen.key(["h"], () => void this.handleHelpViewer());
     this.screen.key(["u"], () => void this.handleUsbMode());
+    this.screen.key(["T"], () => void this.handleThemeToggle());
 
     // Vim-style navigation
     this.screen.key(["j", "down"], () => this.moveMenu(1));
@@ -565,6 +570,44 @@ export class MemphisTUI {
       this.showStatus("USB nie znaleziono");
     }
     this.refreshStateUI();
+    this.screen.render();
+  }
+
+  private async handleThemeToggle(): Promise<void> {
+    // Toggle between dark and light themes
+    const currentThemeName = currentTheme.name;
+    const newThemeName = currentThemeName === "dark" ? "light" : "dark";
+    
+    // Update current theme
+    currentTheme = getTheme(newThemeName);
+    
+    // Update COLORS object
+    COLORS.primary = currentTheme.primary;
+    COLORS.secondary = currentTheme.secondary;
+    COLORS.text = currentTheme.text;
+    COLORS.bg = currentTheme.background;
+    
+    // Apply theme to UI elements
+    this.headerBox.style.fg = currentTheme.text;
+    this.headerBox.style.bg = currentTheme.primary;
+    
+    this.sidebarBox.style.fg = currentTheme.text;
+    this.sidebarBox.style.bg = currentTheme.background;
+    this.sidebarBox.style.border.fg = currentTheme.border;
+    
+    this.contentBox.style.fg = currentTheme.text;
+    this.contentBox.style.bg = currentTheme.background;
+    this.contentBox.style.border.fg = currentTheme.border;
+    
+    this.statusBar.style.fg = currentTheme.text;
+    this.statusBar.style.bg = currentTheme.secondary;
+    
+    // Log theme change
+    await this.logOpsEntry(`[Theme] Switched to ${newThemeName} theme`, ["theme", "tui"]);
+    
+    // Refresh UI
+    this.refreshStateUI();
+    this.showStatus(`Theme: ${newThemeName} (press T to toggle)`);
     this.screen.render();
   }
 
