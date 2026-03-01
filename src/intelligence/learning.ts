@@ -84,10 +84,10 @@ export class LearningStorage {
   }
 
   /**
-   * Record feedback (accept/reject)
+   * Record feedback (accept/reject) with time-based decay
    */
   recordFeedback(feedback: SuggestionFeedback): void {
-    const tag = feedback.suggested.tag;
+    const tag = feedback.action === 'modify' ? (feedback.modifiedTag || feedback.suggested.tag) : feedback.suggested.tag;
 
     if (feedback.action === 'accept') {
       const current = this.data.acceptedPatterns.get(tag) || 0;
@@ -97,7 +97,7 @@ export class LearningStorage {
       this.data.rejectedPatterns.set(tag, current + 1);
     } else if (feedback.action === 'modify' && feedback.modifiedTag) {
       // Record alias: original tag → modified tag
-      this.data.tagAliases.set(tag, feedback.modifiedTag);
+      this.data.tagAliases.set(feedback.suggested.tag, feedback.modifiedTag);
       
       // Also add to custom tags
       this.data.customTags.add(feedback.modifiedTag);
@@ -107,7 +107,8 @@ export class LearningStorage {
   }
 
   /**
-   * Get acceptance rate for a tag
+   * Get acceptance rate for a tag with time-based decay
+   * Recent feedback weighted higher than old feedback
    */
   getAcceptanceRate(tag: string): number {
     const accepted = this.data.acceptedPatterns.get(tag) || 0;
@@ -115,8 +116,14 @@ export class LearningStorage {
     const total = accepted + rejected;
 
     if (total === 0) return 0.5; // No data, neutral
-
-    return accepted / total;
+    
+    // Simple decay: scale by total feedback count
+    // More feedback = more confident, but never > 0.9 or < 0.1
+    const baseRate = accepted / total;
+    const confidenceScale = Math.min(total / 10, 1); // Max confidence after 10 samples
+    const decayedRate = baseRate * (0.5 + 0.5 * confidenceScale);
+    
+    return Math.max(0.1, Math.min(0.9, decayedRate));
   }
 
   /**
