@@ -1,0 +1,13 @@
+#!/bin/bash
+# Memphis CLI Wrapper
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SIMPLIFIED_CLI="$SCRIPT_DIR/dist/cli/simplified.js"
+
+if [ -f "$SIMPLIFIED_CLI" ]; then
+    exec node "$SIMPLIFIED_CLI" "$@"
+else
+    echo "Error: Memphis CLI not found at $SIMPLIFIED_CLI"
+    echo "Run: npm run build"
+    exit 1
+fi
