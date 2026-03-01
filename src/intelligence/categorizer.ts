@@ -204,23 +204,15 @@ export class Categorizer {
     timeOfDay: InferenceContext['timeOfDay'], 
     dayOfWeek: string
   ): TagSuggestion | null {
-    // Weekend vs weekday
-    if (['Saturday', 'Sunday'].includes(dayOfWeek)) {
-      return {
-        tag: 'weekend',
-        category: 'time',
-        confidence: 0.6,
-        source: 'context',
-        evidence: 'It\'s the weekend'
-      };
-    }
-
-    // Time of day
+    // Skip weekend tags entirely - they're low value
+    // Users don't care about "weekend" classification
+    
+    // Time of day with stricter rules
     if (timeOfDay === 'morning') {
       return {
         tag: 'morning',
         category: 'time',
-        confidence: 0.5,
+        confidence: 0.35, // Reduced from 0.5
         source: 'context',
         evidence: 'Morning entry'
       };
@@ -228,7 +220,7 @@ export class Categorizer {
       return {
         tag: 'eod',
         category: 'type',
-        confidence: 0.5,
+        confidence: 0.35, // Reduced from 0.5
         source: 'context',
         evidence: 'Evening entry, likely end-of-day'
       };
@@ -243,8 +235,27 @@ export class Categorizer {
    */
   private async classifyWithLLM(content: string): Promise<TagSuggestion[]> {
     try {
-      // Resolve provider (uses Memphis's provider resolution)
-      const resolved = await resolveProvider({ skipOpenClaw: true });
+      // Resolve provider - prefer smaller/faster models for classification
+      // Try in order: qwen2.5:0.5b > phi3 > qwen2.5-coder:3b (fallback)
+      let resolved = await resolveProvider({ 
+        provider: 'ollama',
+        model: 'qwen2.5:0.5b',
+        skipOpenClaw: true 
+      });
+      
+      // Fallback to default if qwen2.5:0.5b not available
+      if (!resolved) {
+        resolved = await resolveProvider({ 
+          provider: 'ollama',
+          model: 'phi3',
+          skipOpenClaw: true 
+        });
+      }
+      
+      // Final fallback to default provider
+      if (!resolved) {
+        resolved = await resolveProvider({ skipOpenClaw: true });
+      }
       
       if (!resolved) {
         return [];
@@ -276,14 +287,21 @@ Rules:
 
 Return ONLY the JSON array, no other text:`;
 
-      // Call LLM
-      const response = await resolved.provider.chat([
-        { role: 'user', content: prompt }
-      ], {
-        model: resolved.model,
-        temperature: 0.3, // Lower temperature for more consistent classification
-        max_tokens: 500
-      });
+      // Call LLM with timeout (max 3 seconds for classification)
+      const timeoutPromise = new Promise<null>((_, reject) => 
+        setTimeout(() => reject(new Error('LLM classification timeout')), 3000)
+      );
+      
+      const response = await Promise.race([
+        resolved.provider.chat([
+          { role: 'user', content: prompt }
+        ], {
+          model: resolved.model,
+          temperature: 0.3,
+          max_tokens: 200 // Reduced from 500 for faster response
+        }),
+        timeoutPromise
+      ]) as any;
       
       if (!response || !response.content) {
         return [];
