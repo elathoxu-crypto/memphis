@@ -148,6 +148,26 @@ export class LearningStorage {
   }
 
   /**
+   * Get top accepted tags
+   */
+  getTopAccepted(limit = 10): Array<{ tag: string; count: number }> {
+    return Array.from(this.data.acceptedPatterns.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, limit)
+      .map(([tag, count]) => ({ tag, count }));
+  }
+
+  /**
+   * Get top rejected tags
+   */
+  getTopRejected(limit = 10): Array<{ tag: string; count: number }> {
+    return Array.from(this.data.rejectedPatterns.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, limit)
+      .map(([tag, count]) => ({ tag, count }));
+  }
+
+  /**
    * Get statistics
    */
   getStats(): {
@@ -159,15 +179,8 @@ export class LearningStorage {
     topAccepted: Array<{ tag: string; count: number }>;
     topRejected: Array<{ tag: string; count: number }>;
   } {
-    const acceptedTags = Array.from(this.data.acceptedPatterns.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 10)
-      .map(([tag, count]) => ({ tag, count }));
-
-    const rejectedTags = Array.from(this.data.rejectedPatterns.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 10)
-      .map(([tag, count]) => ({ tag, count }));
+    const topAccepted = this.getTopAccepted(10);
+    const topRejected = this.getTopRejected(10);
 
     const totalAccepted = Array.from(this.data.acceptedPatterns.values())
       .reduce((sum, count) => sum + count, 0);
@@ -180,8 +193,8 @@ export class LearningStorage {
       rejectedTags: totalRejected,
       customTags: this.data.customTags.size,
       aliases: this.data.tagAliases.size,
-      topAccepted: acceptedTags,
-      topRejected: rejectedTags
+      topAccepted,
+      topRejected
     };
   }
 

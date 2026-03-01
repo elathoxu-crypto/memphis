@@ -925,6 +925,7 @@ export function getPatternByTag(tag: string): TagPattern | undefined {
  */
 export const PATTERN_STATS = {
   totalPatterns: PATTERN_DATABASE.length,
+  totalRegexPatterns: PATTERN_DATABASE.reduce((sum, p) => sum + p.patterns.length, 0),
   byCategory: {
     type: PATTERN_DATABASE.filter(p => p.category === 'type').length,
     person: PATTERN_DATABASE.filter(p => p.category === 'person').length,
@@ -932,7 +933,8 @@ export const PATTERN_STATS = {
     mood: PATTERN_DATABASE.filter(p => p.category === 'mood').length,
     time: PATTERN_DATABASE.filter(p => p.category === 'time').length,
     scope: PATTERN_DATABASE.filter(p => p.category === 'scope').length,
-    tech: PATTERN_DATABASE.filter(p => p.category === 'tech').length
-  },
-  totalRegexPatterns: PATTERN_DATABASE.reduce((sum, p) => sum + p.patterns.length, 0)
+    tech: PATTERN_DATABASE.filter(p => p.category === 'tech').length,
+    custom: PATTERN_DATABASE.filter(p => p.category === 'custom').length,
+    project: PATTERN_DATABASE.filter(p => p.category === 'project').length
+  }
 };

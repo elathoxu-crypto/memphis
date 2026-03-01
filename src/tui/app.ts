@@ -30,6 +30,7 @@ import { renderAskStatic, setupAskInput } from "./screens/ask.js";
 import { renderDecisionsStatic, setupDecisionsInput } from "./screens/decisions.js";
 import { renderSummaryStatic, setupSummaryInput } from "./screens/summary.js";
 import { renderNetwork, setupNetworkInput } from "./screens/network.js";
+import { renderIntelligence } from "./screens/intelligence.js";
 
 // ─── Theme Support ───────────────────────────────────────────────────────────
 import { getTheme, detectTerminalTheme, type Theme } from "./themes.js";
@@ -426,6 +427,10 @@ export class MemphisTUI {
       case "network":
         this.contentBox.setContent(renderNetwork(this.store, this.state));
         setupNetworkInput(this.store, this.widgets, this.state, (name) => this.navigateTo(name), onDone);
+        break;
+
+      case "intelligence":
+        this.contentBox.setContent(renderIntelligence(this.store, this.config, this.state));
         break;
     }
 
