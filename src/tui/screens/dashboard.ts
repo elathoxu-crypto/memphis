@@ -97,8 +97,40 @@ export function renderDashboard(store: Store, config: MemphisConfig, state: TUIS
     }
   }
 
+  // Intelligence Widget
+  content += `{bold}Intelligence:{/bold}\n`;
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const learningPath = path.join(process.env.MEMPHIS_PATH || path.join(process.env.HOME || '', '.memphis'), 'intelligence', 'learning-data.json');
+    
+    if (fs.existsSync(learningPath)) {
+      const learning = JSON.parse(fs.readFileSync(learningPath, 'utf-8'));
+      const totalFeedback = Object.values(learning.acceptedPatterns || {}).reduce((sum: number, n) => sum + (n as number), 0) +
+                           Object.values(learning.rejectedPatterns || {}).reduce((sum: number, n) => sum + (n as number), 0);
+      
+      const topTags = Object.entries(learning.acceptedPatterns || {})
+        .sort((a, b) => ((b[1] as number) || 0) - ((a[1] as number) || 0))
+        .slice(0, 3);
+      
+      if (totalFeedback > 0) {
+        content += `  {green}✓ Active{/green} (${totalFeedback} feedback events)\n`;
+        if (topTags.length > 0) {
+          content += `  Top: ${topTags.map(([tag, count]) => `${tag}(${count})`).join(', ')}\n`;
+        }
+      } else {
+        content += `  {yellow}Learning (no feedback yet){/yellow}\n`;
+      }
+    } else {
+      content += `  {gray}Not initialized{/gray}\n`;
+    }
+  } catch (err) {
+    content += `  {gray}—{/gray}\n`;
+  }
+  content += `\n`;
+
   // Overall status
-  content += `\n{bold}Status:{/bold} `;
+  content += `{bold}Status:{/bold} `;
   if (report.ok) {
     content += `{green}OK{/green}\n`;
   } else {
