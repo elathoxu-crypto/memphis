@@ -346,19 +346,23 @@ program
     // If screen specified, navigate to it after a brief delay
     if (opts.screen) {
       setTimeout(() => {
-        const screenMap: Record<string, number> = {
-          dashboard: 1,
-          journal: 2,
-          vault: 3,
-          recall: 4,
-          ask: 5,
-          openclaw: 6,
-          settings: 7,
+        const screenMap: Record<string, string> = {
+          dashboard: "dashboard",
+          journal: "journal",
+          vault: "vault",
+          recall: "recall",
+          ask: "ask",
+          openclaw: "openclaw",
+          settings: "settings",
+          cline: "cline",
+          offline: "offline",
+          summary: "summary",
+          decisions: "decisions",
+          soul: "soul",
         };
-        const screenNum = screenMap[opts.screen.toLowerCase()];
-        if (screenNum) {
-          // Access the navigateToMenu method via the instance
-          (tui as any).navigateToMenu(screenNum);
+        const screenName = screenMap[opts.screen.toLowerCase()];
+        if (screenName) {
+          tui.navigateTo(screenName as any);
         }
       }, 500);
     }
