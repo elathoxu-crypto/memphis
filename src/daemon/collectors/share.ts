@@ -2,6 +2,7 @@ import { Store } from "../../memory/store.js";
 import { Collector } from "../types.js";
 import { loadConfig, type MemphisConfig } from "../../config/loader.js";
 import { shareSyncCommand, exportShareBlocks, type ShareSyncSummary } from "../../cli/share-sync.js";
+import { assertOperation } from "../../security/rls.js";
 
 export class ShareCollector implements Collector {
   public readonly name = "share";
@@ -44,6 +45,12 @@ export class ShareCollector implements Collector {
 
   async collect(): Promise<void> {
     const config = loadConfig();
+    try {
+      assertOperation("collector.share");
+    } catch (error) {
+      console.warn(`[daemon:share] operation disabled: ${error instanceof Error ? error.message : error}`);
+      return;
+    }
     if (this.isPushDisabled(config)) {
       return;
     }

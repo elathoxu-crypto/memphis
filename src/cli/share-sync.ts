@@ -5,6 +5,7 @@ import { Store } from "../memory/store.js";
 import { loadConfig } from "../config/loader.js";
 import { PinataBridge } from "../integrations/pinata.js";
 import { z } from "zod";
+import { assertChainAccess, assertOperation } from "../security/rls.js";
 
 /**
  * Memphis Share Sync (skeleton)
@@ -84,6 +85,7 @@ export async function shareSyncCommand(opts: ShareSyncOptions = {}): Promise<Sha
   }
 
   if (shouldPush) {
+    assertOperation("share.push");
     const payloads = await exportShareBlocks(store, limit, since);
     if (payloads.length === 0) {
       console.log(chalk.gray("[share-sync] no share-tagged blocks to push"));
@@ -117,6 +119,7 @@ export async function shareSyncCommand(opts: ShareSyncOptions = {}): Promise<Sha
   }
 
   if (shouldPull) {
+    assertOperation("share.pull");
     const entries = await readNetworkEntries({ sort: "desc", unique: true });
     const pending = entries.filter((entry) => entry.status !== "imported" && entry.status !== "unavailable");
     if (pending.length === 0) {
@@ -186,6 +189,7 @@ export async function exportShareBlocks(store: Store, limit = 10, since?: string
     for (const block of blocks) {
       const tags = block.data.tags || [];
       if (!tags.includes("share")) continue;
+      assertChainAccess(chain, "export", { tags, type: block.data.type, agent: block.data.agent });
       if (sinceDate && !isNaN(sinceDate.getTime())) {
         const blockTime = new Date(block.timestamp);
         if (isNaN(blockTime.getTime()) || blockTime < sinceDate) continue;

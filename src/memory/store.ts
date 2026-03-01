@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import type { Block, BlockData } from "./chain.js";
 import { createBlock, validateBlockAgainstSoul } from "./chain.js";
 import { commitBlock } from "../utils/git.js";
+import { assertChainAccess } from "../security/rls.js";
 
 /**
 
@@ -70,6 +71,25 @@ export class Store {
     return dir;
   }
 
+  private enforceChainAccess(
+    chain: string,
+    action: "read" | "write" | "export" | "import",
+    data?: BlockData
+  ): void {
+    try {
+      assertChainAccess(chain, action, {
+        tags: data?.tags,
+        type: data?.type,
+        agent: data?.agent,
+      });
+    } catch (error) {
+      if (error instanceof Error) {
+        throw new StoreError(`RLS denied ${action} on ${chain}: ${error.message}`, "RLS_DENIED");
+      }
+      throw error;
+    }
+  }
+
   private blockFile(chain: string, index: number): string {
     return join(this.chainDir(chain), `${String(index).padStart(6, "0")}.json`);
   }
@@ -99,6 +119,7 @@ export class Store {
    */
   async appendBlock(chain: string, data: BlockData): Promise<Block> {
     try {
+      this.enforceChainAccess(chain, "write", data);
       // 1. Get previous block for chain linking
       const prev = this.getLastBlock(chain);
       
@@ -150,6 +171,7 @@ export class Store {
   }
 
   readChain(chain: string): Block[] {
+    this.enforceChainAccess(chain, "read");
     try {
       const dir = this.chainDir(chain);
       if (!existsSync(dir)) return [];

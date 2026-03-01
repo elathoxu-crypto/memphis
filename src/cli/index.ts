@@ -524,6 +524,8 @@ program
       const result = await autosummarize(store, {
         useLLM: opts.llm,
         dryRun: opts.dryRun,
+        force: opts.force,
+        triggerBlocks: threshold,
       });
       
       if (opts.dryRun) {

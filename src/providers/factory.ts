@@ -9,12 +9,13 @@
  *
  * Resolution order (default):
  *   1. Explicit provider/model in options
- *   2. OpenClaw gateway (if available)
- *   3. Codex (if OPENAI_API_KEY or codex CLI present)
- *   4. OpenAI (if OPENAI_API_KEY)
- *   5. OpenRouter (if OPENROUTER_API_KEY)
- *   6. MiniMax (if MINIMAX_API_KEY)
- *   7. Ollama (local fallback, always available)
+ *   2. Configured provider preferences (currently Ollama from config)
+ *   3. OpenClaw gateway (if available and not offline)
+ *   4. Codex (if OPENAI_API_KEY or codex CLI present)
+ *   5. OpenAI (if OPENAI_API_KEY)
+ *   6. OpenRouter (if OPENROUTER_API_KEY)
+ *   7. MiniMax (if MINIMAX_API_KEY)
+ *   8. Ollama (local fallback, always available)
  */
 
 import { OllamaProvider } from "./ollama.js";
@@ -25,6 +26,7 @@ import { OpenClawProvider, isGatewayAvailable } from "./openclaw.js";
 import { MiniMaxProvider } from "./minimax.js";
 import type { Provider } from "./index.js";
 import { getProviderApiKey } from "../integrations/vault-providers.js";
+import { loadConfig } from "../config/loader.js";
 
 export type ProviderName = "openclaw" | "codex" | "openai" | "openrouter" | "minimax" | "ollama";
 
@@ -95,12 +97,22 @@ export async function resolveProvider(options: ProviderOptions = {}): Promise<Re
 
   // Auto-resolution chain
 
-  // 1. OpenClaw gateway
-  if (!skipOpenClaw && await isGatewayAvailable().catch(() => false)) {
+  const config = loadConfig();
+
+  if (config.providers?.ollama?.url) {
+    process.env.OLLAMA_BASE_URL = config.providers.ollama.url;
+    if (config.providers.ollama.model) {
+      process.env.OLLAMA_MODEL = config.providers.ollama.model;
+    }
+    const preferredModel = config.providers.ollama.model || "qwen2.5:3b";
+    return { provider: new OllamaProvider(), name: "ollama", model: preferredModel };
+  }
+
+  const openclawAvailable = !skipOpenClaw && !process.env.MEMPHIS_OFFLINE && await isGatewayAvailable().catch(() => false);
+  if (openclawAvailable) {
     return { provider: new OpenClawProvider(), name: "openclaw", model };
   }
 
-  // 2. Codex
   if (!skipCodex) {
     const codex = new CodexProvider();
     if (codex.isConfigured()) {
@@ -108,26 +120,22 @@ export async function resolveProvider(options: ProviderOptions = {}): Promise<Re
     }
   }
 
-  // 3. OpenAI
   const openaiKey = await tryGetApiKey("openai", vaultPassword);
   if (openaiKey) {
     process.env.OPENAI_API_KEY = openaiKey;
     return { provider: new OpenAIProvider(), name: "openai", model };
   }
 
-  // 4. OpenRouter
   const orKey = await tryGetApiKey("openrouter", vaultPassword);
   if (orKey) {
     return { provider: new OpenRouterProvider(orKey), name: "openrouter", model };
   }
 
-  // 5. MiniMax
   const mmKey = await tryGetApiKey("minimax", vaultPassword);
   if (mmKey) {
     return { provider: new MiniMaxProvider(mmKey), name: "minimax", model };
   }
 
-  // 6. Ollama (always last — always available locally)
   return { provider: new OllamaProvider(), name: "ollama", model };
 }
 
@@ -138,7 +146,11 @@ async function resolveExplicit(
 ): Promise<ResolvedProvider> {
   switch (name.toLowerCase()) {
     case "openclaw": {
-      if (!await isGatewayAvailable().catch(() => false)) {
+      if (process.env.MEMPHIS_OFFLINE === "1") {
+        throw new Error("OpenClaw gateway not available (offline mode)");
+      }
+      const available = await isGatewayAvailable().catch(() => false);
+      if (!available) {
         throw new Error("OpenClaw gateway not available");
       }
       return { provider: new OpenClawProvider(), name: "openclaw", model };
