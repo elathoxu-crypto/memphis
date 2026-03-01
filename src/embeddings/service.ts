@@ -124,8 +124,10 @@ export class EmbeddingService {
 
     const sinceTs = options.since ? new Date(options.since).getTime() : undefined;
 
+    // Collect blocks to embed (respecting limit and since)
+    const toEmbed: Block[] = [];
     for (const block of blocks) {
-      if (processed >= limit) break;
+      if (processed + skipped >= limit) break;
       if (sinceTs && new Date(block.timestamp).getTime() < sinceTs) {
         skipped++;
         continue;
@@ -138,16 +140,23 @@ export class EmbeddingService {
         continue;
       }
 
-      if (!options.dryRun) {
-        await this.backend.init();
-        const vectors = await this.backend.embedBlocks([block]);
-        if (vectors[0]) {
-          this.persistVector(chain, block, vectors[0]);
+      toEmbed.push(block);
+      processed++;
+    }
+
+    // Batch embed all blocks at once (much faster than sequential)
+    if (!options.dryRun && toEmbed.length > 0) {
+      await this.backend.init();
+      const vectors = await this.backend.embedBlocks(toEmbed);
+
+      for (let i = 0; i < toEmbed.length; i++) {
+        const block = toEmbed[i];
+        const vector = vectors[i];
+        if (vector) {
+          this.persistVector(chain, block, vector);
+          yield { type: "process", chain, blockIndex: block.index };
         }
       }
-
-      processed++;
-      yield { type: "process", chain, blockIndex: block.index };
     }
 
     const durationMs = Date.now() - start;
