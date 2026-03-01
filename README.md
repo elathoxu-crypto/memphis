@@ -8,6 +8,14 @@
 
 ## English
 
+### 🚀 New to Memphis?
+
+**→ [Read the 5-minute Quickstart Guide](docs/QUICKSTART.md) ←**
+
+Get your first memory saved in 5 minutes. No complexity, just the essentials.
+
+---
+
 ### Overview
 Memphis is a self-hosted AI brain that keeps append-only chains for every action (journal, ask, decisions, summaries, share). It blends keyword + semantic recall, grows a knowledge graph, runs daily reflections, and keeps a daemon watching repos so you can summon the right context instantly.
 
