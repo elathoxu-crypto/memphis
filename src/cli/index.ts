@@ -57,6 +57,7 @@ import { planCommand } from "./commands/plan.js";
 import { ingestCommand } from "./commands/ingest.js";
 import { watchCommand } from "./commands/watch.js";
 import { DaemonManager } from "../daemon/index.js";
+import { mcpStartCommand, mcpInspectCommand } from "./commands/mcp.js";
 
 const program = new Command();
 const daemonManager = new DaemonManager();
@@ -138,6 +139,25 @@ program
       noEmbed: opts.noEmbed,
       quiet: opts.quiet,
     });
+  });
+
+const mcpProgram = program
+  .command("mcp")
+  .description("Model Context Protocol (MCP) utilities for Memphis");
+
+mcpProgram
+  .command("start")
+  .description("Start the Memphis MCP server over stdio transport")
+  .action(async () => {
+    await mcpStartCommand();
+  });
+
+mcpProgram
+  .command("inspect")
+  .description("Show the MCP tools exposed by Memphis")
+  .option("-j, --json", "Output JSON")
+  .action(opts => {
+    mcpInspectCommand({ json: opts.json });
   });
 
 program
