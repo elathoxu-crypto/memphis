@@ -13,6 +13,7 @@ import { GitCollector } from "./collectors/git.js";
 import { ShellCollector } from "./collectors/shell.js";
 import { HeartbeatCollector } from "./collectors/heartbeat.js";
 import { ShareCollector } from "./collectors/share.js";
+import { ReflectionCollector } from "./collectors/reflection.js";
 
 const DEFAULT_INTERVAL = 60_000;
 
@@ -236,6 +237,19 @@ class DaemonRuntime {
       schedules.push({
         collector: shareCollector,
         interval: collectorsConfig.share?.interval ?? 30 * 60_000,
+        running: false,
+      });
+    }
+
+    if (collectorsConfig.reflection?.enabled ?? true) {
+      const reflectionCollector = new ReflectionCollector(this.store, {
+        mode: (collectorsConfig.reflection as any)?.mode ?? "daily",
+        save: true,
+        notify: true,
+      });
+      schedules.push({
+        collector: reflectionCollector,
+        interval: collectorsConfig.reflection?.interval ?? 24 * 60 * 60_000, // 24h default
         running: false,
       });
     }
