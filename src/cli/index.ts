@@ -49,6 +49,7 @@ import { embedCommand } from "./commands/embed.js";
 import { shareReplicatorCommand } from "./commands/share-replicator.js";
 import { registerTradeCommand } from "./commands/trade.js";
 import { soulStatusCommand } from "./commands/soul-status.js";
+import { intelligenceCommand } from "./commands/intelligence.js";
 import { graphBuildCommand, graphShowCommand } from "./commands/graph.js";
 import { createWorkspaceStore } from "./utils/workspace-store.js";
 import { writeWorkspaceSelection, getWorkspaceSelectionFilePath } from "../security/workspace.js";
@@ -695,6 +696,18 @@ daemonProgram
   .action((opts) => {
     const lines = Number.parseInt(opts.lines, 10) || 50;
     daemonManager.logs(lines);
+  });
+
+program
+  .command("intelligence <action>")
+  .description("Phase 6 Intelligence commands (stats, clear)")
+  .option("-j, --json", "Output JSON format")
+  .option("--clear", "Clear learning data (for 'clear' action)")
+  .action((action, options) => {
+    intelligenceCommand(action, {
+      json: options.json,
+      clear: options.clear
+    });
   });
 
 program.parse();
