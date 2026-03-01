@@ -274,7 +274,7 @@ memphis share-sync --all
 - [ ] Conflict resolution
 - [ ] Reputation system
 - [ ] Encrypted trades (E2E)
-- [ ] Network explorer (TUI)
+- [x] Network explorer (TUI) — ✅ v1.5.0 (2026-03-01)
 
 ---
 
