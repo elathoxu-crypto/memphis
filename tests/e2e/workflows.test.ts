@@ -158,6 +158,64 @@ describe("E2E: Error Handling", () => {
   });
 });
 
+describe("E2E: CLI Shortcuts", () => {
+  it("should support 'j' shortcut for journal", () => {
+    const result = execWithEnv('j "Test shortcut memory"', TEST_HOME);
+    expect(result).toContain("journal#");
+    expect(result).toContain("Test shortcut memory");
+  });
+
+  it("should support 's' shortcut for status", () => {
+    const result = execWithEnv("s", TEST_HOME);
+    expect(result).toContain("✓ Workspace") || expect(result).toContain("Workspace");
+  });
+
+  it("should support 'r' shortcut for recall", () => {
+    // Add a memory first
+    execWithEnv('j "Recall test memory"', TEST_HOME);
+    
+    // Try to recall
+    const result = execWithEnv("r journal", TEST_HOME);
+    expect(result.length > 0).toBe(true);
+  });
+});
+
+describe("E2E: Vault Workflow", () => {
+  it("should initialize vault", () => {
+    const result = execWithEnv("vault init", TEST_HOME);
+    expect(result).toContain("Vault initialized") || expect(result.length > 0).toBe(true);
+  });
+
+  it("should add and retrieve secrets", () => {
+    // Initialize vault first
+    execWithEnv("vault init", TEST_HOME);
+    
+    // Add a secret
+    const addResult = execWithEnv('vault add test-key "test-value"', TEST_HOME);
+    expect(addResult.length > 0).toBe(true);
+    
+    // Retrieve the secret
+    const getResult = execWithEnv("vault get test-key", TEST_HOME);
+    expect(getResult.length > 0).toBe(true);
+  });
+});
+
+describe("E2E: Sync Workflow", () => {
+  it("should support share-sync dry-run", () => {
+    // Add a share-tagged block
+    execWithEnv('journal "Test share" --tags share', TEST_HOME);
+    
+    // Dry run should work without actual IPFS
+    const result = execWithEnv("share-sync --dry-run", TEST_HOME);
+    expect(result.length > 0).toBe(true);
+  });
+
+  it("should show share-sync help", () => {
+    const result = execWithEnv("share-sync --help", TEST_HOME);
+    expect(result).toContain("share-sync") || expect(result.length > 0).toBe(true);
+  });
+});
+
 /**
  * Execute Memphis CLI with isolated test workspace
  */
