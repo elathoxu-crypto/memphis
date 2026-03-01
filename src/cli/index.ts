@@ -299,11 +299,12 @@ program
 program
   .command("vault")
   .description("Manage encrypted secrets (SSI Vault)")
-  .argument("<action>", "init | add | list | get | delete")
+  .argument("<action>", "init | add | list | get | delete | export | backup | recover")
   .argument("[key]", "Secret key name")
   .argument("[value]", "Secret value")
   .option("--password-env <var>", "Read vault password from environment variable (recommended for scripts)")
   .option("--password-stdin", "Read vault password from stdin (recommended for scripts)")
+  .option("--seed <phrase>", "Recovery seed phrase (for recover action)")
   .action(async (action, key, value, opts) => {
     await vaultCommand({
       action,
@@ -311,6 +312,7 @@ program
       value,
       passwordEnv: opts.passwordEnv,
       passwordStdin: opts.passwordStdin,
+      seed: opts.seed,
     });
   });
 

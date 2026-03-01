@@ -8,13 +8,16 @@ import { promptHidden, readStdinTrimmed } from "../utils/prompt.js";
 import { createWorkspaceStore } from "../utils/workspace-store.js";
 
 interface VaultOptions {
-  action: "add" | "list" | "get" | "delete" | "init" | "export";
+  action: "add" | "list" | "get" | "delete" | "init" | "export" | "backup" | "recover";
   key?: string;
   value?: string;
   password?: string;
   passwordEnv?: string;
   passwordStdin?: boolean;
   json?: boolean;
+  seed?: string;
+  shares?: string[];
+  threshold?: number;
 }
 
 
@@ -248,6 +251,80 @@ export async function vaultCommand(opts: VaultOptions): Promise<void> {
 
       console.log(chalk.yellow(`⚠ Revoked secret: ${opts.key}`));
       console.log(chalk.gray("Note: append-only chain; historical encrypted blocks remain on disk."));
+      break;
+    }
+
+    case "backup": {
+      const { generateSeedPhrase, formatSeedPhrase, deriveRecoveryKey } = await import("../../utils/recovery.js");
+      const password = await resolveVaultPassword(opts);
+
+      // Generate recovery seed
+      const seed = generateSeedPhrase();
+
+      // Derive recovery key
+      const { salt } = deriveRecoveryKey(seed);
+
+      console.log();
+      console.log(chalk.bold.yellow("⚠️  RECOVERY SEED PHRASE"));
+      console.log(chalk.dim("   Store this securely! Anyone with this phrase can recover your vault."));
+      console.log();
+      console.log(chalk.white(formatSeedPhrase(seed)));
+      console.log();
+      console.log(chalk.dim("   Salt: " + salt));
+      console.log();
+
+      // Store salt in vault for recovery
+      await guard.appendBlock(chain, {
+        type: "vault",
+        content: "recovery-salt",
+        tags: ["recovery", "setup"],
+        encrypted: salt,
+        key_id: "recovery-salt",
+      } as any);
+
+      console.log(chalk.green("✓ Recovery seed generated and salt stored."));
+      console.log(chalk.gray("  Use: memphis vault recover --seed \"<phrase>\""));
+      break;
+    }
+
+    case "recover": {
+      const { deriveRecoveryKey, validateSeedPhrase } = await import("../../utils/recovery.js");
+
+      if (!opts.seed) {
+        console.log(chalk.red("Usage: memphis vault recover --seed \"<word1 word2 ... word24>\""));
+        console.log(chalk.dim("  Provide your 24-word recovery seed phrase."));
+        process.exit(1);
+      }
+
+      // Validate seed
+      if (!validateSeedPhrase(opts.seed)) {
+        console.log(chalk.red("✗ Invalid seed phrase. Must be 12 or 24 words."));
+        process.exit(1);
+      }
+
+      // Find recovery salt
+      const blocks = guard.readChain(chain);
+      const saltBlock = blocks.find(b => (b.data as any).key_id === "recovery-salt" && !(b.data as any).revoked);
+
+      if (!saltBlock) {
+        console.log(chalk.red("✗ No recovery salt found. Did you run 'vault export' first?"));
+        process.exit(1);
+      }
+
+      const salt = (saltBlock.data as any).encrypted;
+
+      // Derive key from seed
+      const { key } = deriveRecoveryKey(opts.seed, salt);
+
+      console.log();
+      console.log(chalk.green("✓ Recovery key derived from seed phrase."));
+      console.log(chalk.dim("  You can now use this password to access your vault."));
+      console.log();
+      console.log(chalk.cyan("Recovery password: ") + key.toString("hex"));
+      console.log();
+      console.log(chalk.yellow("⚠️  Store this password securely!"));
+      console.log();
+
       break;
     }
 
