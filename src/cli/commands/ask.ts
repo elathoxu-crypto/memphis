@@ -3,6 +3,7 @@ import { askWithContext, type AskOptions } from "../../core/ask.js";
 import { checkAndSaveDecision } from "../../core/decision-detector.js";
 import { memphis } from "../../agents/logger.js";
 import { createWorkspaceStore } from "../utils/workspace-store.js";
+import { wrapError } from "../../utils/errors.js";
 
 export async function askCommand(question: string, options?: {
   useVault?: boolean;
@@ -115,7 +116,8 @@ export async function askCommand(question: string, options?: {
       memphis.api(result.provider.toLowerCase(), "ok", duration);
     }
   } catch (err) {
-    console.log(chalk.red(`❌ Error: ${err}`));
+    const userError = wrapError(err, "ask command");
+    console.log(userError.toString());
     memphis.error("ask", String(err));
     process.exit(1);
   }
