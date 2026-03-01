@@ -11,10 +11,12 @@ import type {
   InferenceContext,
   SuggestionSource,
   TagPattern,
-  SuggestionFeedback
+  SuggestionFeedback,
+  TagCategory
 } from './types.js';
 import { PATTERN_DATABASE, getPatternsByPriority } from './patterns.js';
 import { getLearningStorage } from './learning.js';
+import { resolveProvider } from '../providers/factory.js';
 import type { Block } from '../memory/chain.js';
 
 /**
@@ -237,22 +239,99 @@ export class Categorizer {
 
   /**
    * LLM classification (slow, accurate)
-   * TODO: Implement when LLM provider is available
+   * Zero-shot classification using LLM provider
    */
   private async classifyWithLLM(content: string): Promise<TagSuggestion[]> {
-    // Placeholder - will implement in next iteration
-    // This would call an LLM API with a prompt like:
-    // "Classify this content with tags: [content]"
-    // and parse the response
-    
-    return [];
+    try {
+      // Resolve provider (uses Memphis's provider resolution)
+      const resolved = await resolveProvider({ skipOpenClaw: true });
+      
+      if (!resolved) {
+        return [];
+      }
+      
+      // Create zero-shot classification prompt
+      const prompt = `Classify the following text with relevant tags. Return only a JSON array of tags with confidence scores.
+
+Text: "${content}"
+
+Available tag categories:
+- Type: meeting, decision, bug, feature, learning, insight, question, idea, goal, progress, problem, solution, review, docs, test, refactor, eod, weekly
+- Priority: high, medium, low
+- Tech: tech:javascript, tech:typescript, tech:react, tech:python, tech:rust, tech:go, tech:database, tech:docker, tech:git, tech:api
+- Mood: positive, negative
+- Scope: work, personal
+
+Return format (JSON array):
+[
+  {"tag": "meeting", "confidence": 0.95, "reason": "Contains meeting indicator"},
+  {"tag": "tech:database", "confidence": 0.80, "reason": "Mentions PostgreSQL"}
+]
+
+Rules:
+- Only include tags with confidence > 0.6
+- Maximum 5 tags
+- Be specific (use tech:* tags when possible)
+- Consider context and intent
+
+Return ONLY the JSON array, no other text:`;
+
+      // Call LLM
+      const response = await resolved.provider.chat([
+        { role: 'user', content: prompt }
+      ], {
+        model: resolved.model,
+        temperature: 0.3, // Lower temperature for more consistent classification
+        max_tokens: 500
+      });
+      
+      if (!response || !response.content) {
+        return [];
+      }
+
+      // Parse JSON response
+      const jsonMatch = response.content.match(/\[[\s\S]*\]/);
+      if (!jsonMatch) {
+        return [];
+      }
+
+      const parsed = JSON.parse(jsonMatch[0]);
+      
+      // Convert to TagSuggestion format
+      const suggestions: TagSuggestion[] = parsed.map((item: any) => ({
+        tag: item.tag.toLowerCase(),
+        category: this.inferCategory(item.tag),
+        confidence: Math.min(item.confidence || 0.7, 1),
+        source: 'llm' as SuggestionSource,
+        evidence: item.reason || 'LLM classification'
+      }));
+
+      return suggestions;
+    } catch (err) {
+      // LLM classification is best-effort, don't fail on errors
+      return [];
+    }
+  }
+
+  /**
+   * Infer category from tag name
+   */
+  private inferCategory(tag: string): TagCategory {
+    if (tag.startsWith('tech:')) return 'tech';
+    if (tag.startsWith('project:')) return 'project';
+    if (tag.startsWith('person:')) return 'person';
+    if (['high', 'medium', 'low'].includes(tag)) return 'priority';
+    if (['positive', 'negative'].includes(tag)) return 'mood';
+    if (['morning', 'eod', 'weekly'].includes(tag)) return 'time';
+    if (['work', 'personal'].includes(tag)) return 'scope';
+    return 'type';
   }
 
   /**
    * Check if we need LLM fallback
    */
   private needsLLMFallback(suggestions: TagSuggestion[]): boolean {
-    // Only use LLM if we have less than 2 high-confidence suggestions
+    // Only use LLM if we have less than 2 high-confidence suggestions (>80%)
     const highConfidence = suggestions.filter(s => s.confidence > 0.8);
     return highConfidence.length < 2;
   }
@@ -391,7 +470,7 @@ export async function categorize(
   content: string, 
   context?: InferenceContext
 ): Promise<CategorySuggestion> {
-  const categorizer = new Categorizer();
+  const categorizer = new Categorizer({ enableLLMFallback: true });
   return categorizer.suggestCategories(content, context);
 }
 

@@ -19,7 +19,7 @@ export async function journalCommand(message: string, options: { tags?: string; 
   // Phase 6: Auto-categorization with --suggest-tags
   if (suggestTags && manualTags.length === 0) {
     try {
-      const categorizer = new Categorizer();
+      const categorizer = new Categorizer({ enableLLMFallback: true });
       
       // Build context from recent blocks
       const allBlocks = guard.readChain(chain);
