@@ -10,9 +10,11 @@ import type {
   CategorizerConfig,
   InferenceContext,
   SuggestionSource,
-  TagPattern 
+  TagPattern,
+  SuggestionFeedback
 } from './types.js';
 import { PATTERN_DATABASE, getPatternsByPriority } from './patterns.js';
+import { getLearningStorage } from './learning.js';
 import type { Block } from '../memory/chain.js';
 
 /**
@@ -32,11 +34,11 @@ const DEFAULT_CONFIG: CategorizerConfig = {
  */
 export class Categorizer {
   private config: CategorizerConfig;
-  private learningData: Map<string, { accepted: number; rejected: number }>;
+  private learningStorage;
 
   constructor(config: Partial<CategorizerConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
-    this.learningData = new Map();
+    this.learningStorage = getLearningStorage();
   }
 
   /**
@@ -119,16 +121,11 @@ export class Categorizer {
     // Calculate confidence based on pattern priority and learning data
     let confidence = pattern.priority / 100; // Normalize to 0-1
 
-    // Adjust confidence based on user feedback
+    // Adjust confidence based on user feedback (from persistent storage)
     if (this.config.learningEnabled) {
-      const key = pattern.tag;
-      const data = this.learningData.get(key);
-      if (data) {
-        const total = data.accepted + data.rejected;
-        if (total > 0) {
-          const acceptanceRate = data.accepted / total;
-          confidence = confidence * 0.5 + acceptanceRate * 0.5; // Blend
-        }
+      const acceptanceRate = this.learningStorage.getAcceptanceRate(pattern.tag);
+      if (acceptanceRate !== 0.5) { // Has feedback
+        confidence = confidence * 0.5 + acceptanceRate * 0.5; // Blend
       }
     }
 
@@ -342,35 +339,34 @@ export class Categorizer {
   }
 
   /**
-   * Learn from user feedback
+   * Learn from user feedback (persistent)
    */
-  learnFromFeedback(tag: string, accepted: boolean): void {
+  learnFromFeedback(tag: string, accepted: boolean, modifiedTag?: string): void {
     if (!this.config.learningEnabled) return;
-    
-    const data = this.learningData.get(tag) || { accepted: 0, rejected: 0 };
-    
-    if (accepted) {
-      data.accepted++;
-    } else {
-      data.rejected++;
-    }
-    
-    this.learningData.set(tag, data);
+
+    const feedback: SuggestionFeedback = {
+      suggested: {
+        tag,
+        category: 'custom',
+        confidence: 0,
+        source: 'pattern'
+      },
+      action: accepted ? 'accept' : (modifiedTag ? 'modify' : 'reject'),
+      modifiedTag,
+      context: {
+        content: '',
+        timestamp: new Date()
+      }
+    };
+
+    this.learningStorage.recordFeedback(feedback);
   }
 
   /**
    * Get learning statistics
    */
-  getLearningStats(): Map<string, { accepted: number; rejected: number; accuracy: number }> {
-    const stats = new Map();
-    
-    for (const [tag, data] of this.learningData) {
-      const total = data.accepted + data.rejected;
-      const accuracy = total > 0 ? data.accepted / total : 0;
-      stats.set(tag, { ...data, accuracy });
-    }
-    
-    return stats;
+  getLearningStats() {
+    return this.learningStorage.getStats();
   }
 
   /**

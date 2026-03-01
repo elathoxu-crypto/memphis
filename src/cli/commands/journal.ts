@@ -54,6 +54,13 @@ export async function journalCommand(message: string, options: { tags?: string; 
         if (answer === 'y' || answer === 'yes') {
           tags = result.tags.slice(0, 5).map(t => t.tag);
           console.log(chalk.green(`✓ Applied ${tags.length} tags`));
+          
+          // Record feedback (all accepted)
+          if (categorizer.getConfig().learningEnabled) {
+            result.tags.slice(0, 5).forEach(tag => {
+              categorizer.learnFromFeedback(tag.tag, true);
+            });
+          }
         } else if (answer === 'e' || answer === 'edit') {
           const suggestedStr = result.tags.slice(0, 5).map(t => t.tag).join(', ');
           console.log(chalk.gray(`Suggested: ${suggestedStr}`));
@@ -71,11 +78,25 @@ export async function journalCommand(message: string, options: { tags?: string; 
           });
           
           tags = customTags ? customTags.split(',').map(t => t.trim()) : result.tags.slice(0, 5).map(t => t.tag);
+          
+          // Record modified feedback
+          if (categorizer.getConfig().learningEnabled && customTags) {
+            result.tags.slice(0, 5).forEach(originalTag => {
+              categorizer.learnFromFeedback(originalTag.tag, false, customTags);
+            });
+          }
         } else if (answer === 's' || answer === 'skip') {
           tags = [];
           console.log(chalk.gray('Skipped tagging'));
         } else {
           console.log(chalk.gray('No tags applied'));
+          
+          // Record rejected feedback
+          if (categorizer.getConfig().learningEnabled) {
+            result.tags.slice(0, 5).forEach(tag => {
+              categorizer.learnFromFeedback(tag.tag, false);
+            });
+          }
         }
         
         // Log performance
