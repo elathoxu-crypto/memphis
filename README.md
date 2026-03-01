@@ -1,6 +1,8 @@
 # Memphis 🧠
 
-**Local-first cognitive engine that captures, links, and reflects on everything you build.**
+**Local-first cognitive engine with AI-powered intelligence features.**
+
+**Latest: v1.7.0 — Phase 6 Intelligence (Auto-categorization + Smart Suggestions)**
 
 [English](#english) | [Polski](#polski)
 
@@ -14,10 +16,43 @@
 
 Get your first memory saved in 5 minutes. No complexity, just the essentials.
 
+### ✨ What's New in v1.7.0?
+
+**Phase 6 Intelligence Features:**
+- **Auto-Categorization** — Automatic tag suggestions with 77.2% accuracy
+- **Learning System** — Remembers your preferences, gets better over time
+- **Time-Based Suggestions** — Reminds you to journal after 6h inactivity
+- **Pattern Database** — 380+ regex patterns across 36 tags
+- **TUI Integration** — Dashboard widget + Intelligence screen [9]
+
+**Quick Example:**
+```bash
+memphis journal "Meeting with John about Project X" --suggest-tags
+
+Suggested tags (confidence):
+  meeting (100%)
+  person (90%)
+  project (80%)
+
+Accept suggestions? [y/n/e=edit/s=skip]: y
+✓ Applied: meeting, person, project
+```
+
+**Performance:**
+- Pattern matching: 0.27ms (37x faster than target)
+- LLM fallback: 140ms (93x optimized)
+- Tests: Unit 96%, Integration 84%, Benchmarks 100%
+
 ---
 
 ### Overview
 Memphis is a self-hosted AI brain that keeps append-only chains for every action (journal, ask, decisions, summaries, share). It blends keyword + semantic recall, grows a knowledge graph, runs daily reflections, and keeps a daemon watching repos so you can summon the right context instantly.
+
+**Phase 6 adds:**
+- **Auto-categorization** — Tags your journal entries automatically
+- **Learning system** — Adapts to your workflow
+- **Time-based prompts** — Never forget to journal
+- **Smart suggestions** — Context-aware reminders
 
 ### ASCII Architecture
 ```
