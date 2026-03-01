@@ -1,5 +1,11 @@
 import { join } from "node:path";
 import { homedir } from "node:os";
+import {
+  DEFAULT_ALLOWED_CHAINS,
+  DEFAULT_WORKSPACE_ID,
+  DEFAULT_WORKSPACE_LABEL,
+  WORKSPACE_TAG_PREFIX,
+} from "../security/constants.js";
 
 export const MEMPHIS_HOME = join(homedir(), ".memphis");
 export const CHAINS_PATH = join(MEMPHIS_HOME, "chains");
@@ -8,6 +14,8 @@ export const EMBEDDINGS_PATH = join(MEMPHIS_HOME, "embeddings");
 export const DAEMON_PID_PATH = join(MEMPHIS_HOME, "daemon.pid");
 export const DAEMON_LOG_PATH = join(MEMPHIS_HOME, "daemon.log");
 export const DAEMON_STATE_PATH = join(MEMPHIS_HOME, "daemon-state.json");
+
+const defaultWorkspaceTag = `${WORKSPACE_TAG_PREFIX}${DEFAULT_WORKSPACE_ID}`;
 
 export const DEFAULT_CONFIG = {
   providers: {},
@@ -37,5 +45,17 @@ export const DEFAULT_CONFIG = {
       shell: { enabled: true, interval: 60_000 },
       heartbeat: { enabled: true, interval: 5 * 60_000 },
     },
+  },
+  security: {
+    defaultWorkspace: DEFAULT_WORKSPACE_ID,
+    workspaces: [
+      {
+        id: DEFAULT_WORKSPACE_ID,
+        label: DEFAULT_WORKSPACE_LABEL,
+        allowedChains: [...DEFAULT_ALLOWED_CHAINS],
+        includeDefault: true,
+        tags: [defaultWorkspaceTag],
+      },
+    ],
   },
 };

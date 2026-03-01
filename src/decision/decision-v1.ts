@@ -14,7 +14,7 @@ export const DecisionV1Schema = z
     title: z.string(),
     reasoning: z.string().optional().default(""),
     mode: z.enum(["conscious", "inferred"]).optional().default("conscious"),
-    status: z.enum(["active", "revised", "deprecated"]).optional().default("active"),
+    status: z.enum(["active", "revised", "deprecated", "contradicted"]).optional().default("active"),
     scope: z.enum(["personal", "project", "life"]).optional().default("personal"),
     supersedes: z.string().optional(),
     confidence: z.number().min(0).max(1).optional(),

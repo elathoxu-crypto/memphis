@@ -43,6 +43,19 @@ export class StoreError extends Error {
   }
 }
 
+/**
+ * Common interface for Store and WorkspaceGuard
+ */
+export interface IStore {
+  getBasePath(): string;
+  appendBlock(chain: string, data: BlockData): Promise<Block>;
+  addBlock(chain: string, data: BlockData): Block;
+  readChain(chain: string): Block[];
+  getLastBlock(chain: string): Block | undefined;
+  listChains(): string[];
+  getChainStats(chain: string): { blocks: number; first?: string; last?: string };
+}
+
 export class Store {
   private basePath: string;
 

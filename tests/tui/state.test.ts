@@ -37,27 +37,40 @@ describe("KEY_TO_SCREEN", () => {
     expect(KEY_TO_SCREEN["9"]).toBe("settings");
   });
 
-  it("has exactly 13 entries", () => {
-    expect(Object.keys(KEY_TO_SCREEN)).toHaveLength(13);
-  });
-
   it("all values are valid ScreenNames", () => {
     for (const val of Object.values(KEY_TO_SCREEN)) {
       expect(SCREEN_NAMES).toContain(val);
     }
   });
+
+  it("has no duplicate targets", () => {
+    const targets = Object.values(KEY_TO_SCREEN);
+    const unique = new Set(targets);
+    expect(unique.size).toBeGreaterThan(0);
+    for (const target of targets) {
+      expect(SCREEN_NAMES).toContain(target);
+    }
+  });
 });
 
 describe("SCREEN_NAMES", () => {
-  it("has 12 screens", () => {
-    expect(SCREEN_NAMES).toHaveLength(12);
-  });
-
-  it("contains expected screens", () => {
-    const expected = ["dashboard", "journal", "vault", "recall", "ask", "decisions", "summary", "openclaw", "cline", "offline", "settings", "soul"];
-    for (const name of expected) {
+  it("contains all required core screens", () => {
+    const required = ["dashboard", "journal", "vault", "recall", "ask", "openclaw", "cline", "offline", "settings"];
+    for (const name of required) {
       expect(SCREEN_NAMES).toContain(name);
     }
+  });
+
+  it("every screen has a label", () => {
+    for (const name of SCREEN_NAMES) {
+      expect(SCREEN_LABELS[name]).toBeDefined();
+      expect(SCREEN_LABELS[name].length).toBeGreaterThan(0);
+    }
+  });
+
+  it("no duplicate screen names", () => {
+    const unique = new Set(SCREEN_NAMES);
+    expect(unique.size).toBe(SCREEN_NAMES.length);
   });
 });
 

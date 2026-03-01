@@ -1,4 +1,4 @@
-import { Store } from "../memory/store.js";
+import { Store, type IStore } from "../memory/store.js";
 import type { Block } from "../memory/chain.js";
 import { loadConfig } from "../config/loader.js";
 import { OllamaProvider } from "../providers/ollama.js";
@@ -50,7 +50,7 @@ import { existsSync, mkdirSync, writeFileSync, unlinkSync } from "node:fs";
 /**
  * Get lock for autosummarizer
  */
-function acquireLock(store: Store): boolean {
+function acquireLock(store: IStore): boolean {
   const lockPath = `${store.getBasePath()}/.locks`;
   const lockFile = `${lockPath}/autosummarize.lock`;
   
@@ -70,7 +70,7 @@ function acquireLock(store: Store): boolean {
   }
 }
 
-function releaseLock(store: Store): void {
+function releaseLock(store: IStore): void {
   const lockFile = `${store.getBasePath()}/.locks/autosummarize.lock`;
   try {
     unlinkSync(lockFile);
@@ -82,7 +82,7 @@ function releaseLock(store: Store): void {
 /**
  * Get last summary block to find where we left off
  */
-export function getLastSummaryMarker(store: Store): { chain: string; fromIndex: number; toIndex: number } | undefined {
+export function getLastSummaryMarker(store: IStore): { chain: string; fromIndex: number; toIndex: number } | undefined {
   const summaries = store.readChain("summary");
   if (summaries.length === 0) return undefined;
   
@@ -106,7 +106,7 @@ export function getLastSummaryMarker(store: Store): { chain: string; fromIndex: 
 /**
  * Count blocks in chains since index (inclusive)
  */
-function countBlocksSince(store: Store, chain: string, sinceIndex: number): number {
+function countBlocksSince(store: IStore, chain: string, sinceIndex: number): number {
   const blocks = store.readChain(chain);
   return blocks.filter(b => b.index >= sinceIndex).length;
 }
@@ -115,7 +115,7 @@ function countBlocksSince(store: Store, chain: string, sinceIndex: number): numb
  * Get blocks to summarize
  */
 function getBlocksToSummarize(
-  store: Store,
+  store: IStore,
   chains: string[],
   fromIndex: number,
   limit: number
@@ -278,7 +278,7 @@ Use the format: - Bullet point`
  * Main autosummarizer function
  */
 export async function autosummarize(
-  store: Store,
+  store: IStore,
   opts?: SummaryOptions
 ): Promise<SummaryResult> {
   const options = {
@@ -427,7 +427,7 @@ export async function autosummarize(
 /**
  * Check if autosummary should run (for hook integration)
  */
-export function shouldTriggerAutosummary(store: Store, threshold: number = 50): boolean {
+export function shouldTriggerAutosummary(store: IStore, threshold: number = 50): boolean {
   const lastMarker = getLastSummaryMarker(store);
   const fromIndex = lastMarker ? lastMarker.toIndex + 1 : 0;
   

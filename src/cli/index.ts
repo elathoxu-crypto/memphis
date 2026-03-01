@@ -28,6 +28,7 @@ process.on("SIGTERM", () => { cleanupTerminalHard(); process.exit(143); });
 import { Command } from "commander";
 import { Store } from "../memory/store.js";
 import { loadConfig } from "../config/loader.js";
+import chalk from "chalk";
 import { journalCommand } from "./commands/journal.js";
 import { askCommand } from "./commands/ask.js";
 import { recallCommand } from "./commands/recall.js";
@@ -48,6 +49,8 @@ import { embedCommand } from "./commands/embed.js";
 import { shareReplicatorCommand } from "./commands/share-replicator.js";
 import { soulStatusCommand } from "./commands/soul-status.js";
 import { graphBuildCommand, graphShowCommand } from "./commands/graph.js";
+import { createWorkspaceStore } from "./utils/workspace-store.js";
+import { writeWorkspaceSelection, getWorkspaceSelectionFilePath } from "../security/workspace.js";
 import { reflectCommand } from "./commands/reflect.js";
 import { planCommand } from "./commands/plan.js";
 import { ingestCommand } from "./commands/ingest.js";
@@ -160,6 +163,45 @@ program
   .option("-v, --verbose", "Show detailed info")
   .action((opts) => {
     statusCommand({ json: opts.json, verbose: opts.verbose });
+  });
+
+const workspaceProgram = program
+  .command("workspace")
+  .description("Manage workspaces");
+
+workspaceProgram
+  .command("list")
+  .description("List configured workspaces")
+  .action(() => {
+    const { config, workspace } = createWorkspaceStore();
+    console.log();
+    console.log(chalk.bold("  Workspaces:"));
+    console.log(chalk.dim("    * marks the active workspace"));
+
+    for (const def of config.security.workspaces) {
+      const marker = def.id === workspace.id ? chalk.green("  *") : "   ";
+      const label = def.label ?? "";
+      const allowed = def.policy.allowedChains.includes("*")
+        ? "all"
+        : def.policy.allowedChains.join(", ") || "(defaults)";
+      const includeDefault = def.policy.includeDefault ? "yes" : "no";
+      console.log(`${marker} ${chalk.cyan(def.id)} ${chalk.gray(label)} — allowed: ${allowed} — includeDefault: ${includeDefault}`);
+    }
+    console.log();
+  });
+
+workspaceProgram
+  .command("set <id>")
+  .description("Set the active workspace")
+  .action((id: string) => {
+    const { config } = createWorkspaceStore();
+    if (!config.security.workspaceMap[id]) {
+      console.log(chalk.red(`Workspace '${id}' is not defined in config.`));
+      process.exit(1);
+    }
+    writeWorkspaceSelection(id);
+    console.log(chalk.green(`Workspace set to '${id}'.`));
+    console.log(chalk.gray(`Persisted at ${getWorkspaceSelectionFilePath()}`));
   });
 
 program

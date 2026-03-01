@@ -1,6 +1,5 @@
-import { Store } from "../../memory/store.js";
 import { buildStatusReport, type StatusReport } from "../../core/status.js";
-import { loadConfig } from "../../config/loader.js";
+import { createWorkspaceStore } from "../utils/workspace-store.js";
 import chalk from "chalk";
 
 export interface StatusOptions {
@@ -9,10 +8,9 @@ export interface StatusOptions {
 }
 
 export async function statusCommand(options: StatusOptions = {}) {
-  const config = loadConfig();
-  const store = new Store(config.memory.path);
+  const { config, guard, workspace } = createWorkspaceStore();
   
-  const report = buildStatusReport(store, config);
+  const report = buildStatusReport(guard, config);
   
   // JSON output
   if (options.json) {
@@ -21,6 +19,12 @@ export async function statusCommand(options: StatusOptions = {}) {
   }
   
   // Human output
+  console.log();
+  console.log(chalk.bold("  Workspace:"));
+  const allowedList = workspace.policy.allowedChains ? workspace.policy.allowedChains.join(", ") : "all";
+  console.log(`    id           : ${workspace.id}`);
+  console.log(`    includeDefault: ${workspace.policy.includeDefault}`);
+  console.log(`    allowedChains : ${allowedList}`);
   console.log();
   console.log(chalk.bold("  Memphis 🧠"));
   console.log(chalk.dim("  Local-first AI brain with persistent memory"));

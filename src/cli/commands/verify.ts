@@ -1,9 +1,9 @@
 import chalk from "chalk";
 import { Store } from "../../memory/store.js";
 import { verifyChain, validateBlockAgainstSoul, verifyBlock, type Block } from "../../memory/chain.js";
-import { loadConfig } from "../../config/loader.js";
 import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
+import { createWorkspaceStore } from "../utils/workspace-store.js";
 
 export interface VerifyOptions {
   chain?: string;
@@ -69,15 +69,19 @@ function verifyChainFiles(store: Store, chain: string): { valid: boolean; broken
 }
 
 export async function verifyCommand(options: VerifyOptions = {}) {
-  const config = loadConfig();
-  const store = new Store(config.memory.path);
+  const { store, guard } = createWorkspaceStore();
   
   // Get chains to verify
   let chains: string[];
+  const available = guard.listChains();
   if (options.chain) {
+    if (!available.includes(options.chain)) {
+      console.log(chalk.red(`Chain '${options.chain}' is not available in the current workspace.`));
+      process.exit(1);
+    }
     chains = [options.chain];
   } else {
-    chains = store.listChains();
+    chains = available;
   }
   
   if (chains.length === 0) {

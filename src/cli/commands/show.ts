@@ -1,7 +1,6 @@
-import { loadConfig } from "../../config/loader.js";
-import { Store } from "../../memory/store.js";
 import { log } from "../../utils/logger.js";
 import { safeParseDecisionV1, type DecisionV1 } from "../../decision/decision-v1.js";
+import { createWorkspaceStore } from "../utils/workspace-store.js";
 
 function pretty(obj: unknown): string {
   return JSON.stringify(obj, null, 2);
@@ -44,10 +43,9 @@ export async function showCommand(kind: string, id: string) {
     return;
   }
 
-  const config = loadConfig();
-  const store = new Store(config.memory.path);
+  const { guard } = createWorkspaceStore();
 
-  const blocks = store.readChain("decisions");
+  const blocks = guard.readChain("decisions");
   const found = findDecision(blocks as any[], id);
 
   if (!found) {

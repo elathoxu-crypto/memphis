@@ -1,7 +1,7 @@
 import { readFileSync, renameSync, mkdirSync, existsSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { randomUUID } from "node:crypto";
-import { Store } from "./store.js";
+import { Store, type IStore } from "./store.js";
 import { verifyBlock, validateBlockAgainstSoul, type Block } from "./chain.js";
 
 export interface QuarantineResult {
@@ -59,7 +59,7 @@ function parseBlockFile(chainDir: string, filename: string): Block | null {
 /**
  * Revise a single chain - detect and quarantine damaged blocks
  */
-function reviseChain(store: Store, chain: string, dryRun: boolean): QuarantineResult {
+function reviseChain(store: IStore, chain: string, dryRun: boolean): QuarantineResult {
   const chainDir = join(store.getBasePath(), chain);
   const files = listBlockFiles(chainDir);
   
@@ -161,7 +161,7 @@ function reviseChain(store: Store, chain: string, dryRun: boolean): QuarantineRe
 /**
  * Revise all chains or specific chain
  */
-export function revise(store: Store, options: ReviseOptions): QuarantineResult[] {
+export function revise(store: IStore, options: ReviseOptions): QuarantineResult[] {
   const chains = options.chain ? [options.chain] : store.listChains();
   const results: QuarantineResult[] = [];
   

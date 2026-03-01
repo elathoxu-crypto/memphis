@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync, existsSync } from "node:fs";
 import path from "node:path";
-import { Store } from "../memory/store.js";
+import { Store, type IStore } from "../memory/store.js";
 import { verifyChain } from "../memory/chain.js";
 import type { MemphisConfig } from "../config/loader.js";
 import { loadOfflineConfig } from "../offline/config.js";
@@ -103,7 +103,7 @@ function loadEmbeddingSummaries(root: string): EmbeddingSummary[] {
 /**
  * Build comprehensive status report from store and config (sync)
  */
-export function buildStatusReport(store: Store, config: MemphisConfig): StatusReport {
+export function buildStatusReport(store: IStore, config: MemphisConfig): StatusReport {
   const chains: ChainStatus[] = [];
   const recentBlocks: RecentBlock[] = [];
   

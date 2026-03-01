@@ -1,8 +1,8 @@
-import { Store } from "../memory/store.js";
+import { Store, type IStore } from "../memory/store.js";
 import type { Block } from "../memory/chain.js";
 import { loadSemanticIndex } from "../embeddings/loader.js";
 import { LocalOllamaBackend } from "../embeddings/backends/local.js";
-import { dotProduct, normalizeVector } from "../utils/math.js";
+import { dotProduct } from "../utils/math.js";
 
 
 export interface RecallQuery {
@@ -95,7 +95,7 @@ function parseDate(dateStr?: string): number | undefined {
 /**
  * Build recall result from query
  */
-export async function recall(store: Store, query: RecallQuery, semanticOptions?: SemanticOptions): Promise<RecallResult> {
+export async function recall(store: IStore, query: RecallQuery, semanticOptions?: SemanticOptions): Promise<RecallResult> {
   const limit = query.limit || 20;
   const candidates: RecallHit[] = [];
 
@@ -118,7 +118,8 @@ export async function recall(store: Store, query: RecallQuery, semanticOptions?:
   // Search each chain
   const semanticWeight = semanticOptions?.semanticWeight ?? 0.5;
   const useSemantic = !semanticOptions?.disableSemantic && semanticWeight > 0;
-  const semanticOnly = semanticOptions?.semanticOnly;
+  const semanticOnly = useSemantic ? semanticOptions?.semanticOnly : false;
+  const effectiveSemanticWeight = useSemantic ? semanticWeight : 0;
 
   const semanticHits: RecallHit[] = [];
   if (useSemantic) {
@@ -156,47 +157,49 @@ export async function recall(store: Store, query: RecallQuery, semanticOptions?:
     }
   }
 
-  for (const chain of chains) {
-    const blocks = store.readChain(chain);
+  if (!semanticOnly) {
+    for (const chain of chains) {
+      const blocks = store.readChain(chain);
 
-    for (const block of blocks) {
-      // Time filter
-      const blockMs = new Date(block.timestamp).getTime();
-      if (sinceMs && blockMs < sinceMs) continue;
-      if (untilMs && blockMs > untilMs) continue;
+      for (const block of blocks) {
+        // Time filter
+        const blockMs = new Date(block.timestamp).getTime();
+        if (sinceMs && blockMs < sinceMs) continue;
+        if (untilMs && blockMs > untilMs) continue;
 
-      // Type filter
-      if (query.type && block.data.type !== query.type) continue;
+        // Type filter
+        if (query.type && block.data.type !== query.type) continue;
 
-      // Tag filter
-      if (query.tag && !block.data.tags?.includes(query.tag)) continue;
+        // Tag filter
+        if (query.tag && !block.data.tags?.includes(query.tag)) continue;
 
-      // Text score
-      const score = scoreBlock(block, query);
-      if (score > 0 || !query.text) {
-        // Create snippet (first 120 chars)
-        const content = block.data.content || "";
-        const snippet = content.length > 120 
-          ? content.substring(0, 120) + "..." 
-          : content;
+        // Text score
+        const score = scoreBlock(block, query);
+        if (score > 0 || !query.text) {
+          // Create snippet (first 120 chars)
+          const content = block.data.content || "";
+          const snippet = content.length > 120 
+            ? content.substring(0, 120) + "..." 
+            : content;
 
-        candidates.push({
-          chain,
-          index: block.index,
-          timestamp: block.timestamp,
-          type: block.data.type,
-          tags: block.data.tags || [],
-          score,
-          snippet,
-          content,
-        });
+          candidates.push({
+            chain,
+            index: block.index,
+            timestamp: block.timestamp,
+            type: block.data.type,
+            tags: block.data.tags || [],
+            score,
+            snippet,
+            content,
+          });
+        }
       }
     }
   }
 
   // Merge keyword + semantic with weighted scoring
   const mergedHits = new Map<string, RecallHit>();
-  const keywordWeight = 1 - semanticWeight;
+  const keywordWeight = semanticOnly ? 0 : (1 - effectiveSemanticWeight);
 
   // First add all keyword candidates
   for (const hit of candidates) {
@@ -212,14 +215,30 @@ export async function recall(store: Store, query: RecallQuery, semanticOptions?:
     const existing = mergedHits.get(key);
     if (existing) {
       // Merge: add semantic score
-      existing.score += hit.score * semanticWeight;
+      existing.score += hit.score * effectiveSemanticWeight;
     } else {
       // New hit from semantic only
-      mergedHits.set(key, { ...hit, score: hit.score * semanticWeight });
+      mergedHits.set(key, { ...hit, score: hit.score * effectiveSemanticWeight });
     }
   }
 
   const allHits = Array.from(mergedHits.values());
+
+  const RECENCY_WINDOW_MS = Number(process.env.MEMPHIS_RECENCY_WINDOW_DAYS || 7) * 24 * 60 * 60 * 1000;
+  const RECENCY_WEIGHT = Number(process.env.MEMPHIS_RECENCY_WEIGHT || 0.2);
+
+  if (RECENCY_WEIGHT > 0 && RECENCY_WINDOW_MS > 0) {
+    const now = Date.now();
+    for (const hit of allHits) {
+      const ts = new Date(hit.timestamp).getTime();
+      if (!Number.isFinite(ts)) continue;
+      const age = now - ts;
+      if (age >= 0 && age <= RECENCY_WINDOW_MS) {
+        const freshness = 1 - age / RECENCY_WINDOW_MS;
+        hit.score += RECENCY_WEIGHT * Math.max(0, freshness);
+      }
+    }
+  }
 
   // Sort: score desc, then timestamp desc
   allHits.sort((a, b) => {

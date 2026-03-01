@@ -8,15 +8,15 @@ export interface FallbackConfig {
 export class FallbackLLM {
   private models: string[];
   private currentIndex = 0;
-  
+
   constructor(models: string[] = ["llama3.2:1b", "llama3.2:3b", "gemma3:4b"]) {
     this.models = models;
   }
-  
+
   getCurrentModel(): string {
     return this.models[this.currentIndex];
   }
-  
+
   next(): boolean {
     if (this.currentIndex < this.models.length - 1) {
       this.currentIndex++;
@@ -24,17 +24,17 @@ export class FallbackLLM {
     }
     return false;
   }
-  
+
   reset(): void {
     this.currentIndex = 0;
   }
-  
+
   async executeWithFallback<T>(
     fn: (model: string) => Promise<T>,
     onFallback?: (model: string, error: Error) => void
   ): Promise<T> {
     this.reset();
-    
+
     while (true) {
       const model = this.getCurrentModel();
       try {
@@ -42,7 +42,7 @@ export class FallbackLLM {
       } catch (error) {
         const err = error as Error;
         if (onFallback) onFallback(model, err);
-        
+
         if (!this.next()) {
           throw new Error(`All fallback models failed: ${err.message}`);
         }
@@ -51,4 +51,7 @@ export class FallbackLLM {
   }
 }
 
-export const fallbackLLM = new FallbackLLM();
+/** Factory — always returns a fresh instance (avoids shared global state). */
+export function createFallbackLLM(models?: string[]): FallbackLLM {
+  return new FallbackLLM(models);
+}

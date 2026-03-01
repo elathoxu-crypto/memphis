@@ -1,7 +1,6 @@
 import chalk from "chalk";
-import { Store } from "../../memory/store.js";
-import { revise, type ReviseOptions, type QuarantineResult } from "../../memory/revise.js";
-import { loadConfig } from "../../config/loader.js";
+import { revise, type ReviseOptions } from "../../memory/revise.js";
+import { createWorkspaceStore } from "../utils/workspace-store.js";
 
 export interface RepairCliOptions {
   chain?: string;
@@ -10,8 +9,7 @@ export interface RepairCliOptions {
 }
 
 export async function repairCommand(options: RepairCliOptions = {}) {
-  const config = loadConfig();
-  const store = new Store(config.memory.path);
+  const { guard } = createWorkspaceStore();
   
   const reviseOptions: ReviseOptions = {
     chain: options.chain,
@@ -19,7 +17,7 @@ export async function repairCommand(options: RepairCliOptions = {}) {
     json: options.json,
   };
   
-  const results = revise(store, reviseOptions);
+  const results = revise(guard, reviseOptions);
   
   // JSON output
   if (options.json) {

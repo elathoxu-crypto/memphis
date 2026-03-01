@@ -3,6 +3,8 @@ import { parse } from "yaml";
 import { z } from "zod";
 import { homedir } from "node:os";
 import { DEFAULT_CONFIG, CONFIG_PATH } from "./defaults.js";
+import { normalizeWorkspaceDefinition } from "../security/workspace.js";
+import type { SecurityConfig, WorkspaceDefinition } from "../security/workspace.js";
 
 // Helper to resolve ~ in paths
 function resolvePath(path: string): string {
@@ -65,6 +67,19 @@ const DaemonConfigSchema = z.object({
   collectors: z.record(z.string(), CollectorConfigSchema).optional(),
 }).optional();
 
+const WorkspaceDefinitionSchema = z.object({
+  id: z.string().min(1),
+  label: z.string().optional(),
+  allowedChains: z.array(z.string()).optional(),
+  includeDefault: z.boolean().optional(),
+  tags: z.array(z.string()).optional(),
+});
+
+const SecurityConfigSchema = z.object({
+  defaultWorkspace: z.string().optional(),
+  workspaces: z.array(WorkspaceDefinitionSchema).nonempty({ message: "At least one workspace must be defined" }),
+});
+
 const MemphisConfigSchema = z.object({
   providers: z.record(z.string(), ProviderSchema).optional(),
   memory: MemoryConfigSchema.optional(),
@@ -73,9 +88,13 @@ const MemphisConfigSchema = z.object({
   integrations: IntegrationsConfigSchema,
   telegram: TelegramConfigSchema,
   daemon: DaemonConfigSchema,
+  security: SecurityConfigSchema,
 });
 
-export type MemphisConfig = z.infer<typeof MemphisConfigSchema> & typeof DEFAULT_CONFIG;
+type MemphisConfigRaw = z.infer<typeof MemphisConfigSchema>;
+export type MemphisConfig = Omit<MemphisConfigRaw, "security"> & {
+  security: SecurityConfig;
+} & typeof DEFAULT_CONFIG;
 
 export class ConfigError extends Error {
   constructor(message: string, public readonly issues?: z.ZodIssue[]) {
@@ -102,7 +121,7 @@ export function loadConfig(): MemphisConfig {
   }
 
   // Resolve env vars in api_key
-  const merged = deepMerge(DEFAULT_CONFIG, fileConfig) as MemphisConfig;
+  const merged = deepMerge(DEFAULT_CONFIG, fileConfig);
   
   // Resolve ~ in memory.path
   if (merged.memory?.path) {
@@ -132,7 +151,40 @@ export function loadConfig(): MemphisConfig {
     );
   }
 
-  return merged;
+  const security = buildSecurityConfig(result.data.security);
+
+  return {
+    ...result.data,
+    security,
+  } as MemphisConfig;
+}
+
+export function buildSecurityConfig(raw: z.infer<typeof SecurityConfigSchema>): SecurityConfig {
+  const normalized: WorkspaceDefinition[] = raw.workspaces.map(normalizeWorkspaceDefinition);
+  const workspaceMap: Record<string, WorkspaceDefinition> = {};
+
+  for (const ws of normalized) {
+    if (workspaceMap[ws.id]) {
+      throw new ConfigError(`Duplicate workspace id: ${ws.id}`);
+    }
+    workspaceMap[ws.id] = ws;
+  }
+
+  const defaultWorkspace = (raw.defaultWorkspace || normalized[0]?.id)?.trim();
+
+  if (!defaultWorkspace) {
+    throw new ConfigError("Default workspace cannot be empty");
+  }
+
+  if (!workspaceMap[defaultWorkspace]) {
+    throw new ConfigError(`Default workspace "${defaultWorkspace}" is not defined`);
+  }
+
+  return {
+    defaultWorkspace,
+    workspaces: normalized,
+    workspaceMap,
+  };
 }
 
 function deepMerge(target: any, source: any): any {

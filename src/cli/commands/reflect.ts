@@ -83,6 +83,7 @@ export async function reflectCommand(options: {
   save?: boolean;
   dryRun?: boolean;
   json?: boolean;
+  staleDays?: number;
 }) {
   const config = loadConfig();
   const store = new Store(config.memory.path);

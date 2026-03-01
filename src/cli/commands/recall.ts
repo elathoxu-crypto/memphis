@@ -1,8 +1,7 @@
-import { Store } from "../../memory/store.js";
-import { loadConfig } from "../../config/loader.js";
-import { recall, type RecallQuery, type RecallHit } from "../../core/recall.js";
+import { recall, type RecallQuery } from "../../core/recall.js";
 import { recallDecisionsV1, formatDecisionOneLiner } from "../../decision/recall-v1.js";
 import chalk from "chalk";
+import { createWorkspaceStore } from "../utils/workspace-store.js";
 
 export async function recallCommand(
   scopeOrKeyword: string, 
@@ -20,13 +19,12 @@ export async function recallCommand(
     includeVault?: boolean;
   }
 ) {
-  const config = loadConfig();
-  const store = new Store(config.memory.path);
+  const { guard } = createWorkspaceStore();
   const limit = options.limit ? parseInt(options.limit) : 20;
 
   // Handle "decisions" specially
   if (scopeOrKeyword === "decisions") {
-    const results = recallDecisionsV1(store, {
+    const results = recallDecisionsV1(guard, {
       query: queryText,
       limit,
       since: options.since,
@@ -61,7 +59,7 @@ export async function recallCommand(
     includeVault: options.includeVault,
   };
 
-  const result = await recall(store, recallQuery);
+  const result = await recall(guard, recallQuery);
 
   // JSON output
   if (options.json) {

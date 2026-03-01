@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { Store } from "../memory/store.js";
+import { Store, type IStore } from "../memory/store.js";
 import type { Block } from "../memory/chain.js";
 import { safeParseDecisionV1, type DecisionV1 } from "./decision-v1.js";
 
@@ -140,7 +140,7 @@ function matchesProject(d: DecisionV1, hint: { cwd: string; gitRoot?: string }):
   return false;
 }
 
-export function recallDecisionsV1(store: Store, opts: RecallDecisionsOptions = {}): RecalledDecision[] {
+export function recallDecisionsV1(store: IStore, opts: RecallDecisionsOptions = {}): RecalledDecision[] {
   const limit = opts.limit ?? 15;
   const cwd = opts.cwd ?? process.cwd();
   const gitRoot = getGitRoot(cwd);

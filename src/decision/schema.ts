@@ -15,7 +15,7 @@ export const DECISION_SCHEMA_VERSION = "decision:v1" as const;
 export const DecisionModeSchema = z.enum(["conscious", "inferred"]);
 export type DecisionMode = z.infer<typeof DecisionModeSchema>;
 
-export const DecisionStatusSchema = z.enum(["active", "revised", "deprecated"]);
+export const DecisionStatusSchema = z.enum(["active", "revised", "deprecated", "contradicted"]);
 export type DecisionStatus = z.infer<typeof DecisionStatusSchema>;
 
 export const ImpactScopeSchema = z.enum(["personal", "project", "life"]);

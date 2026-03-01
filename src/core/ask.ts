@@ -1,4 +1,4 @@
-import { Store } from "../memory/store.js";
+import { Store, type IStore } from "../memory/store.js";
 import { recall, type RecallQuery, type RecallHit } from "./recall.js";
 import { loadConfig } from "../config/loader.js";
 import type { Block } from "../memory/chain.js";
@@ -118,7 +118,7 @@ function shouldUseSummaries(question: string): boolean {
 /**
  * Get recent summaries from summary chain
  */
-function getRecentSummaries(store: Store, max: number = 2): Block[] {
+function getRecentSummaries(store: IStore, max: number = 2): Block[] {
   const summaries = store.readChain("summary");
   // Return newest first, limited to max
   return summaries
@@ -450,7 +450,7 @@ async function selectProvider(preferred?: string, useVault = false, vaultPasswor
  * Main ask with context function
  */
 export async function askWithContext(
-  store: Store,
+  store: IStore,
   opts: AskOptions
 ): Promise<AskResult> {
   const {
@@ -503,11 +503,11 @@ export async function askWithContext(
     recallQuery.tag = tags[0]; // Simple tag filter
   }
 
-      const recallResult = await recall(store, recallQuery, {
-        semanticWeight,
-        semanticOnly,
-        disableSemantic,
-      });
+  const recallResult = await recall(store, recallQuery, {
+    semanticWeight,
+    semanticOnly,
+    disableSemantic,
+  });
   const hits = recallResult.hits.slice(0, topK);
 
   // Step 3: Build context string (with or without summaries)

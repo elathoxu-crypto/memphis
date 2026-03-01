@@ -1,20 +1,20 @@
 import chalk from "chalk";
-import { Store } from "../../memory/store.js";
 import { createBlock } from "../../memory/chain.js";
 import { encrypt, decrypt, generateDID } from "../../utils/crypto.js";
-import { loadConfig } from "../../config/loader.js";
 import { sha256 } from "../../utils/hash.js";
 import { writeFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { promptHidden, readStdinTrimmed } from "../utils/prompt.js";
+import { createWorkspaceStore } from "../utils/workspace-store.js";
 
 interface VaultOptions {
-  action: "add" | "list" | "get" | "delete" | "init";
+  action: "add" | "list" | "get" | "delete" | "init" | "export";
   key?: string;
   value?: string;
   password?: string;
   passwordEnv?: string;
   passwordStdin?: boolean;
+  json?: boolean;
 }
 
 
@@ -33,14 +33,13 @@ async function resolveVaultPassword(opts: VaultOptions): Promise<string> {
 }
 
 export async function vaultCommand(opts: VaultOptions): Promise<void> {
-  const config = loadConfig();
-  const store = new Store(config.memory?.path || `${process.env.HOME}/.memphis/chains`);
+  const { config, store, guard } = createWorkspaceStore();
   const chain = "vault";
 
   switch (opts.action) {
     case "init": {
       // Initialize vault chain with genesis
-      const existing = store.readChain(chain);
+      const existing = guard.readChain(chain);
       if (existing.length > 0) {
         console.log(chalk.yellow("Vault already initialized!"));
         return;
@@ -91,7 +90,7 @@ export async function vaultCommand(opts: VaultOptions): Promise<void> {
       const password = await resolveVaultPassword(opts);
       const encrypted = encrypt(opts.value, password);
       
-      await store.appendBlock(chain, {
+      await guard.appendBlock(chain, {
         type: "vault",
         content: opts.key,
         tags: ["secret", opts.key],
@@ -104,7 +103,7 @@ export async function vaultCommand(opts: VaultOptions): Promise<void> {
     }
 
     case "list": {
-      const chainBlocks = store.readChain(chain).filter(b => b.data.type === "vault" && b.data.content);
+      const chainBlocks = guard.readChain(chain).filter(b => b.data.type === "vault" && b.data.content);
 
       // Determine latest state per key (append-only)
       const latestByKey = new Map<string, (typeof chainBlocks)[number]>();
@@ -128,13 +127,81 @@ export async function vaultCommand(opts: VaultOptions): Promise<void> {
       break;
     }
 
+    case "export": {
+      const chainBlocks = guard.readChain(chain).filter(b => b.data.type === "vault" && b.data.content);
+
+      if (chainBlocks.length === 0) {
+        console.log(chalk.yellow("Vault is empty. Run 'memphis vault init' and add secrets first."));
+        return;
+      }
+
+      type VaultExportEntry = {
+        key: string;
+        createdAt: string;
+        updatedAt: string;
+        versions: number;
+        revoked: boolean;
+        tags: string[];
+        lastBlockIndex: number;
+      };
+
+      const exportMap = new Map<string, VaultExportEntry>();
+
+      for (const block of chainBlocks) {
+        const keyName = block.data.content!;
+        const existing = exportMap.get(keyName);
+        const tags = Array.isArray(block.data.tags) ? block.data.tags : [];
+        if (!existing) {
+          exportMap.set(keyName, {
+            key: keyName,
+            createdAt: block.timestamp,
+            updatedAt: block.timestamp,
+            versions: 1,
+            revoked: Boolean((block.data as any).revoked),
+            tags: [...tags],
+            lastBlockIndex: block.index,
+          });
+          continue;
+        }
+
+        existing.updatedAt = block.timestamp;
+        existing.versions += 1;
+        existing.revoked = Boolean((block.data as any).revoked);
+        existing.lastBlockIndex = block.index;
+        existing.tags = Array.from(new Set([...existing.tags, ...tags]));
+      }
+
+      const exportData = [...exportMap.values()].sort((a, b) => a.key.localeCompare(b.key));
+
+      if (opts.json) {
+        console.log(JSON.stringify(exportData, null, 2));
+      } else {
+        console.log(chalk.bold("\n🔐 Vault Export (metadata only)\n"));
+        for (const entry of exportData) {
+          console.log(chalk.cyan(`• ${entry.key}`));
+          console.log(`    status   : ${entry.revoked ? chalk.yellow("revoked") : chalk.green("active")}`);
+          console.log(`    versions : ${entry.versions}`);
+          console.log(`    created  : ${entry.createdAt}`);
+          console.log(`    updated  : ${entry.updatedAt}`);
+          console.log(`    block #  : ${entry.lastBlockIndex}`);
+          if (entry.tags.length > 0) {
+            console.log(`    tags     : ${entry.tags.join(", ")}`);
+          }
+          console.log("");
+        }
+      }
+
+      console.log(chalk.gray("Reminder: this export only lists metadata. Store the file securely if you redirect it to disk."));
+      break;
+    }
+
     case "get": {
       if (!opts.key) {
         console.log(chalk.red("Usage: memphis vault get <key> (prompts) | --password-env VAR | --password-stdin"));
         return;
       }
 
-      const blocks = store.readChain(chain)
+      const blocks = guard.readChain(chain)
         .filter(b => b.data.type === "vault" && b.data.content === opts.key);
 
       if (blocks.length === 0) {
@@ -171,7 +238,7 @@ export async function vaultCommand(opts: VaultOptions): Promise<void> {
       }
 
       // Append-only revocation block (does not erase history)
-      await store.appendBlock(chain, {
+      await guard.appendBlock(chain, {
         type: "vault",
         content: opts.key,
         tags: ["revoked", opts.key],

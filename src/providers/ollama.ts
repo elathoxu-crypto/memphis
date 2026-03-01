@@ -5,6 +5,9 @@ export class OllamaProvider extends BaseProvider {
   name = "ollama";
   baseUrl = "http://localhost:11434/v1";
   models = [
+    "qwen2.5-coder:3b",
+    "qwen2.5:3b",
+    "phi3:mini",
     "llama3.2:1b",
     "llama3.2:3b", 
     "gemma3:4b",
@@ -14,8 +17,8 @@ export class OllamaProvider extends BaseProvider {
     "codellama",
   ];
   
-  // Default to lightest model for offline
-  defaultModel = "llama3.2:1b";
+  // Default to most capable local model (configurable)
+  defaultModel = "qwen2.5-coder:3b";
   
   apiKey = "ollama"; // Ollama doesn't need real key
   
@@ -24,9 +27,12 @@ export class OllamaProvider extends BaseProvider {
     // Ollama uses default localhost URL
     this.baseUrl = process.env.OLLAMA_BASE_URL || "http://localhost:11434/v1";
     
-    // Check config for preferred model
-    const configModel = process.env.OLLAMA_MODEL;
-    if (configModel && this.models.includes(configModel)) {
+    // Check env/config for preferred model
+    const configModel = process.env.OLLAMA_MODEL || process.env.MEMPHIS_OLLAMA_MODEL;
+    if (configModel) {
+      if (!this.models.includes(configModel)) {
+        this.models.unshift(configModel);
+      }
       this.defaultModel = configModel;
     }
   }

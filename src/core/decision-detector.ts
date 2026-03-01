@@ -1,5 +1,5 @@
 import chalk from "chalk";
-import { Store } from "../memory/store.js";
+import { Store, type IStore } from "../memory/store.js";
 import { loadConfig } from "../config/loader.js";
 import type { Block } from "../memory/chain.js";
 import { resolveProvider } from "../providers/factory.js";
@@ -170,7 +170,7 @@ Only respond with valid JSON, no other text.`
  * Main decision detection function
  */
 export async function detectDecision(
-  store: Store,
+  store: IStore,
   input: {
     content: string;
     type: string;
@@ -217,7 +217,7 @@ export async function detectDecision(
  * Check for duplicate decision (same source block OR similar title)
  */
 function isDuplicateDecision(
-  store: Store,
+  store: IStore,
   sourceChain: string,
   sourceIndex: number,
   title?: string,
@@ -248,7 +248,7 @@ function isDuplicateDecision(
  * Save decision to decision chain
  */
 export async function saveDecision(
-  store: Store,
+  store: IStore,
   sourceBlock: Block,
   detection: DecisionResult
 ): Promise<Block | undefined> {
@@ -291,7 +291,7 @@ export async function saveDecision(
  * Returns the decision block if one was created
  */
 export async function checkAndSaveDecision(
-  store: Store,
+  store: IStore,
   block: Block
 ): Promise<Block | undefined> {
   // Only check journal and ask blocks

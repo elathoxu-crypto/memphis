@@ -1,8 +1,7 @@
-import { Store } from "../../memory/store.js";
-import { loadConfig } from "../../config/loader.js";
 import { log } from "../../utils/logger.js";
 import { memphis } from "../../agents/logger.js";
 import { createDecisionV1 } from "../../decision/schema.js";
+import { createWorkspaceStore } from "../utils/workspace-store.js";
 
 export interface DecideOptions {
   /** pipe-separated list, e.g. "A|B|C" */
@@ -32,8 +31,7 @@ function splitPipe(s?: string): string[] {
 }
 
 export async function decideCommand(title: string, opts: DecideOptions) {
-  const config = loadConfig();
-  const store = new Store(config.memory.path);
+  const { guard } = createWorkspaceStore();
 
   const options = splitPipe(opts.options);
   const chosen = (opts.chosen ?? "").trim();
@@ -74,7 +72,7 @@ export async function decideCommand(title: string, opts: DecideOptions) {
     evidence: opts.mode === "inferred" ? { refs: splitPipe(opts.evidenceRefs), note: opts.evidenceNote } : undefined,
   });
 
-  const block = await store.appendBlock("decisions", {
+  const block = await guard.appendBlock("decisions", {
     type: "decision",
     content: JSON.stringify(decision),
     tags: ["decision", decision.mode, decision.scope, decision.status, ...tags].filter(Boolean),

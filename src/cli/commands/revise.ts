@@ -1,9 +1,8 @@
 import crypto from "node:crypto";
 import { spawnSync } from "node:child_process";
-import { loadConfig } from "../../config/loader.js";
-import { Store } from "../../memory/store.js";
 import { log } from "../../utils/logger.js";
 import { safeParseDecisionV1, type DecisionV1 } from "../../decision/decision-v1.js";
+import { createWorkspaceStore } from "../utils/workspace-store.js";
 
 function randomId(): string {
   return crypto.randomBytes(12).toString("hex");
@@ -37,17 +36,28 @@ function findLatestDecision(blocks: any[], decisionId: string): { block: any; de
   return matches[0];
 }
 
-export async function reviseCommand(decisionId: string, opts: { reason: string; title?: string; status?: string }) {
+function recordExists(blocks: any[], recordId: string): boolean {
+  for (const block of blocks) {
+    if (block?.data?.type !== "decision") continue;
+    const parsed = safeParseDecisionV1(block.data.content);
+    if (!parsed.ok) continue;
+    if (parsed.value.recordId === recordId) {
+      return true;
+    }
+  }
+  return false;
+}
+
+export async function reviseCommand(decisionId: string, opts: { reason: string; title?: string; status?: string; supersedes?: string }) {
   const id = decisionId.trim();
   if (!id) {
     log.error("decisionId is required");
     return;
   }
 
-  const config = loadConfig();
-  const store = new Store(config.memory.path);
+  const { guard } = createWorkspaceStore();
 
-  const blocks = store.readChain("decisions");
+  const blocks = guard.readChain("decisions");
   const found = findLatestDecision(blocks as any[], id);
 
   if (!found) {
@@ -55,11 +65,31 @@ export async function reviseCommand(decisionId: string, opts: { reason: string; 
     return;
   }
 
+  const supersedesInput = opts.supersedes?.trim();
+  if (supersedesInput && !recordExists(blocks as any[], supersedesInput)) {
+    log.warn(`Supersedes recordId not found: ${supersedesInput}`);
+  }
+
+  const effectiveSupersedes = supersedesInput || found.decision.recordId;
+
   const now = new Date().toISOString();
   const cwd = process.cwd();
   const gitRoot = getGitRoot(cwd);
 
   const status = (opts.status?.trim().toLowerCase() || "revised") as any;
+
+  // Mark previous decision as "revised" via a tombstone block
+  const tombstone: DecisionV1 = {
+    ...found.decision,
+    status: "revised",
+    supersedes: undefined,
+  };
+  await guard.appendBlock("decisions", {
+    type: "decision" as any,
+    content: JSON.stringify(tombstone),
+    tags: ["decision", "lifecycle", "revised"].filter(Boolean),
+    agent: "revise:tombstone",
+  });
 
   const revised: DecisionV1 = {
     ...found.decision,
@@ -69,7 +99,7 @@ export async function reviseCommand(decisionId: string, opts: { reason: string; 
     reasoning: opts.reason.trim(),
     mode: "conscious",
     status,
-    supersedes: found.decision.recordId,
+    supersedes: effectiveSupersedes,
     confidence: 0.85,
     metadata: {
       ...(found.decision.metadata ?? {}),
@@ -79,12 +109,12 @@ export async function reviseCommand(decisionId: string, opts: { reason: string; 
     },
   };
 
-  await store.appendBlock("decisions", {
+  await guard.appendBlock("decisions", {
     type: "decision" as any,
     content: JSON.stringify(revised),
     tags: ["decision", revised.mode, revised.scope, revised.status].filter(Boolean),
     agent: "revise",
   });
 
-  log.info(`Revised decision ${revised.decisionId} (supersedes ${found.decision.recordId})`);
+  log.info(`Revised decision ${revised.decisionId} (supersedes ${effectiveSupersedes})`);
 }

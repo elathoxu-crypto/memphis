@@ -1,9 +1,8 @@
 import chalk from "chalk";
-import { Store } from "../../memory/store.js";
-import { loadConfig } from "../../config/loader.js";
 import { askWithContext, type AskOptions } from "../../core/ask.js";
 import { checkAndSaveDecision } from "../../core/decision-detector.js";
 import { memphis } from "../../agents/logger.js";
+import { createWorkspaceStore } from "../utils/workspace-store.js";
 
 export async function askCommand(question: string, options?: {
   useVault?: boolean;
@@ -24,8 +23,7 @@ export async function askCommand(question: string, options?: {
   noSemantic?: boolean;
   graph?: boolean;
 }) {
-  const config = loadConfig();
-  const store = new Store(config.memory.path);
+  const { guard } = createWorkspaceStore();
 
   const askOptions: AskOptions = {
     question,
@@ -51,7 +49,7 @@ export async function askCommand(question: string, options?: {
 
   try {
     const startTime = Date.now();
-    const result = await askWithContext(store, askOptions);
+    const result = await askWithContext(guard, askOptions);
     const duration = (Date.now() - startTime) / 1000;
 
     if (options?.json) {
@@ -91,7 +89,7 @@ export async function askCommand(question: string, options?: {
           
           // Check for decision (async, non-blocking)
           try {
-            const decisionBlock = await checkAndSaveDecision(store, result.savedBlock);
+            const decisionBlock = await checkAndSaveDecision(guard, result.savedBlock);
             if (decisionBlock) {
               console.log(chalk.gray(`\n📋 Decision detected! Saved to decision#${String(decisionBlock.index).padStart(6, "0")}`));
             }
