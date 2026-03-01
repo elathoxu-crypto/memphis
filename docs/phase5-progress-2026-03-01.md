@@ -162,6 +162,7 @@ Tasks:
 - ✅ E2E tests (30 min)
 - ✅ Error messages (20 min)
 - ✅ CLI simplification (1h)
+- 🟡 TUI improvements (30 min so far)
 
 **Week 2 (Mar 8-14, 2026):**
 - ✅ CLI simplification
