@@ -77,10 +77,14 @@ program
   .description("Add a journal entry to memory")
   .option("-t, --tags <tags>", "Comma-separated tags")
   .option("-f, --force", "Force autosummary after this entry")
+  .option("--chain <chain>", "Target chain (default: journal)")
+  .option("--suggest-tags", "Auto-suggest tags using AI categorization (Phase 6)")
   .action((message, options) => {
     journalCommand(message, {
       tags: options.tags,
       force: options.force,
+      chain: options.chain,
+      suggestTags: options.suggestTags,
     });
   });
 
