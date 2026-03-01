@@ -606,6 +606,50 @@ program
     }
   });
 
+const offlineProgram = program
+  .command("offline")
+  .description("Manage offline mode settings");
+
+offlineProgram
+  .command("status")
+  .description("Show current offline mode, network status, and active model")
+  .action(async () => {
+    const { offlineStatusCommand } = await import("./commands/offline.js");
+    await offlineStatusCommand();
+  });
+
+offlineProgram
+  .command("on")
+  .description("Force offline mode (always use local models)")
+  .action(async () => {
+    const { offlineOnCommand } = await import("./commands/offline.js");
+    await offlineOnCommand();
+  });
+
+offlineProgram
+  .command("auto")
+  .description("Enable auto-detection (switch based on network)")
+  .action(async () => {
+    const { offlineAutoCommand } = await import("./commands/offline.js");
+    await offlineAutoCommand();
+  });
+
+offlineProgram
+  .command("off")
+  .description("Force online mode (disable offline)")
+  .action(async () => {
+    const { offlineOffCommand } = await import("./commands/offline.js");
+    await offlineOffCommand();
+  });
+
+offlineProgram
+  .command("model <name>")
+  .description("Set preferred offline model")
+  .action(async (name: string) => {
+    const { offlineModelCommand } = await import("./commands/offline.js");
+    await offlineModelCommand(name);
+  });
+
 const daemonProgram = program
   .command("daemon")
   .description("Manage the Memphis background daemon");
