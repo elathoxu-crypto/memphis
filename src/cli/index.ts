@@ -50,6 +50,7 @@ import { shareReplicatorCommand } from "./commands/share-replicator.js";
 import { registerTradeCommand } from "./commands/trade.js";
 import { soulStatusCommand } from "./commands/soul-status.js";
 import { intelligenceCommand } from "./commands/intelligence.js";
+import { inferCommand } from "./commands/infer.js";
 import { graphBuildCommand, graphShowCommand } from "./commands/graph.js";
 import { createWorkspaceStore } from "./utils/workspace-store.js";
 import { writeWorkspaceSelection, getWorkspaceSelectionFilePath } from "../security/workspace.js";
@@ -718,6 +719,23 @@ program
     intelligenceCommand(action, {
       json: options.json,
       clear: options.clear
+    });
+  });
+
+// Model B: Inferred decisions
+program
+  .command("infer")
+  .description("Detect inferred decisions from git history (Model B MVP)")
+  .option("--since <days>", "Analyze commits from last N days", "7")
+  .option("--threshold <0-1>", "Minimum confidence threshold", "0.5")
+  .option("--json", "Output as JSON")
+  .option("--prompt", "Prompt to save detected decisions")
+  .action((options) => {
+    inferCommand({
+      since: options.since,
+      threshold: options.threshold,
+      json: options.json,
+      prompt: options.prompt
     });
   });
 
