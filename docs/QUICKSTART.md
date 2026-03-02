@@ -1,242 +1,320 @@
-# Memphis Quickstart 🚀
+# Memphis Quick Start Guide
 
-**First journal entry in 5 minutes. No complexity.**
-
----
-
-## What You'll Do
-
-1. Install Memphis
-2. Initialize your brain
-3. Write your first memory
-4. Ask a question about it
-5. (Optional) Try the visual dashboard
+**Get your AI brain running in 5 minutes!** 🚀
 
 ---
 
-## Step 1: Install (2 min)
+## 📋 Prerequisites
+
+- Node.js 18+ installed
+- One of these providers:
+  - **Ollama** (recommended, free, offline)
+  - **ZAI API key** (49 characters)
+  - **OpenAI API key**
+  - **MiniMax API key**
+
+---
+
+## 🚀 Installation (3 min)
+
+### 1. Clone & Build
 
 ```bash
-# Clone + install
 git clone https://github.com/elathoxu-crypto/memphis.git
 cd memphis
 npm install
 npm run build
-
-# Make CLI available globally
-npm link
 ```
 
-**Verify:**
+### 2. Initialize
+
 ```bash
-memphis --version
-# Should show: 1.5.0 (or newer)
+node dist/cli/index.js init
+```
+
+**Interactive wizard will:**
+- ✅ Detect available providers
+- ✅ Let you choose provider (Ollama/ZAI/OpenAI/MiniMax)
+- ✅ Input API keys if needed
+- ✅ Create optimized config
+
+**Example:**
+```
+╔═══════════════════════════════════════════════════════════╗
+║           Memphis Brain — Setup Wizard 🧠                ║
+╚═══════════════════════════════════════════════════════════╝
+
+🔍 Detecting environment...
+
+  ✓ Node.js v25.6.1
+  ✓ Ollama (http://127.0.0.1:11434)
+    Available models: qwen2.5-coder, llama3.1
+
+? Recommended provider: ollama/qwen2.5-coder
+  Reason: Local, offline-capable, no API costs
+  Use recommended? (Y/n): Y
+
+✓ Created ~/.memphis/config.yaml
+✓ Created ~/.memphis/chains
+
+Ready? Let's go! 🚀
 ```
 
 ---
 
-## Step 2: Initialize (1 min)
+## 🎯 First Memory (1 min)
+
+### Save a thought:
 
 ```bash
-# Create ~/.memphis/ with default config
-memphis init
-
-# Check if it worked
-memphis status
-```
-
-**Expected output:**
-```
-✓ Workspace: /home/you/.memphis
-✓ Chains: 0 blocks
-✓ Provider: ollama (ready)
-✓ Embeddings: 0 vectors
-```
-
----
-
-## Step 3: First Memory (30 sec)
-
-```bash
-memphis journal "My first memory: Memphis is my AI brain" --tags learning,test
+node dist/cli/index.js journal "I'm working on a new AI project called Memphis"
 ```
 
 **Output:**
 ```
-✓ journal#000001 created
-  SHA256: a1b2c3...
-  Tags: learning, test
+✓ Saved to journal#0
+  Tags: project, ai, memphis
+  Embedding: ready
 ```
 
 ---
 
-## Step 4: Ask About It (30 sec)
+## 🧠 Query Your Brain (30 sec)
+
+### Ask Memphis:
 
 ```bash
-memphis ask "what did I just remember?"
+node dist/cli/index.js ask "What am I working on?"
 ```
 
-**Expected response:**
+**Output:**
 ```
-You just remembered that Memphis is your AI brain.
-Tags: learning, test
-Time: just now
+Context hits: 1
+
+Based on your journal, you're working on Memphis - an AI project 
+with persistent memory chains. You mentioned this in journal#0.
+
+Would you like to explore this further?
 ```
 
 ---
 
-## Step 5: See It Visually (Optional, 1 min)
+## 🔍 Semantic Search (30 sec)
+
+### Find related memories:
 
 ```bash
+node dist/cli/index.js recall "AI"
+```
+
+**Output:**
+```
+Found 3 results:
+
+[0.89] journal#0 — "I'm working on a new AI project called Memphis"
+[0.75] journal#1 — "Testing semantic search with embeddings"
+[0.68] ask#2 — "How does Memphis memory work?"
+```
+
+---
+
+## 🎨 Visual Dashboard (1 min)
+
+### Launch TUI:
+
+```bash
+node dist/cli/index.js tui
+```
+
+**Features:**
+- 💬 Chat interface with history
+- 💡 Suggestions queue (time-based triggers)
+- 📊 Real-time stats (834 journal blocks)
+- 🧠 Learning indicators (54 learned)
+- ⌨️ Quick commands (/j, /a, /d)
+
+**Commands:**
+- `/journal <text>` or `/j <text>` — quick save
+- `/accept` or `/a` — accept suggestion
+- `/dismiss` or `/d` — dismiss suggestion
+- `/status` — show chain stats
+- `/help` — show all commands
+
+**Status Bar:**
+```
+📚 834 journal │ Last: 17m ago │ ✓ ollama/qwen2.5-coder │ 🧠 54 learned │ 💡 2 │ [q] quit
+```
+
+---
+
+## 🔧 Configuration
+
+### View config:
+
+```bash
+cat ~/.memphis/config.yaml
+```
+
+### Example configs:
+
+**Ollama (local):**
+```yaml
+providers:
+  ollama:
+    url: http://127.0.0.1:11434/v1
+    model: qwen2.5-coder
+    role: primary
+
+memory:
+  path: ~/.memphis/chains
+
+embeddings:
+  enabled: true
+  backend: local-ollama
+  model: nomic-embed-text
+```
+
+**ZAI (cloud):**
+```yaml
+providers:
+  zai:
+    url: https://api.zukijourney.com/v1
+    model: zai/glm-5
+    api_key: sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+    role: primary
+
+embeddings:
+  enabled: true
+  backend: local-ollama
+  model: nomic-embed-text
+```
+
+---
+
+## 📚 Core Commands
+
+| Command | Description | Example |
+|---------|-------------|---------|
+| `init` | Setup wizard | `memphis init` |
+| `journal` | Save memory | `memphis journal "My thought"` |
+| `ask` | Query brain | `memphis ask "What did I do?"` |
+| `recall` | Semantic search | `memphis recall "project"` |
+| `status` | Show stats | `memphis status` |
+| `tui` | Visual dashboard | `memphis tui` |
+| `vault` | Encrypted storage | `memphis vault init` |
+| `embed` | Generate embeddings | `memphis embed --chain journal` |
+
+---
+
+## 🎯 Common Workflows
+
+### Daily Journaling:
+
+```bash
+# Morning
+memphis journal "Today's goals: finish TUI, test on second PC" --tags goals
+
+# During work
+memphis journal "Fixed TUI crash - editor.clear bug" --tags bug,tui
+
+# End of day
+memphis journal "Completed Phase 2, starting Phase 3" --tags milestone
+```
+
+### Learning from mistakes:
+
+```bash
+memphis journal "LESSON: Always verify before claiming success" --tags lesson,learning
+```
+
+### Decision tracking:
+
+```bash
+memphis decide "Use ZAI/GLM over OpenAI for cost reasons" --rationale "49-char key, better pricing"
+```
+
+### Semantic recall:
+
+```bash
+memphis recall "last week" --top 20
+memphis recall "bug fix" --since 2026-03-01
+memphis ask "What lessons did I learn?"
+```
+
+---
+
+## 🐛 Troubleshooting
+
+### Provider not working?
+
+```bash
+# Check if Ollama is running
+curl http://127.0.0.1:11434/api/tags
+
+# Check config
+cat ~/.memphis/config.yaml
+
+# Test provider
+memphis ask "test" --provider ollama
+```
+
+### Embeddings not working?
+
+```bash
+# Pull embedding model
+ollama pull nomic-embed-text
+
+# Generate embeddings
+memphis embed --chain journal
+
+# Check status
+memphis status
+```
+
+### TUI crashes?
+
+```bash
+# Update to latest version
+git pull
+npm run build
+
+# Test
 memphis tui
 ```
 
-**Navigate:**
-- `1` — Dashboard (stats)
-- `2` — Journal (all entries)
-- `3` — Ask (interactive Q&A)
-- `q` — Quit
+---
+
+## 📖 Next Steps
+
+1. **Explore features:**
+   - `memphis vault init` — encrypted storage
+   - `memphis daemon start` — background processing
+   - `memphis share-sync --push` — IPFS sync
+
+2. **Customize config:**
+   - Edit `~/.memphis/config.yaml`
+   - Add fallback providers
+   - Adjust embeddings settings
+
+3. **Join community:**
+   - Docs: https://github.com/elathoxu-crypto/memphis
+   - Chat: https://discord.gg/clawd
 
 ---
 
-## 🎉 Done!
+## 🎉 Success Checklist
 
-You now have:
-- ✅ Working Memphis install
+After 5 minutes, you should have:
+
+- ✅ Memphis installed
+- ✅ Provider configured (Ollama/ZAI/OpenAI)
 - ✅ First memory saved
-- ✅ Contextual recall working
-- ✅ Visual dashboard ready
+- ✅ Asked your first question
+- ✅ Tried semantic search
+- ✅ Launched TUI
+
+**If stuck:** Check troubleshooting or ask in Discord!
 
 ---
 
-## What's Next?
-
-### If you want to learn more (10 min):
-
-**Core commands (memorize these):**
-
-| Command | What it does |
-|---------|--------------|
-| `memphis journal <text> --tags x,y` | Save a memory |
-| `memphis ask <question>` | Ask with context |
-| `memphis status` | Check health |
-| `memphis tui` | Visual dashboard |
-
-**5 more useful commands:**
-
-| Command | What it does |
-|---------|--------------|
-| `memphis recall <keyword>` | Search memories |
-| `memphis decide <title> <choice>` | Track decisions |
-| `memphis embed` | Enable semantic search |
-| `memphis reflect --daily` | Get insights |
-| `memphis share-sync --all` | Sync with other agents |
-
-### If you want full docs:
-
-- **Full command reference:** [README.md](../README.md)
-- **Architecture:** [NEXUS.md](NEXUS.md)
-- **Examples:** [WORKFLOWS.md](WORKFLOWS.md)
-- **Tutorial:** [TUTORIAL.md](TUTORIAL.md)
-
----
-
-## Common Issues
-
-### "Provider not ready"
-
-**Problem:** No LLM configured.
-
-**Fix:**
-```bash
-# Option 1: Use Ollama (free, offline)
-# Install: https://ollama.ai
-ollama pull qwen2.5-coder:3b
-
-# Edit ~/.memphis/config.yaml
-providers:
-  default: ollama
-  ollama:
-    model: qwen2.5-coder:3b
-    url: http://127.0.0.1:11434/v1
-
-# Option 2: Use OpenAI (requires API key)
-providers:
-  default: openai
-  openai:
-    apiKey: sk-...
-    model: gpt-4
-```
-
-### "Embeddings slow"
-
-**Problem:** First-time embedding takes 2-3 seconds.
-
-**Normal!** This is Ollama loading the model. Subsequent runs are faster.
-
-### "Where's my data?"
-
-**Location:** `~/.memphis/`
-
-```bash
-# See all chains
-ls ~/.memphis/*.jsonl
-
-# View journal chain
-cat ~/.memphis/journal.jsonl | head -5
-```
-
----
-
-## Real-World Usage
-
-### Daily workflow (recommended):
-
-```bash
-# Morning: capture intent
-memphis journal "Today's focus: finish X feature" --tags goal,focus
-
-# During work: save decisions
-memphis journal "Decided: use SQLite instead of Postgres for simplicity" --tags decision,arch
-
-# Evening: summarize
-memphis journal "EOD: finished X, tomorrow need Y" --tags eod
-```
-
-### Weekly rituals:
-
-```bash
-# Build knowledge graph (connects related memories)
-memphis embed
-memphis graph build
-
-# Get insights
-memphis reflect --weekly
-```
-
-### Ask questions:
-
-```bash
-memphis ask "what decisions did I make about architecture this week?"
-memphis ask "what problems are still unresolved?"
-memphis ask "what did I learn about X?"
-```
-
----
-
-## That's It!
-
-**You don't need to know all 35 commands.**
-
-Just remember:
-1. `journal` — capture
-2. `ask` — query
-3. `tui` — visualize
-
-Everything else is optional.
-
----
-
-**Questions?** Check [NEXUS.md](NEXUS.md) or open an issue on GitHub.
-
-**Want more?** See [WORKFLOWS.md](WORKFLOWS.md) for real-world examples.
+**Happy memory building! 🧠✨**

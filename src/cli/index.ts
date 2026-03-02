@@ -59,6 +59,7 @@ import { ingestCommand } from "./commands/ingest.js";
 import { watchCommand } from "./commands/watch.js";
 import { DaemonManager } from "../daemon/index.js";
 import { mcpStartCommand, mcpInspectCommand } from "./commands/mcp.js";
+import { doctorCommand } from "./commands/doctor.js";
 
 const program = new Command();
 const daemonManager = new DaemonManager();
@@ -72,6 +73,14 @@ program
   .command("init")
   .description("Initialize Memphis in ~/.memphis")
   .action(initCommand);
+
+program
+  .command("doctor")
+  .description("Health check — diagnose common issues")
+  .option("-j, --json", "Output JSON format")
+  .action((options) => {
+    doctorCommand(options);
+  });
 
 program
   .command("journal <message>")
