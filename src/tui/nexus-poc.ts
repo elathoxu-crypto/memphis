@@ -617,9 +617,5 @@ export class NexusChatTUI {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// RUN NEXUS CHAT TUI
+// NO AUTO-START - TUI should only run when explicitly called via 'memphis tui'
 // ─────────────────────────────────────────────────────────────────────────────
-
-console.log("Starting Memphis Nexus Chat TUI...");
-const nexus = new NexusChatTUI();
-nexus.run();
