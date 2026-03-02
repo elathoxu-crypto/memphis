@@ -740,7 +740,7 @@ program
   .option("-c, --chosen <option>", "New chosen option", "")
   .action((id, options) => {
     reviseCommand(id, {
-      reason: options.reasoning,
+      reasoning: options.reasoning,
       chosen: options.chosen
     });
   });
