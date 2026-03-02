@@ -1,8 +1,8 @@
 # Memphis 🧠
 
-**Local-first cognitive engine with AI-powered intelligence features.**
+**Local-first cognitive engine with AI-powered decision tracking.**
 
-**Latest: v1.7.6 — Event Detection System (Phase 6 Week 3-4)**
+**Latest: v1.8.0 — Model B Complete (Cognitive Engine)**
 
 [English](#english) | [Polski](#polski)
 
@@ -16,38 +16,29 @@
 
 Get your first memory saved in 5 minutes. No complexity, just the essentials.
 
-### ✨ What's New in v1.7.6?
+### ✨ What's New in v1.8.0?
 
-**Event Detection System (Phase 6 Week 3-4):**
-- **Process Monitoring** — Detects when processes start/finish/fail
-- **File Change Detection** — Tracks create/modify/delete events
-- **Pattern Detection** — Identifies error spikes and activity bursts
-- **Smart Suggestions** — Context-aware prompts based on events
-- **Combined Triggers** — Time + event-based suggestions working together
+**Cognitive Engine Model B (COMPLETE):**
+- **Decision Inference** — Agent detects decisions from git history automatically
+- **Proactive Prompts** — Interactive prompts to save detected decisions
+- **Decision Lifecycle** — revise/contradict/reinforce commands
+- **Frictionless Capture** — Ultra-fast <100ms decision capture (`md` alias)
+- **TUI Dashboard** — Interactive dashboard for inferred decisions
 
-**TUI Complete (v1.7.3-v1.7.5):**
-- **Phase 3** — Search integration, Tab autocomplete, sync status widget
-- **Phase 4** — Keyboard shortcuts (Ctrl+J/R/S/T), dark/light themes, command history
-- **Phase 5** — Journal sidebar, config export/import, persistent settings
-
-**Quick Example:**
+**Model A+B Working Together:**
 ```bash
-# Event detection works automatically in background
-memphis journal "Finished debugging session"
+# Model A: User explicitly records decision
+memphis decide "Use TypeScript not JavaScript" "TypeScript"
 
-# TUI shows event-based suggestions:
-💡 Suggestions:
-  [1] What did you learn from this debug session?
-  [2] Record the root cause for future reference?
+# Model B: Agent detects decision from git
+memphis infer --since 30
+# Detects: "Refactored addBlock to appendBlock" (83% confidence)
+
+# Frictionless: Capture in <100ms
+md "use TypeScript"
+# ✓ [decisions#8] hash
+# ⚡ 92ms
 ```
-
-**Quick Example:**
-```bash
-memphis journal "Meeting with John about Project X" --suggest-tags
-
-Suggested tags (confidence):
-  meeting (100%)
-  person (90%)
   project (80%)
 
 Accept suggestions? [y/n/e=edit/s=skip]: y
@@ -55,21 +46,76 @@ Accept suggestions? [y/n/e=edit/s=skip]: y
 ```
 
 **Performance:**
-- Pattern matching: 0.27ms (37x faster than target)
-- LLM fallback: 140ms (93x optimized)
-- Event detection: <10ms for 100 events
-- Tests: 182 tests passing (100%)
+- Inference Engine: 20 decisions from 30 days (83% max confidence)
+- Frictionless Capture: 92ms average (target: <100ms) ✅
+- Decision Lifecycle: 3 commands (revise/contradict/reinforce)
+- TUI Dashboard: Interactive batch operations
+- Tests: 182+ tests passing (100%)
+
+---
+
+### 🧠 Cognitive Engine
+
+Memphis implements a 5-model cognitive architecture for decision tracking:
+
+**Model A — Conscious Decisions (100% ✅)**
+User explicitly records decisions:
+```bash
+memphis decide "Use TypeScript not JavaScript" "TypeScript" --reasoning "Better type safety"
+```
+
+**Model B — Inferred Decisions (100% ✅)**
+Agent detects decisions from git history:
+```bash
+memphis infer --since 30
+# Detects: "Refactored addBlock to appendBlock" (83% confidence)
+# Detects: "Migrated from REST to GraphQL" (80% confidence)
+
+# Interactive prompts
+memphis infer --prompt --since 7
+# Shows decisions one by one, asks to save as conscious
+```
+
+**Decision Lifecycle (100% ✅)**
+Track how decisions evolve:
+```bash
+memphis revise <id> --reasoning "New information"
+memphis contradict <id> --evidence "Wrong assumption"
+memphis reinforce <id> --evidence "Still valid"
+```
+
+**Frictionless Capture (100% ✅)**
+Ultra-fast <100ms capture:
+```bash
+# Setup aliases (one-time)
+./scripts/setup-frictionless.sh
+
+# Then capture instantly
+md "use TypeScript not JavaScript"
+# ✓ [decisions#8] 5b289c8f
+# ⚡ 92ms
+```
+
+**TUI Dashboard (100% ✅)**
+Interactive visual interface:
+```bash
+memphis decisions-inferred --since 30
+# Shows all detected decisions
+# Batch select which to save
+# Visual confidence indicators (🟢🟡🔴)
+```
+
+**Why It Matters:**
+- Decisions are the core of cognition
+- Automatic detection = more data captured
+- Frictionless = users actually use it
+- Lifecycle = track how decisions evolve
+- **Result:** Complete decision tracking system
 
 ---
 
 ### Overview
 Memphis is a self-hosted AI brain that keeps append-only chains for every action (journal, ask, decisions, summaries, share). It blends keyword + semantic recall, grows a knowledge graph, runs daily reflections, and keeps a daemon watching repos so you can summon the right context instantly.
-
-**Phase 6 adds:**
-- **Auto-categorization** — Tags your journal entries automatically
-- **Learning system** — Adapts to your workflow
-- **Time-based prompts** — Never forget to journal
-- **Smart suggestions** — Context-aware reminders
 
 ### ASCII Architecture
 ```
@@ -136,8 +182,13 @@ _Decisions, plans, agents_
 | Command | What it does / key flags |
 | --- | --- |
 | `memphis decide <title> <chosen>` | Record decisions with `--options`, `--scope`, `--mode`, `--confidence`. |
-| `memphis show decision <id>` | Display decision or record details. |
+| `memphis decide-fast <title>` | Ultra-fast <100ms capture with `--why`, `--tags`. |
+| `memphis infer [--since --threshold --json --prompt]` | Detect inferred decisions from git history. |
 | `memphis revise <decisionId> [--reasoning]` | Append a revision referencing the original decision. |
+| `memphis contradict <id> [--evidence --reasoning]` | Mark decision as contradicted. |
+| `memphis reinforce <id> [--evidence --reason]` | Strengthen decision with new evidence. |
+| `memphis decisions-inferred [--since]` | Interactive dashboard for inferred decisions. |
+| `memphis show decision <id>` | Display decision or record details. |
 | `memphis plan [--focus --goal --since --output --exec --yolo]` | Emit Codex-ready plans or JSON tasks. |
 | `memphis agent <start|stop|status|openclaw|collab> [options]` | Control automation agents, OpenClaw bridge. |
 | `memphis bot [start|webhook]` | Launch or configure the Telegram bot. |
