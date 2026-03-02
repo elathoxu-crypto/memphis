@@ -33,7 +33,20 @@ export async function inferCommand(opts: InferOptions): Promise<void> {
       return;
     }
 
-    // Human-readable output
+    // Interactive prompt mode
+    if (shouldPrompt && highConfidence.length > 0) {
+      const { ProactivePrompter } = await import("../../decision/proactive-prompter.js");
+      const prompter = new ProactivePrompter(process.cwd(), {
+        confidenceThreshold: threshold,
+        maxPrompts: 3,
+        interactive: true,
+      });
+      
+      await prompter.checkAndPrompt(since);
+      return;
+    }
+
+    // Human-readable output (non-interactive)
     console.log("\n╔═══════════════════════════════════════════════════════════╗");
     console.log("║           Memphis Decision Inference Engine 🧠            ║");
     console.log("╚═══════════════════════════════════════════════════════════╝");
@@ -62,7 +75,7 @@ export async function inferCommand(opts: InferOptions): Promise<void> {
     }
 
     console.log("  ─────────────────────────────────────────────────────");
-    console.log(`  Run 'memphis decide' to save these as conscious decisions\n`);
+    console.log(`  Run with --prompt to save these as conscious decisions\n`);
   } catch (error) {
     console.error("\n  ✗ Inference failed. Make sure you're in a git repository.\n");
     console.error(`  Error: ${error}\n`);
