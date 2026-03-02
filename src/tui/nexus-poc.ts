@@ -5,6 +5,7 @@
 
 import { TUI, Text, Box, Container, ProcessTerminal, Editor } from "@mariozechner/pi-tui";
 import chalk from "chalk";
+import { NexusChainIntegration } from "./nexus-chain.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // AGENT IDENTITY
@@ -192,6 +193,26 @@ export class NexusChatTUI {
     };
 
     this.messages.push(msg);
+    
+    // Save to chain (async, non-blocking)
+    setImmediate(() => {
+      const result = NexusChainIntegration.saveMessageToChain(
+        CURRENT_AGENT.name,
+        content
+      );
+      
+      if (result) {
+        console.log(`[Nexus] Saved to chain: journal#${result.blockIndex}`);
+        
+        // Sync to IPFS (async)
+        NexusChainIntegration.syncToIPFS().then(cid => {
+          if (cid) {
+            console.log(`[Nexus] Synced to IPFS: ${cid}`);
+          }
+        });
+      }
+    });
+    
     this.updateChatBox();
   }
 
