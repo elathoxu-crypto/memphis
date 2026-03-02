@@ -2,6 +2,162 @@
 
 All notable changes to Memphis will be documented in this file.
 
+## [1.7.6] - 2026-03-02
+
+### Added - Event Detection System (Phase 6 Week 3-4)
+
+**Event Detection Engine**
+- Process monitoring — Detect when processes start/finish/fail
+- File change detection — Track create/modify/delete events
+- Pattern detection — Identify error spikes and activity bursts
+- Event persistence — Events saved to `~/.memphis/events.jsonl`
+- Configurable thresholds — Customize detection sensitivity
+
+**Event → Suggestion Mapping**
+- Process finished → "What did you learn?"
+- Process failed → "Debug notes?"
+- Config changed → "Record why?"
+- Error spike → "Root cause?"
+- Activity burst → "Capture your work?"
+- Combined triggers — Time + event suggestions working together
+
+**Technical Details**
+- `src/intelligence/event-types.ts` (145 lines) — Event type definitions
+- `src/intelligence/event-detector.ts` (495 lines) — Detection engine
+- `src/intelligence/suggestions.ts` (+28 lines) — Event suggestion mapping
+- `tests/intelligence/event-detector.test.ts` (327 lines) — Comprehensive tests
+- `docs/event-detection-design.md` (261 lines) — Full design documentation
+
+**Stats**
+- Total lines added: 1,583
+- Tests: 19 new (182 total)
+- Event types: 3 (process, file, pattern)
+- Suggestion mappings: 6
+
+### Changed
+- `checkAllTriggers()` now combines time + event suggestions
+- Priority-based sorting (high > medium > low)
+- Deduplication by trigger type
+
+## [1.7.5] - 2026-03-02
+
+### Added - TUI Phase 5 Complete
+
+**Split View with Journal Sidebar**
+- Real-time journal entries display
+- Last 10-15 entries with timestamps
+- Toggle with Ctrl+S or `/sidebar` command
+- 📖 indicator in status bar
+- 50-char preview with truncation
+
+**Configuration System**
+- TUIConfig interface for all settings
+- Persistent config in `~/.memphis/tui-config.json`
+- Theme, sidebar state, keybindings stored
+- Auto-loads on startup
+
+**Export/Import Settings**
+- `/config` — Show current configuration
+- `/export-config` — Export to JSON file
+- `/import-config` — Import from file
+- `/reset-config` — Reset to defaults
+- Includes command history in export
+
+**Technical Details**
+- `loadTUIConfig()` and `saveTUIConfig()` functions
+- `loadRecentJournalEntries()` for sidebar data
+- Config persisted between sessions
+
+**Stats**
+- Files modified: 1 (`src/tui/nexus-poc.ts`)
+- Lines added: ~150
+- Time: 15 minutes
+
+## [1.7.4] - 2026-03-02
+
+### Added - TUI Phase 4 Complete
+
+**Keyboard Shortcuts**
+- Ctrl+J: Quick journal mode
+- Ctrl+R: Search/Recall mode
+- Ctrl+S: Toggle journal sidebar
+- Ctrl+T: Toggle theme (dark/light)
+- Tab: Autocomplete (from Phase 3)
+- ↑/↓: Command history navigation
+- q: Quit TUI
+
+**Theme System**
+- Dark theme (default): cyan primary
+- Light theme: blue primary
+- Theme-aware status bar and UI
+- 🌙/☀️ indicator in status bar
+- `/theme` command to toggle
+
+**Command History**
+- Last 100 commands stored
+- Up/Down navigation in editor
+- `/history` command to view recent
+- Duplicate prevention
+
+**Help System**
+- `/help` command with full docs
+- Keyboard shortcuts reference
+- All commands with descriptions
+- Theme indicator
+
+**New Commands**
+- `/theme` — Toggle dark/light theme
+- `/sidebar` — Toggle journal sidebar (placeholder)
+- `/history` — Show command history
+
+**Technical Details**
+- Theme interface with color functions
+- Global input listener for shortcuts
+- Command history tracking with deduplication
+- Editor history integration via `addToHistory()`
+
+**Stats**
+- Files modified: 1 (`src/tui/nexus-poc.ts`)
+- Lines added: ~180
+- Time: 15 minutes
+
+## [1.7.3] - 2026-03-02
+
+### Added - TUI Phase 3 Complete
+
+**Search Integration**
+- `/search <query>` — Semantic search via recall
+- `/recall <query>` — Alias for search
+- `/s <query>` — Short alias
+- Inline results display in TUI
+
+**Auto-complete**
+- Tab completion for Memphis commands
+- MemphisAutocompleteProvider integration
+- Command suggestions as you type
+
+**Recall Widget**
+- Show similar messages inline
+- `loadSimilarMessages()` method
+- `updateSimilarMessagesWidget()` method
+- Context-aware suggestions
+
+**Sync Status**
+- 🔄 Syncing / ✅ Synced in status bar
+- `getSyncStatus()` method
+- `showSyncStatus()` method
+- `/sync` command
+
+**Technical Details**
+- Added Store import with proper initialization
+- Integrated `recall()` from `src/core/recall.ts`
+- `searchMemories()` async method
+
+**Stats**
+- Files modified: 1 (`src/tui/nexus-poc.ts`)
+- Lines added: ~120
+- Time: 15 minutes
+
 ## [1.7.2] - 2026-03-02
 
 ### Added - Interactive Onboarding & Provider Support

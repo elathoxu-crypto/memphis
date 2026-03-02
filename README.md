@@ -2,7 +2,7 @@
 
 **Local-first cognitive engine with AI-powered intelligence features.**
 
-**Latest: v1.7.2 — Interactive Wizard + Doctor + ZAI Provider**
+**Latest: v1.7.6 — Event Detection System (Phase 6 Week 3-4)**
 
 [English](#english) | [Polski](#polski)
 
@@ -16,14 +16,30 @@
 
 Get your first memory saved in 5 minutes. No complexity, just the essentials.
 
-### ✨ What's New in v1.7.0?
+### ✨ What's New in v1.7.6?
 
-**Phase 6 Intelligence Features:**
-- **Auto-Categorization** — Automatic tag suggestions with 77.2% accuracy
-- **Learning System** — Remembers your preferences, gets better over time
-- **Time-Based Suggestions** — Reminds you to journal after 6h inactivity
-- **Pattern Database** — 380+ regex patterns across 36 tags
-- **TUI Integration** — Dashboard widget + Intelligence screen [9]
+**Event Detection System (Phase 6 Week 3-4):**
+- **Process Monitoring** — Detects when processes start/finish/fail
+- **File Change Detection** — Tracks create/modify/delete events
+- **Pattern Detection** — Identifies error spikes and activity bursts
+- **Smart Suggestions** — Context-aware prompts based on events
+- **Combined Triggers** — Time + event-based suggestions working together
+
+**TUI Complete (v1.7.3-v1.7.5):**
+- **Phase 3** — Search integration, Tab autocomplete, sync status widget
+- **Phase 4** — Keyboard shortcuts (Ctrl+J/R/S/T), dark/light themes, command history
+- **Phase 5** — Journal sidebar, config export/import, persistent settings
+
+**Quick Example:**
+```bash
+# Event detection works automatically in background
+memphis journal "Finished debugging session"
+
+# TUI shows event-based suggestions:
+💡 Suggestions:
+  [1] What did you learn from this debug session?
+  [2] Record the root cause for future reference?
+```
 
 **Quick Example:**
 ```bash
@@ -41,7 +57,8 @@ Accept suggestions? [y/n/e=edit/s=skip]: y
 **Performance:**
 - Pattern matching: 0.27ms (37x faster than target)
 - LLM fallback: 140ms (93x optimized)
-- Tests: Unit 96%, Integration 84%, Benchmarks 100%
+- Event detection: <10ms for 100 events
+- Tests: 182 tests passing (100%)
 
 ---
 
