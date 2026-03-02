@@ -1,377 +1,516 @@
 # Memphis 🧠
 
-**Local-first cognitive engine with AI-powered decision tracking.**
+**Local-first cognitive engine with AI-powered decision tracking and predictive suggestions.**
 
-**Latest: v1.8.0 — Model B Complete (Cognitive Engine)**
+**Latest: v2.0.0 — Model C Complete (Predictive Engine)**
 
-[English](#english) | [Polski](#polski)
+[English](#english) | [Polski](#polski) | [Quick Start](docs/QUICKSTART.md) | [Full Docs](docs/)
 
 ---
 
 ## English
 
-### 🚀 New to Memphis?
+### 🎯 What is Memphis?
 
-**→ [Read the 5-minute Quickstart Guide](docs/QUICKSTART.md) ←**
+Memphis is a **cognitive engine** that helps you track, learn from, and predict your decisions:
 
-Get your first memory saved in 5 minutes. No complexity, just the essentials.
+- **Model A** — Record conscious decisions manually
+- **Model B** — Detect decisions from git history automatically  
+- **Model C** — Predict decisions before you make them
 
-### ✨ What's New in v1.8.0?
+**Think of it as:** A second brain that learns from your choices and suggests what you'll decide next.
 
-**Cognitive Engine Model B (COMPLETE):**
-- **Decision Inference** — Agent detects decisions from git history automatically
-- **Proactive Prompts** — Interactive prompts to save detected decisions
-- **Decision Lifecycle** — revise/contradict/reinforce commands
-- **Frictionless Capture** — Ultra-fast <100ms decision capture (`md` alias)
-- **TUI Dashboard** — Interactive dashboard for inferred decisions
+---
 
-**Model A+B Working Together:**
+### ✨ What's New in v2.0.0?
+
+**🚀 Model C — Predictive Decisions Engine**
+
+**Pattern Learning:**
 ```bash
-# Model A: User explicitly records decision
-memphis decide "Use TypeScript not JavaScript" "TypeScript"
+# Learn patterns from your decision history
+memphis predict --learn --since 30
+# → 15 decisions analyzed, 3 patterns extracted
+```
 
-# Model B: Agent detects decision from git
-memphis infer --since 30
-# Detects: "Refactored addBlock to appendBlock" (83% confidence)
+**Prediction Generation:**
+```bash
+# Get predictions based on current context
+memphis predict
+# 🔮 PREDICTED DECISIONS
+# 
+# Based on your current work (5 files, 2 commits today):
+#
+# 1. 🟢 [85%] Use REST architecture
+#    Evidence: 5 similar decisions, 80% accuracy
+#    Type: technical
+#
+# 2. 🟡 [72%] Add authentication
+#    Evidence: 3 similar decisions
+```
 
-# Frictionless: Capture in <100ms
+**Proactive Suggestions:**
+```bash
+# Check for suggestions (background daemon runs every 30min)
+memphis suggest --force
+
+# 🔔 PROACTIVE SUGGESTIONS
+# 
+# Based on your current context:
+# 1. 🟢 [85%] Use TypeScript for new features
+#    [a]ccept / [n]one / [c]ustom
+```
+
+**Pattern Management:**
+```bash
+# View learned patterns
+memphis patterns list
+
+# 📊 LEARNED PATTERNS (5)
+#
+# 1. Use TypeScript for new features
+#    Type: technical | Occurrences: 12
+#    Confidence: 92% | Accuracy: 87%
+#    Trend: improving ⬆️
+#
+# 2. Use PostgreSQL for data storage
+#    Type: technical | Occurrences: 8
+#    Confidence: 75% | Accuracy: 80%
+```
+
+**Accuracy Tracking:**
+```bash
+# Track prediction accuracy
+memphis accuracy
+
+# 📊 ACCURACY TRACKING
+#
+# Total events: 45
+# Overall accuracy: 78%
+# Patterns tracked: 5
+#
+# 📈 Improving: 2 | 📉 Declining: 1
+#
+# 🏆 TOP PERFORMERS:
+# 1. [87%] Use TypeScript
+#    12 predictions, improving ⬆️
+```
+
+---
+
+### 🧠 Complete Cognitive Engine
+
+Memphis implements a 3-model cognitive architecture:
+
+#### **Model A — Conscious Decisions** ✅ 100%
+
+You explicitly record decisions:
+
+```bash
+# Full syntax
+memphis decide "Use TypeScript not JavaScript" "TypeScript" \
+  --reasoning "Better type safety" \
+  --scope project \
+  --tags tech,frontend
+
+# Frictionless (92ms average)
 md "use TypeScript"
 # ✓ [decisions#8] hash
 # ⚡ 92ms
 ```
-  project (80%)
 
-Accept suggestions? [y/n/e=edit/s=skip]: y
-✓ Applied: meeting, person, project
+**Features:**
+- Manual capture
+- Rich metadata (reasoning, scope, tags)
+- Lifecycle tracking (revise/contradict/reinforce)
+- Semantic search
+
+---
+
+#### **Model B — Inferred Decisions** ✅ 100%
+
+Agent detects decisions from git history:
+
+```bash
+# Analyze last 30 days
+memphis infer --since 30
+
+# ╔═══════════════════════════════════════════════════════════╗
+# ║           Memphis Decision Inference Engine 🧠            ║
+# ╚═══════════════════════════════════════════════════════════╝
+#
+#   Analyzed commits from last 30 days
+#   Total detected: 20 | High confidence: 15
+#
+#   DETECTED DECISIONS:
+#
+#   1. 🟢 [83%] Refactored addBlock to appendBlock
+#      Type: technical | Category: refactoring
+#      Evidence: commit a6b88d0
+#
+#   2. 🟢 [77%] Using navigateTo instead of navigateToMenu
+#      Type: technical | Category: technology
+#      Evidence: commit 74c8dd5
 ```
+
+**Features:**
+- Git commit analysis
+- Pattern detection (20 patterns)
+- Confidence scoring (50-83%)
+- Interactive prompts (`--prompt`)
+
+---
+
+#### **Model C — Predictive Decisions** ✅ 100%
+
+Agent predicts decisions before you make them:
+
+```bash
+# Learn patterns (one-time setup)
+memphis predict --learn --since 30
+
+# Generate predictions
+memphis predict --min-confidence 0.7
+
+# View pattern stats
+memphis patterns stats
+
+# Track accuracy
+memphis accuracy
+```
+
+**Features:**
+- Pattern learning from history
+- Context analysis (files, branch, commits)
+- Weighted matching (5 dimensions)
+- Proactive suggestions
+- Accuracy tracking
+- Trend detection
 
 **Performance:**
-- Inference Engine: 20 decisions from 30 days (83% max confidence)
-- Frictionless Capture: 92ms average (target: <100ms) ✅
-- Decision Lifecycle: 3 commands (revise/contradict/reinforce)
-- TUI Dashboard: Interactive batch operations
-- Tests: 182+ tests passing (100%)
+| Operation | Target | Actual | Status |
+|-----------|--------|--------|--------|
+| Pattern Learning | <2000ms | 1049ms | ✅ 47% faster |
+| Prediction | <1000ms | 660ms | ✅ 34% faster |
+| Suggestion | <1000ms | 610ms | ✅ 39% faster |
 
 ---
 
-### 🧠 Cognitive Engine
+### 🚀 Quick Start
 
-Memphis implements a 5-model cognitive architecture for decision tracking:
-
-**Model A — Conscious Decisions (100% ✅)**
-User explicitly records decisions:
+**1. Install**
 ```bash
-memphis decide "Use TypeScript not JavaScript" "TypeScript" --reasoning "Better type safety"
+git clone https://github.com/elathoxu-crypto/memphis.git
+cd memphis
+npm install && npm run build
 ```
 
-**Model B — Inferred Decisions (100% ✅)**
-Agent detects decisions from git history:
+**2. Initialize**
 ```bash
-memphis infer --since 30
-# Detects: "Refactored addBlock to appendBlock" (83% confidence)
-# Detects: "Migrated from REST to GraphQL" (80% confidence)
-
-# Interactive prompts
-memphis infer --prompt --since 7
-# Shows decisions one by one, asks to save as conscious
+node dist/cli/index.js init
+# Interactive setup wizard
 ```
 
-**Decision Lifecycle (100% ✅)**
-Track how decisions evolve:
+**3. Make First Decision**
 ```bash
-memphis revise <id> --reasoning "New information"
-memphis contradict <id> --evidence "Wrong assumption"
-memphis reinforce <id> --evidence "Still valid"
+# Model A (conscious)
+node dist/cli/index.js decide "Use Memphis for decision tracking" "Memphis" \
+  --reasoning "Better than scattered notes"
+
+# Model B (inferred - detect from git)
+node dist/cli/index.js infer --since 7
+
+# Model C (predictive - needs training first)
+node dist/cli/index.js predict --learn --since 30
+node dist/cli/index.js predict
 ```
 
-**Frictionless Capture (100% ✅)**
-Ultra-fast <100ms capture:
+**4. Search Your Memory**
 ```bash
-# Setup aliases (one-time)
-./scripts/setup-frictionless.sh
-
-# Then capture instantly
-md "use TypeScript not JavaScript"
-# ✓ [decisions#8] 5b289c8f
-# ⚡ 92ms
+node dist/cli/index.js recall "decision tracking"
+# Finds related decisions, journal entries, etc.
 ```
 
-**TUI Dashboard (100% ✅)**
-Interactive visual interface:
-```bash
-memphis decisions-inferred --since 30
-# Shows all detected decisions
-# Batch select which to save
-# Visual confidence indicators (🟢🟡🔴)
-```
-
-**Why It Matters:**
-- Decisions are the core of cognition
-- Automatic detection = more data captured
-- Frictionless = users actually use it
-- Lifecycle = track how decisions evolve
-- **Result:** Complete decision tracking system
+**Time to first success:** <5 minutes ⏱️
 
 ---
 
-### Overview
-Memphis is a self-hosted AI brain that keeps append-only chains for every action (journal, ask, decisions, summaries, share). It blends keyword + semantic recall, grows a knowledge graph, runs daily reflections, and keeps a daemon watching repos so you can summon the right context instantly.
+### 📋 Command Reference
 
-### ASCII Architecture
+#### **Core Commands**
+
+```bash
+# Decisions (Model A)
+memphis decide <title> <chosen> [--reasoning <why>] [--tags <tags>]
+memphis decisions [--status active|revised] [--recent 7]
+memphis revise <id> <new-choice> [--reasoning <why>]
+memphis contradict <id> [--evidence <why>]
+memphis reinforce <id> [--evidence <why>]
+
+# Inference (Model B)
+memphis infer --since <days>
+memphis infer --prompt --since <days>
+memphis decide-fast <title> <chosen>  # alias: md
+
+# Predictions (Model C)
+memphis predict [--learn] [--since <days>] [--min-confidence <n>]
+memphis patterns [list|stats|clear]
+memphis suggest [--force] [--channel <name>]
+memphis accuracy [clear]
+
+# Memory
+memphis journal <text> [--tags <tags>]
+memphis ask <question>
+memphis recall <keywords>
+
+# System
+memphis status
+memphis doctor
+memphis tui
 ```
-                 ┌────────────┐        ┌────────────┐
-  Files / Git ──▶│  ingest    │──┬────▶│  chains    │◀─────┐   Local CLI
-  Plans / LLM ──▶│  journal   │  │     │ (SHA256)   │      │   (ask/tui)
-                 └────┬───────┘  │     └────┬───────┘      │
-                      │          │          │              │
-                      │          │    ┌─────▼────┐   ┌─────▼────┐
-                      │          └───▶│  recall  │   │  reflect │
-                      │               └────┬─────┘   └────┬─────┘
-                      │                    │              │
-                      │               ┌────▼────┐   ┌─────▼────┐
-                      └──────────────▶│  graph  │──▶│   ask    │
-                                       └────┬───┘   └──────────┘
-                                            │
-                                      ┌─────▼─────┐
-                                      │  daemon   │ (watchers, share-sync, autosummary)
-                                      └───────────┘
+
+#### **Advanced Commands**
+
+```bash
+# Intelligence
+memphis intelligence stats
+memphis intelligence analyze
+
+# Sync
+memphis share-sync --push|--pull
+memphis trade create <recipient> --blocks <chain:range>
+
+# Vault
+memphis vault init
+memphis vault backup  # 24-word seed
+memphis vault recover --seed <words>
+
+# Daemon
+memphis daemon start
+memphis daemon status
 ```
-
-### Install, Upgrade, and Smoke Test
-1. **Clone & install**
-   ```bash
-   git clone https://github.com/elathoxu-crypto/memphis.git
-   cd memphis
-   npm install
-   ```
-2. **Build CLI** – `npm run build` (outputs `dist/`).
-3. **Initialize data home** – `node dist/cli/index.js init` (recreates `~/.memphis`).
-4. **Run the mandatory smoke** – the repo ships `scripts/smoke-test.sh`:
-   ```bash
-   chmod +x scripts/smoke-test.sh
-   bash scripts/smoke-test.sh
-   ```
-   It checks status, journals a tagged entry, exercises recall, reflections, graph, ingest dry-run, and daemon status—mirroring real workflows.
-5. **Regression tests** – `npm run build && npx vitest run` must stay green (currently 163 tests).
-
-### Command Handbook (All Commands)
-_Core memory_
-
-| Command | What it does / key flags |
-| --- | --- |
-| `memphis init` | Bootstrap `~/.memphis` store and config. |
-| `memphis journal <text> [--tags --force]` | Append entries; `--force` triggers autosummary. |
-| `memphis recall <scopeOrKeyword> [query]` | Keyword + semantic recall with `--chain`, `--tag`, `--since`, `--json`. |
-| `memphis ask <question>` | Pull recall context, knowledge graph, summaries; supports `--provider`, `--model`, `--graph`, `--no-save`. |
-| `memphis status [--json --verbose]` | Inspect providers, chain counts, daemon heartbeat. |
-| `memphis reflect [--daily|--weekly|--deep]` | Generate reflection summaries; `--save` stores outputs. |
-| `memphis summarize [--dry-run --force --llm]` | Manual autosummary trigger with block thresholds. |
-
-_Knowledge graph & ingestion_
-
-| Command | What it does / key flags |
-| --- | --- |
-| `memphis embed [--chain --since --limit --force]` | Build embeddings for recall/graph. |
-| `memphis ingest <path> [--chain --tags --embed --recursive --dry-run]` | Chunk + ingest docs or folders. |
-| `memphis watch [path] [--chain --no-embed --quiet]` | File watcher that ingests on change. |
-| `memphis graph build [--chains --threshold --limit --dry-run]` | Materialize triples into `graph` chain. |
-| `memphis graph show [nodeId] [--depth --tag --stats]` | Explore nodes, edges, and stats. |
-
-_Decisions, plans, agents_
-
-| Command | What it does / key flags |
-| --- | --- |
-| `memphis decide <title> <chosen>` | Record decisions with `--options`, `--scope`, `--mode`, `--confidence`. |
-| `memphis decide-fast <title>` | Ultra-fast <100ms capture with `--why`, `--tags`. |
-| `memphis infer [--since --threshold --json --prompt]` | Detect inferred decisions from git history. |
-| `memphis revise <decisionId> [--reasoning]` | Append a revision referencing the original decision. |
-| `memphis contradict <id> [--evidence --reasoning]` | Mark decision as contradicted. |
-| `memphis reinforce <id> [--evidence --reason]` | Strengthen decision with new evidence. |
-| `memphis decisions-inferred [--since]` | Interactive dashboard for inferred decisions. |
-| `memphis show decision <id>` | Display decision or record details. |
-| `memphis plan [--focus --goal --since --output --exec --yolo]` | Emit Codex-ready plans or JSON tasks. |
-| `memphis agent <start|stop|status|openclaw|collab> [options]` | Control automation agents, OpenClaw bridge. |
-| `memphis bot [start|webhook]` | Launch or configure the Telegram bot. |
-| `memphis tui [--screen]` | Start the terminal UI dashboard. |
-
-_Share, sync, vault_
-
-| Command | What it does / key flags |
-| --- | --- |
-| `memphis share-sync [--push --pull --all --limit --since --dry-run --push-disabled]` | Push/pull `share` chain blocks through Pinata/IPFS. |
-| `memphis share replicator [--plan --push --pull --file --limit --dry-run]` | Manage share manifests between Watra ↔ Style setups. |
-| `memphis vault <action> [key] [value] [--password-env --password-stdin]` | Initialize, list, add, fetch, or delete encrypted secrets. |
-| `memphis soul status [--pretty --workspace]` | Report SOUL/autonomy status for the workspace. |
-
-_Ops & safety_
-
-| Command | What it does / key flags |
-| --- | --- |
-| `memphis verify [--chain --json --verbose]` | Validate chain integrity. |
-| `memphis repair [--chain --dry-run --json]` | Quarantine or fix corrupted blocks. |
-| `memphis embed ...` | (see above) often rerun post-repair. |
-| `memphis share-sync ...` | (see above) ties into release gating. |
-| `memphis daemon <start|stop|status|restart|logs>` | Manage the background daemon / collectors. |
-
-_Daemon-adjacent utilities_
-
-| Command | What it does / key flags |
-| --- | --- |
-| `memphis reflect ...` | (see above) run scheduled reflections on demand. |
-| `memphis plan ...` | (see above) ensures Codex/self-coding feedback loop. |
-| `memphis share-sync ...` | (see above) replicates share-tagged payloads. |
-| `memphis ingest ...` | (see above) is your ingestion surface for daemon + manual flows. |
-
-> **Tip:** call commands either via `node dist/cli/index.js <cmd>` (direct) or install globally and use the `memphis` binary.
 
 ---
 
-### Best Workflow
+### 📚 Documentation
 
-Memphis grows over time. The more you feed it, the smarter it gets.
+**Getting Started:**
+- [Quick Start Guide](docs/QUICKSTART.md) — 5-minute setup
+- [Architecture](docs/ARCHITECTURE.md) — How it works
+- [API Reference](docs/API_REFERENCE.md) — Complete command reference
 
-**Week 1 — Just journal (no analysis yet)**
-```bash
-# Morning: set intention
-memphis journal "Today I want to..." --tags goal,focus
+**Models:**
+- [Model A Guide](docs/MODEL-A-GUIDE.md) — Conscious decisions
+- [Model B Guide](docs/MODEL-B-GUIDE.md) — Inferred decisions  
+- [Model C Guide](docs/MODEL-C-GUIDE.md) — Predictive decisions
 
-# During work: capture decisions and insights
-memphis journal "Decided: X instead of Y because..." --tags decision
-memphis journal "Problem: ... Solution: ..." --tags bug,fix
-memphis journal "Insight: ..." --tags insight
+**Advanced:**
+- [Decision Schema](docs/DECISION_SCHEMA.md) — Data format
+- [Integration Tests](docs/MODEL-C-INTEGRATION-TESTS.md) — Test suite
+- [Deployment](docs/DEPLOYMENT.md) — Production setup
 
-# Evening: end of day
-memphis journal "EOD: done X, tomorrow Y" --tags eod
+**Vision:**
+- [Project Vision](docs/VISION.md) — Where we're going
+- [Implementation Roadmap](docs/VISION-IMPLEMENTATION-ROADMAP.md) — How we get there
+
+---
+
+### 🏗️ Architecture
+
+**4-Layer Cognitive Architecture:**
+
+```
+┌─────────────────────────────────────────┐
+│  Layer 4: Interface (CLI/TUI/IDE)       │ ← Your interface
+├─────────────────────────────────────────┤
+│  Layer 3: Cognitive Engine (A+B+C)      │ ← Decision models
+├─────────────────────────────────────────┤
+│  Layer 2: Agent Runtime (Daemon/Watch)  │ ← Background agents
+├─────────────────────────────────────────┤
+│  Layer 1: Memory Ledger (Chains)        │ ← Persistent storage
+└─────────────────────────────────────────┘
 ```
 
-**Week 2 — First embeddings and graph**
+**Components:**
+- **Memory Chains** — Journal, decisions, ask (blockchain-inspired)
+- **Embeddings** — Semantic search (Ollama nomic-embed-text)
+- **Intelligence** — Auto-categorization, pattern matching
+- **Daemon** — Background agents (git collector, shell collector)
+- **Sync** — Multi-agent synchronization (IPFS/Pinata)
+
+---
+
+### 🎯 Use Cases
+
+**For Developers:**
+- Track technical decisions ("Why did I choose X?")
+- Learn from past choices
+- Predict future decisions
+- Onboarding documentation (decision archaeology)
+
+**For Entrepreneurs:**
+- Strategic decision tracking
+- Business pattern recognition
+- Proactive decision support
+- Decision accountability
+
+**For Teams:**
+- Collective decision memory
+- Decision archaeology (why did we do X?)
+- Pattern sharing across agents
+- Knowledge transfer
+
+**For Lifelong Learners:**
+- Learning journal
+- Pattern recognition in behavior
+- Self-reflection tool
+- Decision analytics
+
+---
+
+### 📊 Performance
+
+**v2.0.0 Benchmarks:**
+
+| Metric | Target | Actual | Status |
+|--------|--------|--------|--------|
+| Decision Capture | <100ms | 92ms | ✅ |
+| Inference Engine | <1000ms | 641ms | ✅ |
+| Pattern Learning | <2000ms | 1049ms | ✅ |
+| Prediction Gen | <1000ms | 660ms | ✅ |
+| Context Analysis | <1000ms | 610ms | ✅ |
+
+**Tests:**
+- Integration Tests: 8/8 passing (100%)
+- Unit Tests: 182+ tests passing
+- Accuracy: 77.2% (auto-categorization)
+
+---
+
+### 🔒 Privacy & Security
+
+**Local-First:**
+- All data stored locally in `~/.memphis/`
+- No cloud required
+- No telemetry
+- No tracking
+
+**Optional Sync:**
+- IPFS/Pinata for encrypted sync
+- Multi-agent support (opt-in)
+- Vault for secrets (24-word seed)
+
+**Data Ownership:**
+- You own your chains
+- Export anytime (`memphis export`)
+- Delete anytime (delete `~/.memphis/`)
+
+---
+
+### 🤝 Community
+
+**Get Help:**
+- [Discord](https://discord.gg/clawd) — Community support
+- [GitHub Issues](https://github.com/elathoxu-crypto/memphis/issues) — Bug reports
+- [Documentation](https://docs.openclaw.ai) — Guides & API
+
+**Contributing:**
+- Fork & PR welcome
+- See [CONTRIBUTING.md](CONTRIBUTING.md)
+- Check [VISION.md](docs/VISION.md) for direction
+
+---
+
+### 📦 Installation
+
+**Requirements:**
+- Node.js 18+
+- Git (for Model B inference)
+- Ollama (optional, for embeddings)
+
+**Install:**
 ```bash
-memphis embed                  # once a day (after journaling)
-memphis graph build            # after embed
-memphis reflect --weekly       # every Friday
+# Clone
+git clone https://github.com/elathoxu-crypto/memphis.git
+cd memphis
+
+# Install dependencies
+npm install
+
+# Build
+npm run build
+
+# Initialize
+node dist/cli/index.js init
+
+# Verify
+node dist/cli/index.js doctor
+# ✓ All systems healthy! 9/9 checks passed
 ```
 
-**Week 3+ — Ask questions with context**
-```bash
-memphis ask "what decisions did I make about architecture?"
-memphis ask "what problems are still unresolved?"
-memphis recall decision --since 7d
-```
+---
 
-**Always on — daemon in background**
-```bash
-memphis daemon start           # captures git commits + shell history automatically
-```
+### 🗺️ Roadmap
 
-> 💡 **Rule of thumb:** graph clusters appear after ~20 blocks. Real insights start at ~100. At 1000+ blocks Memphis becomes a map of your thinking.
+**v2.0.0** (Current) ✅
+- ✅ Model A: Conscious decisions
+- ✅ Model B: Inferred decisions
+- ✅ Model C: Predictive decisions
+- ✅ Complete documentation
+
+**v2.1.0** (Next)
+- [ ] Knowledge graph integration
+- [ ] Multi-agent pattern sharing
+- [ ] IDE integration (VS Code)
+- [ ] Web dashboard
+
+**v3.0.0** (Future)
+- [ ] Model D: Collective decisions
+- [ ] Model E: Meta-cognitive
+- [ ] Machine learning models
+- [ ] Team features
+
+---
+
+### 📜 License
+
+MIT License — See [LICENSE](LICENSE)
+
+---
+
+### 🙏 Credits
+
+Created by **Elathoxu Abbylan** (Memphis)
+
+Built with:
+- TypeScript
+- Node.js
+- Ollama
+- IPFS/Pinata
+
+Inspired by:
+- Local-first software movement
+- Cognitive architecture research
+- Decision theory
 
 ---
 
 ## Polski
 
-### Opis
-Memphis to lokalny silnik poznawczy: zapisuje każdy blok w łańcuchach z hashem SHA256, miesza wyszukiwanie słowne z embeddingami, buduje graf wiedzy, prowadzi automatyczne refleksje i posiada demona pilnującego repozytoriów.
+Memphis to **silnik poznawczy** który pomaga śledzić, uczyć się i przewidywać decyzje:
 
-### Architektura ASCII
-```
-                 ┌────────────┐        ┌────────────┐
-  Pliki / Git ──▶│  ingest    │──┬────▶│  chains    │◀─────┐   CLI lokalne
-  Plany / LLM ──▶│  journal   │  │     │ (SHA256)   │      │   (ask/tui)
-                 └────┬───────┘  │     └────┬───────┘      │
-                      │          │          │              │
-                      │          │    ┌─────▼────┐   ┌─────▼────┐
-                      │          └───▶│  recall  │   │  reflect │
-                      │               └────┬─────┘   └────┬─────┘
-                      │                    │              │
-                      │               ┌────▼────┐   ┌─────▼────┐
-                      └──────────────▶│  graph  │──▶│   ask    │
-                                       └────┬───┘   └──────────┘
-                                            │
-                                      ┌─────▼─────┐
-                                      │  daemon   │ (watchers, share-sync, autosummary)
-                                      └───────────┘
-```
+- **Model A** — Ręczne zapisywanie decyzji
+- **Model B** — Automatyczne wykrywanie z gita
+- **Model C** — Przewidywanie decyzji
 
-### Szybki start + smoke test
-1. `git clone … && cd memphis && npm install`.
-2. `npm run build` aby wygenerować `dist/`.
-3. `node dist/cli/index.js init` – tworzy świeże `~/.memphis`.
-4. Test dymny:
-   ```bash
-   chmod +x scripts/smoke-test.sh
-   bash scripts/smoke-test.sh
-   ```
-5. Regressje: `npm run build && npx vitest run` (163 testów powinno przejść).
-
-### Tabela komend (pełna)
-| Komenda | Opis |
-| --- | --- |
-| `memphis init` | Inicjuje katalog domowy Memphis. |
-| `memphis journal <tekst> [--tags --force]` | Dodaje wpis do łańcucha journal, `--force` wymusza autosummary. |
-| `memphis recall <zakres|słowo> [query]` | Szuka po słowach, tagach, czasie, z opcją `--json`. |
-| `memphis ask <pytanie>` | Zadaje pytanie z kontekstem recall/graph; wybierz model i providera. |
-| `memphis status [--json --verbose]` | Stan łańcuchów, providerów i demona. |
-| `memphis reflect [--daily|--weekly|--deep]` | Generuje refleksje i (opcjonalnie) zapisuje je. |
-| `memphis summarize [--dry-run --force --llm]` | Ręczne wyzwolenie autosummaries. |
-| `memphis embed [...]` | Buduje embeddingi dla wybranych łańcuchów. |
-| `memphis ingest <ścieżka> [...]` | Wczytuje pliki/katalogi do pamięci, może od razu embedować. |
-| `memphis watch [ścieżka] [...]` | Nasłuchuje zmian i wywołuje ingest. |
-| `memphis graph build [...]` | Buduje graf wiedzy z progami podobieństwa. |
-| `memphis graph show [nodeId] [...]` | Pokazuje węzły, krawędzie lub statystyki grafu. |
-| `memphis decide <tytuł> <wybór>` | Rejestruje decyzję wraz z kontekstem. |
-| `memphis show decision <id>` | Wyświetla konkretną decyzję/blok. |
-| `memphis revise <decisionId>` | Dodaje rewizję dla wcześniejszej decyzji. |
-| `memphis plan [...]` | Buduje plan dla agenta Codex/self-coding. |
-| `memphis agent <akcja>` | Steruje agentami (start/stop/status/openclaw/collab). |
-| `memphis bot [start|webhook]` | Bot telegramowy. |
-| `memphis tui [--screen]` | Uruchamia TUI. |
-| `memphis share-sync [...]` | Push/pull łańcucha `share` (IPFS/Pinata). |
-| `memphis share replicator [...]` | Zarządza manifestami Watra ↔ Style. |
-| `memphis vault <akcja>` | Szyfruje sekret (`init/add/list/get/delete`). |
-| `memphis soul status [...]` | Status SOUL/autonomy dla workspace. |
-| `memphis verify [...]` | Sprawdza integralność łańcucha. |
-| `memphis repair [...]` | Naprawia / izoluje uszkodzone bloki. |
-| `memphis daemon <start|stop|status|restart|logs>` | Kontroluje proces demona. |
-
-Dbaj o zachowanie workflowu: smoke-test, `npm run build`, `npx vitest run`, a przed wydaniem wypchnij `share` oraz dziennik zmian.
+**Dokumentacja:** [QUICKSTART.md](docs/QUICKSTART.md) | [MODEL-C-GUIDE.md](docs/MODEL-C-GUIDE.md)
 
 ---
 
-### Najlepszy workflow
+**Status:** v2.0.0 Production Ready ✅  
+**GitHub:** https://github.com/elathoxu-crypto/memphis  
+**Discord:** https://discord.gg/clawd
 
-Memphis rośnie z czasem. Im więcej karmisz, tym mądrzejszy staje się.
+---
 
-**Tydzień 1 — sam journaling (bez analizy)**
-```bash
-# Rano: intencja
-memphis journal "Dziś chcę..." --tags cel,focus
-
-# W trakcie: decyzje i insighty
-memphis journal "Postanawiam: X zamiast Y bo..." --tags decyzja
-memphis journal "Problem: ... Rozwiązanie: ..." --tags bug,fix
-memphis journal "Insight: ..." --tags insight
-
-# Wieczór: koniec dnia
-memphis journal "EOD: zrobiłem X, jutro Y" --tags eod
-```
-
-**Tydzień 2 — pierwsze embeddingi i graf**
-```bash
-memphis embed                  # raz dziennie po journalowaniu
-memphis graph build            # po embed
-memphis reflect --weekly       # co piątek
-```
-
-**Tydzień 3+ — pytania z kontekstem**
-```bash
-memphis ask "jakie decyzje podjąłem o architekturze?"
-memphis ask "jakie problemy są nierozwiązane?"
-memphis recall decyzja --since 7d
-```
-
-**Zawsze — daemon w tle**
-```bash
-memphis daemon start           # łapie git commity i historię shella automatycznie
-```
-
-> 💡 **Zasada kciuka:** klastry w grafie pojawiają się po ~20 blokach. Prawdziwe insighty od ~100. Przy 1000+ blokach Memphis staje się mapą Twojego myślenia.
+*Made with 🧠 by Memphis*
