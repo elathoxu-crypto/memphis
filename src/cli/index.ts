@@ -53,6 +53,7 @@ import { intelligenceCommand } from "./commands/intelligence.js";
 import { inferCommand } from "./commands/infer.js";
 import { contradictCommand } from "./commands/contradict.js";
 import { reinforceCommand } from "./commands/reinforce.js";
+import { decideFastCommand } from "./commands/decide-fast.js";
 import { graphBuildCommand, graphShowCommand } from "./commands/graph.js";
 import { createWorkspaceStore } from "./utils/workspace-store.js";
 import { writeWorkspaceSelection, getWorkspaceSelectionFilePath } from "../security/workspace.js";
@@ -766,6 +767,21 @@ program
     reinforceCommand(id, {
       evidence: options.evidence,
       reason: options.reason
+    });
+  });
+
+// Frictionless Capture - Ultra-fast decision capture
+program
+  .command("decide-fast <title>")
+  .description("Ultra-fast decision capture (<100ms, no LLM)")
+  .option("-w, --why <text>", "Why did you choose this?", "")
+  .option("-t, --tags <tags>", "Tags (comma-separated)", "")
+  .option("-a, --ask", "Interactive mode - ask for reasoning", false)
+  .action((title, options) => {
+    decideFastCommand(title, {
+      why: options.why,
+      tags: options.tags,
+      ask: options.ask
     });
   });
 
