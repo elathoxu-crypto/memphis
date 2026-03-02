@@ -14,10 +14,11 @@ import { OpenAIProvider } from "../providers/openai.js";
 import { OpenRouterProvider } from "../providers/openrouter.js";
 import { MiniMaxProvider } from "../providers/minimax.js";
 import { OllamaProvider } from "../providers/ollama.js";
+import { ZAIProvider } from "../providers/zai.js";
 import { getProviderApiKey, isVaultInitialized } from "./vault-providers.js";
 import type { Provider } from "../providers/index.js";
 
-export type SupportedProvider = "openai" | "openrouter" | "minimax" | "ollama";
+export type SupportedProvider = "openai" | "openrouter" | "minimax" | "ollama" | "zai";
 
 export interface CreateProviderOptions {
   /** Password for vault decryption */
@@ -79,6 +80,15 @@ export async function createProvider(
       return { provider: new OllamaProvider(), source: "fallback" };
     }
     
+    case "zai": {
+      if (apiKey) {
+        const p = new ZAIProvider();
+        (p as any).apiKey = apiKey;
+        return { provider: p, source: "vault" };
+      }
+      return { provider: new OllamaProvider(), source: "fallback" };
+    }
+    
     default:
       throw new Error(`Unknown provider: ${name}`);
   }
@@ -92,7 +102,7 @@ export async function createBestProvider(
   options: CreateProviderOptions = {}
 ): Promise<ProviderResult> {
   // Try in order of preference
-  const providers: SupportedProvider[] = ["openai", "openrouter", "minimax", "ollama"];
+  const providers: SupportedProvider[] = ["openai", "zai", "openrouter", "minimax", "ollama"];
   
   for (const name of providers) {
     try {

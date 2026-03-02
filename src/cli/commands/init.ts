@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { MEMPHIS_HOME, CONFIG_PATH, CHAINS_PATH, EMBEDDINGS_PATH } from "../../config/defaults.js";
 import { log } from "../../utils/logger.js";
@@ -6,6 +6,21 @@ import { promptHidden, promptYesNo } from "../utils/prompt.js";
 import { sha256 } from "../../utils/hash.js";
 import { detectEnvironment, getRecommendedProvider, checkEmbeddingsSupport } from "../../utils/environment.js";
 import chalk from "chalk";
+import * as readline from "readline";
+
+async function promptInput(question: string): Promise<string> {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+  });
+
+  return new Promise((resolve) => {
+    rl.question(question, (answer) => {
+      rl.close();
+      resolve(answer.trim());
+    });
+  });
+}
 
 const DEFAULT_YAML = `# Memphis configuration
 # Docs: https://github.com/oswobodzeni/memphis
@@ -129,6 +144,7 @@ export async function initCommand() {
     console.log(chalk.gray(`    Available models: ${env.ollamaModels.slice(0, 3).join(", ")}${env.ollamaModels.length > 3 ? "..." : ""}`));
   }
   console.log(`  ${env.openaiKey ? chalk.green("✓") : chalk.yellow("⚠")} OpenAI API key ${env.openaiKey ? "" : "(not found)"}`);
+  console.log(`  ${env.zaiKey ? chalk.green("✓") : chalk.yellow("⚠")} ZAI API key ${env.zaiKey ? "(49 chars)" : "(not found)"}`);
   console.log(`  ${env.minimaxKey ? chalk.green("✓") : chalk.yellow("⚠")} MiniMax API key ${env.minimaxKey ? "" : "(not found)"}`);
   console.log(`  ${env.openrouterKey ? chalk.green("✓") : chalk.yellow("⚠")} OpenRouter API key ${env.openrouterKey ? "" : "(not found)"}`);
   console.log("");
@@ -141,6 +157,7 @@ export async function initCommand() {
   let selectedProvider = recommended.provider;
   let selectedModel = recommended.model;
   let enableEmbeddings = embeddingsSupport.available;
+  let apiKey = "";
 
   if (!process.stdin.isTTY || !process.stdout.isTTY) {
     // Non-interactive mode - use recommended config
@@ -157,9 +174,48 @@ export async function initCommand() {
       const useRecommended = await promptYesNo("  Use recommended? (Y/n): ", true);
       
       if (!useRecommended) {
-        console.log(chalk.yellow("\n  Manual configuration required."));
-        console.log(chalk.gray("  Edit ~/.memphis/config.yaml after setup.\n"));
-        selectedProvider = "manual";
+        // Show provider selection menu
+        console.log(chalk.cyan("\n?") + " Select provider:");
+        console.log(chalk.white("  1. Ollama (local, offline)"));
+        console.log(chalk.white("  2. ZAI/GLM (cloud, requires API key)"));
+        console.log(chalk.white("  3. OpenAI (cloud, requires API key)"));
+        console.log(chalk.white("  4. MiniMax (cloud, requires API key)"));
+        console.log(chalk.white("  5. Manual config"));
+        
+        const choice = await promptInput(chalk.cyan("?") + " Provider number (1-5): ");
+        
+        switch (choice) {
+          case "1":
+            selectedProvider = "ollama";
+            selectedModel = env.ollamaModels[0]?.split(":")[0] || "qwen2.5-coder";
+            break;
+          case "2":
+            selectedProvider = "zai";
+            selectedModel = "zai/glm-5";
+            console.log(chalk.cyan("\n?") + " ZAI API key (49 characters)");
+            console.log(chalk.gray("  Get your key at: https://zukijourney.com"));
+            apiKey = await promptHidden(chalk.cyan("?") + " API key: ");
+            if (apiKey.length !== 49) {
+              console.log(chalk.yellow("  Warning: API key should be 49 characters"));
+            }
+            break;
+          case "3":
+            selectedProvider = "openai";
+            selectedModel = "gpt-4o-mini";
+            console.log(chalk.cyan("\n?") + " OpenAI API key");
+            apiKey = await promptHidden(chalk.cyan("?") + " API key: ");
+            break;
+          case "4":
+            selectedProvider = "minimax";
+            selectedModel = "abab6.5-chat";
+            console.log(chalk.cyan("\n?") + " MiniMax API key");
+            apiKey = await promptHidden(chalk.cyan("?") + " API key: ");
+            break;
+          case "5":
+          default:
+            selectedProvider = "manual";
+            break;
+        }
       }
     } else {
       console.log(chalk.yellow("\n⚠ No providers detected."));
@@ -188,7 +244,7 @@ export async function initCommand() {
   mkdirSync(CHAINS_PATH, { recursive: true });
 
   // Generate config YAML based on selections
-  const configYaml = generateConfigYaml(selectedProvider, selectedModel, enableEmbeddings);
+  const configYaml = generateConfigYaml(selectedProvider, selectedModel, enableEmbeddings, apiKey);
   writeFileSync(CONFIG_PATH, configYaml, "utf-8");
 
   // ─── Security Setup ─────────────────────────────────────────────────────
@@ -230,7 +286,7 @@ export async function initCommand() {
   }
 }
 
-function generateConfigYaml(provider: string, model: string, embeddings: boolean): string {
+function generateConfigYaml(provider: string, model: string, embeddings: boolean, apiKey?: string): string {
   if (provider === "manual" || provider === "none") {
     return DEFAULT_YAML;
   }
@@ -245,17 +301,35 @@ function generateConfigYaml(provider: string, model: string, embeddings: boolean
     yaml += `    url: http://127.0.0.1:11434/v1\n`;
     yaml += `    model: ${model}\n`;
     yaml += `    role: primary\n`;
+  } else if (provider === "zai") {
+    yaml += `  zai:\n`;
+    yaml += `    url: https://api.zukijourney.com/v1\n`;
+    yaml += `    model: ${model}\n`;
+    if (apiKey && apiKey.length === 49) {
+      yaml += `    api_key: ${apiKey}\n`;
+    } else {
+      yaml += `    api_key: \${ZAI_API_KEY}\n`;
+    }
+    yaml += `    role: primary\n`;
   } else if (provider === "openai") {
     yaml += `  openai:\n`;
     yaml += `    url: https://api.openai.com/v1\n`;
     yaml += `    model: ${model}\n`;
-    yaml += `    api_key: \${OPENAI_API_KEY}\n`;
+    if (apiKey) {
+      yaml += `    api_key: ${apiKey}\n`;
+    } else {
+      yaml += `    api_key: \${OPENAI_API_KEY}\n`;
+    }
     yaml += `    role: primary\n`;
   } else if (provider === "minimax") {
     yaml += `  minimax:\n`;
     yaml += `    url: https://api.minimax.chat/v1\n`;
     yaml += `    model: ${model}\n`;
-    yaml += `    api_key: \${MINIMAX_API_KEY}\n`;
+    if (apiKey) {
+      yaml += `    api_key: ${apiKey}\n`;
+    } else {
+      yaml += `    api_key: \${MINIMAX_API_KEY}\n`;
+    }
     yaml += `    role: primary\n`;
   }
   

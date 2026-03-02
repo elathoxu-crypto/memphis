@@ -15,6 +15,7 @@ export interface EnvironmentInfo {
   openaiKey: boolean;
   minimaxKey: boolean;
   openrouterKey: boolean;
+  zaiKey: boolean;
   homeDir: string;
 }
 
@@ -49,6 +50,7 @@ export function detectEnvironment(): EnvironmentInfo {
   const openaiKey = !!process.env.OPENAI_API_KEY;
   const minimaxKey = !!process.env.MINIMAX_API_KEY;
   const openrouterKey = !!process.env.OPENROUTER_API_KEY;
+  const zaiKey = !!(process.env.ZAI_API_KEY && process.env.ZAI_API_KEY.length === 49);
   
   return {
     nodeVersion,
@@ -58,6 +60,7 @@ export function detectEnvironment(): EnvironmentInfo {
     openaiKey,
     minimaxKey,
     openrouterKey,
+    zaiKey,
     homeDir: home
   };
 }
@@ -81,6 +84,15 @@ export function getRecommendedProvider(env: EnvironmentInfo): {
       provider: "ollama",
       model: model.split(":")[0], // Remove :latest suffix
       reason: "Local, offline-capable, no API costs"
+    };
+  }
+  
+  // Fall back to ZAI if key available (good performance/cost ratio)
+  if (env.zaiKey) {
+    return {
+      provider: "zai",
+      model: "zai/glm-5",
+      reason: "Cloud-based, good performance"
     };
   }
   
