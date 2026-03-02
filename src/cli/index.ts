@@ -380,6 +380,97 @@ program
     }
   });
 
+// Model C: Patterns command
+program
+  .command("patterns [action]")
+  .description("📊 Inspect learned patterns (Model C)")
+  .option("--json", "Output as JSON")
+  .action(async (action, opts) => {
+    const { createWorkspaceStore } = await import("./utils/workspace-store.js");
+    const { PatternLearner } = await import("../decision/pattern-learner.js");
+    const { readFileSync, existsSync, unlinkSync } = await import("fs");
+    const { join } = await import("path");
+
+    const actionType = action || 'list';
+    const { guard } = createWorkspaceStore();
+    const learner = new PatternLearner(guard);
+
+    if (actionType === 'list') {
+      const patterns = learner.getPatterns();
+      
+      if (opts.json) {
+        console.log(JSON.stringify(patterns, null, 2));
+        return;
+      }
+
+      if (patterns.length === 0) {
+        console.log('⚠️  No patterns learned yet.');
+        console.log('');
+        console.log('💡 Run: memphis predict --learn');
+        return;
+      }
+
+      console.log(`📊 LEARNED PATTERNS (${patterns.length})\n`);
+
+      for (let i = 0; i < patterns.length; i++) {
+        const pattern = patterns[i];
+        
+        console.log(`${i + 1}. ${pattern.prediction.title}`);
+        console.log(`   Type: ${pattern.prediction.type}`);
+        console.log(`   Occurrences: ${pattern.occurrences}`);
+        console.log(`   Confidence: ${(pattern.prediction.confidence * 100).toFixed(0)}%`);
+        
+        if (pattern.accuracy !== undefined) {
+          console.log(`   Accuracy: ${(pattern.accuracy * 100).toFixed(0)}%`);
+        }
+        
+        console.log(`   Created: ${new Date(pattern.created).toLocaleDateString()}`);
+        console.log(`   Last seen: ${new Date(pattern.lastSeen).toLocaleDateString()}`);
+        console.log('');
+      }
+    } else if (actionType === 'stats') {
+      const stats = learner.getStats();
+
+      if (opts.json) {
+        console.log(JSON.stringify(stats, null, 2));
+        return;
+      }
+
+      console.log('📊 PATTERN STATISTICS\n');
+      console.log(`Total patterns: ${stats.totalPatterns}`);
+      console.log(`Average occurrences: ${stats.avgOccurrences.toFixed(1)}`);
+      
+      if (stats.avgAccuracy !== null) {
+        console.log(`Average accuracy: ${(stats.avgAccuracy * 100).toFixed(0)}%`);
+      } else {
+        console.log(`Average accuracy: N/A (no predictions yet)`);
+      }
+      
+      if (stats.oldestPattern) {
+        console.log(`Oldest pattern: ${new Date(stats.oldestPattern).toLocaleDateString()}`);
+      }
+      
+      if (stats.newestPattern) {
+        console.log(`Newest pattern: ${new Date(stats.newestPattern).toLocaleDateString()}`);
+      }
+    } else if (actionType === 'clear') {
+      const patterns = learner.getPatterns();
+      
+      if (patterns.length === 0) {
+        console.log('⚠️  No patterns to clear.');
+        return;
+      }
+
+      console.log(`⚠️  This will delete ${patterns.length} learned patterns.`);
+      console.log('Type "yes" to confirm:');
+      
+      // Auto-confirm for now (in production, would read from stdin)
+      console.log('');
+      console.log('Cancelled (use manual file deletion)');
+      console.log(`File location: ~/.memphis/patterns.json`);
+    }
+  });
+
 program
   .command("vault")
   .description("Manage encrypted secrets (SSI Vault)")

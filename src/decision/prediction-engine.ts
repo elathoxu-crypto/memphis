@@ -9,6 +9,7 @@
 
 import { PatternLearner, DecisionPattern, Prediction, DecisionContext } from './pattern-learner.js';
 import { ContextAnalyzer, CurrentContext } from './context-analyzer.js';
+import { ContextMatcher, ContextMatch } from './context-matcher.js';
 
 // ============================================================================
 // TYPES
@@ -39,6 +40,7 @@ export interface PredictionResult {
 export class PredictionEngine {
   private learner: PatternLearner;
   private analyzer: ContextAnalyzer;
+  private matcher: ContextMatcher;
   private config: PredictionConfig;
 
   constructor(
@@ -48,6 +50,16 @@ export class PredictionEngine {
   ) {
     this.learner = learner;
     this.analyzer = analyzer;
+    this.matcher = new ContextMatcher({
+      weights: {
+        activity: 0.3,
+        time: 0.15,
+        files: 0.25,
+        branch: 0.15,
+        graph: 0.15,
+      },
+      minScore: 0.5,
+    });
     this.config = {
       minConfidence: config?.minConfidence || 0.6,
       maxPredictions: config?.maxPredictions || 5,
@@ -67,11 +79,11 @@ export class PredictionEngine {
     // 2. Get all patterns
     const patterns = this.learner.getPatterns();
 
-    // 3. Match patterns to context
-    const matchedPatterns = this.matchPatterns(patterns, patternContext);
+    // 3. Match patterns to context (using advanced matcher)
+    const matches = this.matcher.matchPatterns(patterns, currentContext, patternContext);
 
     // 4. Score and rank predictions
-    const predictions = this.scorePredictions(matchedPatterns, patternContext);
+    const predictions = this.scorePredictions(matches);
 
     // 5. Filter and diversify
     const filtered = this.filterAndDiversify(predictions);
@@ -81,7 +93,7 @@ export class PredictionEngine {
       context: currentContext,
       patternContext,
       stats: {
-        patternsMatched: matchedPatterns.length,
+        patternsMatched: matches.length,
         patternsTotal: patterns.length,
         avgConfidence: filtered.length > 0 
           ? filtered.reduce((sum, p) => sum + p.confidence, 0) / filtered.length 
@@ -158,17 +170,19 @@ export class PredictionEngine {
   }
 
   /**
-   * Score predictions from patterns
+   * Score predictions from matches
    */
-  private scorePredictions(
-    patterns: DecisionPattern[],
-    context: DecisionContext
-  ): Prediction[] {
+  private scorePredictions(matches: ContextMatch[]): Prediction[] {
     const predictions: Prediction[] = [];
 
-    for (const pattern of patterns) {
+    for (const match of matches) {
+      const pattern = match.pattern;
+      
       // Calculate confidence
       let confidence = pattern.prediction.confidence;
+
+      // Boost for match score
+      confidence *= (0.5 + match.score * 0.5); // Scale by match quality
 
       // Boost for recency
       const daysSinceLast = this.daysSince(pattern.lastSeen);
@@ -195,7 +209,7 @@ export class PredictionEngine {
         title: pattern.prediction.title,
         confidence: Math.round(confidence * 1000) / 1000, // Round to 3 decimals
         basedOn: pattern.prediction.evidence.slice(0, 5),
-        evidence: this.getEvidenceDescriptions(pattern),
+        evidence: this.getEvidenceDescriptions(pattern, match),
         pattern,
       });
     }
@@ -209,13 +223,14 @@ export class PredictionEngine {
   /**
    * Get evidence descriptions
    */
-  private getEvidenceDescriptions(pattern: DecisionPattern): string[] {
-    // Return simplified evidence
+  private getEvidenceDescriptions(pattern: DecisionPattern, match: ContextMatch): string[] {
+    // Return simplified evidence with match reason
     return [
       `${pattern.occurrences} similar decisions`,
       pattern.accuracy 
         ? `${Math.round(pattern.accuracy * 100)}% accuracy`
         : 'New pattern',
+      match.reason,
     ];
   }
 
