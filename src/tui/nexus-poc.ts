@@ -3,7 +3,7 @@
  * Multi-agent chat interface using @mariozechner/pi-tui
  */
 
-import { TUI, Text, Box, Container, ProcessTerminal, Editor } from "@mariozechner/pi-tui";
+import { TUI, Text, Box, Container, ProcessTerminal, Editor, type AutocompleteProvider, type AutocompleteItem } from "@mariozechner/pi-tui";
 import chalk from "chalk";
 import { NexusChainIntegration } from "./nexus-chain.js";
 import * as fs from "fs";
@@ -11,6 +11,71 @@ import * as path from "path";
 import { checkTimeTriggers, type Suggestion } from "../intelligence/suggestions.js";
 import { recall, type RecallQuery, type RecallHit } from "../core/recall.js";
 import { Store } from "../memory/store.js";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AUTOCOMPLETE PROVIDER
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Memphis command autocomplete provider for pi-tui Editor
+ * Suggests commands like /j, /a, /search, etc.
+ */
+class MemphisAutocompleteProvider implements AutocompleteProvider {
+  private commands: AutocompleteItem[] = [
+    { value: "/j ", label: "/j", description: "Quick journal entry" },
+    { value: "/a ", label: "/a", description: "Ask Memphis a question" },
+    { value: "/d ", label: "/d", description: "Record a decision" },
+    { value: "/search ", label: "/search", description: "Search memories" },
+    { value: "/recall ", label: "/recall", description: "Recall from chains" },
+    { value: "/s ", label: "/s", description: "Short alias for /search" },
+    { value: "/sync", label: "/sync", description: "Show network sync status" },
+    { value: "/help", label: "/help", description: "Show available commands" },
+    { value: "/clear", label: "/clear", description: "Clear chat history" },
+    { value: "/quit", label: "/quit", description: "Exit TUI (or press q)" },
+  ];
+
+  getSuggestions(lines: string[], cursorLine: number, cursorCol: number): { items: AutocompleteItem[]; prefix: string; } | null {
+    // Only autocomplete at start of first line (command mode)
+    if (cursorLine !== 0 || cursorCol < 1) return null;
+    
+    const line = lines[0] || "";
+    
+    // Check if we're typing a command (starts with /)
+    if (!line.startsWith("/")) return null;
+    
+    // Extract the prefix (command being typed)
+    const prefix = line.substring(0, cursorCol);
+    
+    // Filter commands that match the prefix
+    const items = this.commands.filter(cmd => 
+      cmd.value.startsWith(prefix) || cmd.label.startsWith(prefix)
+    );
+    
+    if (items.length === 0) return null;
+    
+    return { items, prefix };
+  }
+
+  applyCompletion(lines: string[], cursorLine: number, cursorCol: number, item: AutocompleteItem, prefix: string): { lines: string[]; cursorLine: number; cursorCol: number; } {
+    // Replace the prefix with the completion
+    const line = lines[0] || "";
+    const beforePrefix = line.substring(0, line.indexOf(prefix));
+    const afterCursor = line.substring(cursorCol);
+    
+    // Insert the completed value
+    const newLine = beforePrefix + item.value + afterCursor;
+    const newLines = [newLine, ...lines.slice(1)];
+    
+    // Position cursor after the completed text
+    const newCursorCol = (beforePrefix + item.value).length;
+    
+    return { 
+      lines: newLines, 
+      cursorLine: 0, 
+      cursorCol: newCursorCol 
+    };
+  }
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // AGENT IDENTITY
@@ -331,6 +396,12 @@ export class NexusChatTUI {
       this.handleInput(text);
       // Note: pi-tui Editor clears itself after onSubmit
     };
+    
+    // Setup autocomplete provider for Memphis commands
+    const autocompleteProvider = new MemphisAutocompleteProvider();
+    this.editor.setAutocompleteProvider(autocompleteProvider);
+    this.editor.setAutocompleteMaxVisible(8);
+    
     root.addChild(this.editor);
 
     // ─── Status Bar ──────────────────────────────────────────────────────────
