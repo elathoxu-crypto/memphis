@@ -279,6 +279,7 @@ program
   .option("-c, --confidence <n>", "Confidence 0-1", "1")
   .option("-l, --links <links>", "Related decision IDs (pipe-separated)", "")
   .option("-e, --evidence <evidence>", "Evidence refs for inferred (pipe-separated)", "")
+  .option("-t, --tags <tags>", "Tags (comma-separated)", "")
   .action((title: string, chosen: string, opts: any) => {
     decideCommand(title, {
       options: opts.options,
@@ -287,6 +288,7 @@ program
       scope: opts.scope,
       mode: opts.mode,
       confidence: opts.confidence,
+      tags: opts.tags,
       links: opts.links,
       evidenceRefs: opts.evidence,
     });
