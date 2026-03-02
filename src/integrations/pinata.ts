@@ -74,9 +74,29 @@ export class PinataBridge {
     });
   }
 
+  /**
+   * Sanitize JSON data by removing control characters
+   * Fix for "Bad control character in string literal" error
+   */
+  private sanitizeJSONData(data: any): any {
+    const str = JSON.stringify(data);
+    // Remove control characters except standard whitespace
+    const cleaned = str.replace(/[\x00-\x1F\x7F]/g, (char) => {
+      // Keep standard whitespace: \n, \r, \t
+      if (char === '\n' || char === '\r' || char === '\t') {
+        return char;
+      }
+      return '';
+    });
+    return JSON.parse(cleaned);
+  }
+
   async pinJSON(data: MemoryBlock): Promise<string> {
+    // Sanitize data first (fix for Pinata JSON parsing error)
+    const sanitizedData = this.sanitizeJSONData(data);
+
     // Validate size (max 2KB)
-    const json = JSON.stringify(data);
+    const json = JSON.stringify(sanitizedData);
     const sizeKB = json.length / 1024;
 
     if (sizeKB > 2) {
@@ -84,9 +104,9 @@ export class PinataBridge {
     }
 
     const body = JSON.stringify({
-      pinataContent: data,
+      pinataContent: sanitizedData,
       pinataMetadata: {
-        name: `${data.agent}_${data.timestamp}`,
+        name: `${sanitizedData.agent}_${sanitizedData.timestamp}`,
       },
     });
 
