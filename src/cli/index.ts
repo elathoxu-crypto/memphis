@@ -54,6 +54,7 @@ import { inferCommand } from "./commands/infer.js";
 import { contradictCommand } from "./commands/contradict.js";
 import { reinforceCommand } from "./commands/reinforce.js";
 import { decideFastCommand } from "./commands/decide-fast.js";
+import { decisionsInferredCommand } from "./commands/decisions-inferred.js";
 import { graphBuildCommand, graphShowCommand } from "./commands/graph.js";
 import { createWorkspaceStore } from "./utils/workspace-store.js";
 import { writeWorkspaceSelection, getWorkspaceSelectionFilePath } from "../security/workspace.js";
@@ -782,6 +783,17 @@ program
       why: options.why,
       tags: options.tags,
       ask: options.ask
+    });
+  });
+
+// TUI: Inferred Decisions Dashboard
+program
+  .command("decisions-inferred")
+  .description("Interactive dashboard for inferred decisions")
+  .option("--since <days>", "Analyze commits from last N days", "7")
+  .action((options) => {
+    decisionsInferredCommand({
+      since: options.since
     });
   });
 
