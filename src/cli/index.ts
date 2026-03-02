@@ -51,6 +51,8 @@ import { registerTradeCommand } from "./commands/trade.js";
 import { soulStatusCommand } from "./commands/soul-status.js";
 import { intelligenceCommand } from "./commands/intelligence.js";
 import { inferCommand } from "./commands/infer.js";
+import { contradictCommand } from "./commands/contradict.js";
+import { reinforceCommand } from "./commands/reinforce.js";
 import { graphBuildCommand, graphShowCommand } from "./commands/graph.js";
 import { createWorkspaceStore } from "./utils/workspace-store.js";
 import { writeWorkspaceSelection, getWorkspaceSelectionFilePath } from "../security/workspace.js";
@@ -302,15 +304,6 @@ program
   .argument("<id>", "Decision ID or record ID")
   .action((kind, id) => {
     showCommand(kind, id);
-  });
-
-program
-  .command("revise")
-  .description("Revise a decision (creates new block)")
-  .argument("<decisionId>", "Decision ID to revise")
-  .option("-r, --reasoning <reasoning>", "New reasoning")
-  .action((decisionId, opts) => {
-    reviseCommand(decisionId, { reason: opts.reasoning || "" });
   });
 
 program
@@ -736,6 +729,43 @@ program
       threshold: options.threshold,
       json: options.json,
       prompt: options.prompt
+    });
+  });
+
+// Decision Lifecycle commands
+program
+  .command("revise <decisionId>")
+  .description("Revise an existing decision (create new that supersedes old)")
+  .option("-r, --reasoning <text>", "Reasoning for the revision", "")
+  .option("-c, --chosen <option>", "New chosen option", "")
+  .action((id, options) => {
+    reviseCommand(id, {
+      reason: options.reasoning,
+      chosen: options.chosen
+    });
+  });
+
+program
+  .command("contradict <decisionId>")
+  .description("Mark a decision as contradicted")
+  .option("-e, --evidence <text>", "Evidence of contradiction", "")
+  .option("-r, --reasoning <text>", "Why does this contradict?", "")
+  .action((id, options) => {
+    contradictCommand(id, {
+      evidence: options.evidence,
+      reasoning: options.reasoning
+    });
+  });
+
+program
+  .command("reinforce <decisionId>")
+  .description("Reinforce a decision with new evidence")
+  .option("-e, --evidence <text>", "Supporting evidence", "")
+  .option("-r, --reason <text>", "Why does this reinforce?", "")
+  .action((id, options) => {
+    reinforceCommand(id, {
+      evidence: options.evidence,
+      reason: options.reason
     });
   });
 
