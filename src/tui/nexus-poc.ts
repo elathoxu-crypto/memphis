@@ -8,6 +8,7 @@ import chalk from "chalk";
 import { NexusChainIntegration } from "./nexus-chain.js";
 import * as fs from "fs";
 import * as path from "path";
+import { checkTimeTriggers, type Suggestion } from "../intelligence/suggestions.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // AGENT IDENTITY
@@ -217,14 +218,19 @@ interface NexusMessage {
 
 export class NexusChatTUI {
   private messages: NexusMessage[] = [];
+  private suggestions: Suggestion[] = [];
   private tui: TUI;
   private chatText: Text;
   private editor: any;
   private statusBar: Text;
+  private suggestionsWidget: Text;
 
   constructor() {
     // Load recent messages from ask chain
     this.messages = loadRecentMessages(5);
+    
+    // Load time-based suggestions
+    this.suggestions = this.loadSuggestions();
     
     // Add welcome message if no messages loaded
     if (this.messages.length === 0) {
@@ -244,8 +250,16 @@ export class NexusChatTUI {
     this.tui = new TUI(terminal);
     this.chatText = new Text("");
     this.statusBar = new Text("", 1, 0);
+    this.suggestionsWidget = new Text("", 1, 0);
     
     this.setupUI();
+  }
+  
+  private loadSuggestions(): Suggestion[] {
+    const stats = loadChainStats();
+    if (!stats.lastActivity) return [];
+    
+    return checkTimeTriggers(stats.lastActivity.getTime());
   }
 
   private setupUI() {
@@ -271,6 +285,12 @@ export class NexusChatTUI {
     // ─── Header ─────────────────────────────────────────────────────────────
     const header = new Text(chalk.bold.cyan("Memphis Nexus") + " " + chalk.gray("[POC]"), 1, 0);
     root.addChild(header);
+
+    // ─── Suggestions Widget ─────────────────────────────────────────────────
+    if (this.suggestions.length > 0) {
+      this.suggestionsWidget = new Text(this.renderSuggestions(), 1, 0);
+      root.addChild(this.suggestionsWidget);
+    }
 
     // ─── Chat History (80% of screen) ───────────────────────────────────────
     this.chatText = new Text(this.renderChatHistory());
@@ -307,6 +327,27 @@ export class NexusChatTUI {
     return output;
   }
 
+  private renderSuggestions(): string {
+    if (this.suggestions.length === 0) return "";
+    
+    let output = "\n";
+    output += chalk.bold.yellow("💡 Suggestions") + " " + chalk.gray(`(${this.suggestions.length})`) + "\n";
+    
+    for (const suggestion of this.suggestions) {
+      const priorityColor = 
+        suggestion.priority === 'high' ? chalk.red :
+        suggestion.priority === 'medium' ? chalk.yellow :
+        chalk.gray;
+      
+      output += `  ${priorityColor('●')} ${suggestion.message}\n`;
+    }
+    
+    output += chalk.gray(`  [a] accept [d] dismiss`) + "\n";
+    output += "\n";
+    
+    return output;
+  }
+
   private renderStatusBar(): string {
     const stats = loadChainStats();
     const intel = loadIntelligenceStats();
@@ -329,8 +370,15 @@ export class NexusChatTUI {
     // Chain summary
     const chainStr = `📚 ${stats.journal} journal`;
     
+    // Suggestions count
+    const suggestionStr = this.suggestions.length > 0 
+      ? chalk.bold.yellow(`💡 ${this.suggestions.length}`)
+      : "";
+    
     // Keyboard hints (context-aware)
-    const hints = "[q] quit [h] help";
+    const hints = this.suggestions.length > 0 
+      ? "[a] accept [d] dismiss [q] quit"
+      : "[q] quit [h] help";
     
     // Compose status bar
     const parts = [
@@ -338,6 +386,7 @@ export class NexusChatTUI {
       lastActivity,
       providerStr,
       intelStr,
+      suggestionStr,
       chalk.gray(hints),
       chalk.gray(`⏱️ ${this.formatTime(new Date())}`)
     ].filter(p => p); // Remove empty parts
@@ -365,7 +414,7 @@ export class NexusChatTUI {
 
     switch (command) {
       case "/help":
-        this.addSystemMessage("Commands: /help, /clear, /agents, /status");
+        this.addSystemMessage("Commands: /help, /clear, /agents, /status, /suggestions");
         break;
       case "/clear":
         this.messages = [];
@@ -386,9 +435,100 @@ export class NexusChatTUI {
         }
         this.addSystemMessage(statusMsg);
         break;
+      case "/suggestions":
+        if (this.suggestions.length === 0) {
+          this.addSystemMessage("No pending suggestions");
+        } else {
+          this.addSystemMessage(`Pending suggestions: ${this.suggestions.length}`);
+        }
+        break;
+      case "/a":
+      case "/accept":
+        this.acceptSuggestion();
+        break;
+      case "/d":
+      case "/dismiss":
+        this.dismissSuggestion();
+        break;
+      case "/j":
+      case "/journal":
+        const journalText = parts.slice(1).join(" ");
+        if (!journalText) {
+          this.addSystemMessage("Usage: /journal <text>");
+        } else {
+          this.quickJournal(journalText);
+        }
+        break;
       default:
-        this.addSystemMessage(`Unknown command: ${command}`);
+        this.addSystemMessage(`Unknown command: ${command}. Type /help for available commands.`);
     }
+  }
+  
+  private acceptSuggestion() {
+    if (this.suggestions.length === 0) {
+      this.addSystemMessage("No suggestions to accept");
+      return;
+    }
+    
+    const suggestion = this.suggestions[0];
+    this.suggestions.shift();
+    
+    this.addSystemMessage(`✓ Accepted: ${suggestion.message}`);
+    this.addSystemMessage("Opening journal... (use: /journal <text> to save)");
+    
+    this.updateSuggestionsWidget();
+  }
+  
+  private dismissSuggestion() {
+    if (this.suggestions.length === 0) {
+      this.addSystemMessage("No suggestions to dismiss");
+      return;
+    }
+    
+    const suggestion = this.suggestions[0];
+    this.suggestions.shift();
+    
+    this.addSystemMessage(`✗ Dismissed: ${suggestion.message}`);
+    
+    this.updateSuggestionsWidget();
+  }
+  
+  private updateSuggestionsWidget() {
+    // Re-render suggestions widget
+    if (this.suggestions.length > 0) {
+      // Widget will show new suggestions on next render
+    } else {
+      // Clear widget
+    }
+    this.tui.requestRender();
+  }
+  
+  private quickJournal(text: string) {
+    this.showTypingIndicator();
+    
+    setImmediate(async () => {
+      try {
+        // Save directly to journal chain
+        const result = NexusChainIntegration.saveMessageToChain(
+          "User",
+          `[JOURNAL] ${text}`
+        );
+        
+        this.hideTypingIndicator();
+        
+        if (result) {
+          this.addSystemMessage(`✓ Saved to journal#${result.blockIndex}`);
+          // Reload suggestions (activity changed)
+          this.suggestions = this.loadSuggestions();
+          this.updateSuggestionsWidget();
+        } else {
+          this.addSystemMessage("✗ Failed to save journal entry");
+        }
+      } catch (error) {
+        this.hideTypingIndicator();
+        this.addSystemMessage(`✗ Error: ${error}`);
+      }
+    });
   }
 
   private sendMessage(content: string) {
@@ -422,6 +562,25 @@ export class NexusChatTUI {
       }
     });
     
+    this.updateChatBox();
+  }
+  
+  private showTypingIndicator() {
+    const typingMsg: NexusMessage = {
+      id: "typing",
+      from: NEXUS_AGENTS[0],
+      to: "all",
+      content: "Memphis is thinking...",
+      timestamp: new Date(),
+      type: "status"
+    };
+    
+    this.messages.push(typingMsg);
+    this.updateChatBox();
+  }
+  
+  private hideTypingIndicator() {
+    this.messages = this.messages.filter(m => m.id !== "typing");
     this.updateChatBox();
   }
 
