@@ -62,6 +62,92 @@ interface KeyboardShortcut {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// TUI CONFIGURATION
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface TUIConfig {
+  theme: ThemeMode;
+  sidebarEnabled: boolean;
+  sidebarWidth: number;
+  keybindings: {
+    quickJournal: string;
+    search: string;
+    toggleSidebar: string;
+    toggleTheme: string;
+  };
+  maxHistorySize: number;
+}
+
+const DEFAULT_TUI_CONFIG: TUIConfig = {
+  theme: 'dark',
+  sidebarEnabled: false,
+  sidebarWidth: 35,
+  keybindings: {
+    quickJournal: 'Ctrl+J',
+    search: 'Ctrl+R',
+    toggleSidebar: 'Ctrl+S',
+    toggleTheme: 'Ctrl+T'
+  },
+  maxHistorySize: 100
+};
+
+function loadTUIConfig(): TUIConfig {
+  const configPath = path.join(process.env.HOME || "/root", ".memphis", "tui-config.json");
+  
+  try {
+    if (fs.existsSync(configPath)) {
+      const data = JSON.parse(fs.readFileSync(configPath, "utf8"));
+      return { ...DEFAULT_TUI_CONFIG, ...data };
+    }
+  } catch {}
+  
+  return DEFAULT_TUI_CONFIG;
+}
+
+function saveTUIConfig(config: TUIConfig): void {
+  const configPath = path.join(process.env.HOME || "/root", ".memphis", "tui-config.json");
+  
+  try {
+    fs.writeFileSync(configPath, JSON.stringify(config, null, 2), "utf8");
+  } catch {}
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// JOURNAL SIDEBAR
+// ─────────────────────────────────────────────────────────────────────────────
+
+function loadRecentJournalEntries(limit: number = 10): Array<{ index: number; content: string; timestamp: Date }> {
+  const journalPath = path.join(process.env.HOME || "/root", ".memphis", "chains", "journal");
+  
+  try {
+    if (!fs.existsSync(journalPath)) return [];
+    
+    const files = fs.readdirSync(journalPath)
+      .filter(f => f.endsWith(".json"))
+      .map(f => {
+        const filePath = path.join(journalPath, f);
+        try {
+          const data = JSON.parse(fs.readFileSync(filePath, "utf8"));
+          return {
+            index: data.index || parseInt(f.replace(".json", "")),
+            content: data.content || data.text || "",
+            timestamp: new Date(data.timestamp || fs.statSync(filePath).mtime)
+          };
+        } catch {
+          return null;
+        }
+      })
+      .filter((e): e is NonNullable<typeof e> => e !== null)
+      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+      .slice(0, limit);
+    
+    return files;
+  } catch {
+    return [];
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // AUTOCOMPLETE PROVIDER
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -81,6 +167,10 @@ class MemphisAutocompleteProvider implements AutocompleteProvider {
     { value: "/theme", label: "/theme", description: "Toggle theme (dark/light)" },
     { value: "/sidebar", label: "/sidebar", description: "Toggle journal sidebar" },
     { value: "/history", label: "/history", description: "Show command history" },
+    { value: "/config", label: "/config", description: "Show TUI configuration" },
+    { value: "/export-config", label: "/export-config", description: "Export config to file" },
+    { value: "/import-config", label: "/import-config", description: "Import config from file" },
+    { value: "/reset-config", label: "/reset-config", description: "Reset to defaults" },
     { value: "/status", label: "/status", description: "Show system status" },
     { value: "/help", label: "/help", description: "Show available commands" },
     { value: "/clear", label: "/clear", description: "Clear chat history" },
@@ -352,8 +442,20 @@ export class NexusChatTUI {
   private journalSidebarText: Text | null = null;
   private commandHistory: string[] = [];
   private historyIndex: number = -1;
+  
+  // Phase 5: Journal sidebar data
+  private recentJournal: Array<{ index: number; content: string; timestamp: Date }> = [];
+  private config: TUIConfig = DEFAULT_TUI_CONFIG;
 
   constructor() {
+    // Phase 5: Load TUI configuration
+    this.config = loadTUIConfig();
+    this.theme = this.config.theme === 'dark' ? DARK_THEME : LIGHT_THEME;
+    this.showJournalSidebar = this.config.sidebarEnabled;
+    
+    // Phase 5: Load recent journal entries
+    this.recentJournal = loadRecentJournalEntries(15);
+    
     // Load recent messages from ask chain
     this.messages = loadRecentMessages(5);
     
@@ -525,7 +627,14 @@ export class NexusChatTUI {
   
   private toggleJournalSidebar() {
     this.showJournalSidebar = !this.showJournalSidebar;
+    
+    // Update config
+    this.config.sidebarEnabled = this.showJournalSidebar;
+    saveTUIConfig(this.config);
+    
+    // Refresh journal data when opening
     if (this.showJournalSidebar) {
+      this.recentJournal = loadRecentJournalEntries(15);
       this.addSystemMessage("📖 Journal sidebar enabled (Ctrl+S to toggle)");
     } else {
       this.addSystemMessage("📖 Journal sidebar disabled");
@@ -535,6 +644,11 @@ export class NexusChatTUI {
   
   private toggleTheme() {
     this.theme = this.theme.mode === 'dark' ? LIGHT_THEME : DARK_THEME;
+    
+    // Update config
+    this.config.theme = this.theme.mode;
+    saveTUIConfig(this.config);
+    
     this.addSystemMessage(`🎨 Theme: ${this.theme.mode} mode`);
     this.updateChatBox();
   }
@@ -576,6 +690,11 @@ export class NexusChatTUI {
   private renderChatHistory(): string {
     let output = "";
     
+    // Phase 5: Add journal sidebar if enabled
+    if (this.showJournalSidebar) {
+      output += this.renderJournalSidebar();
+    }
+    
     for (const msg of this.messages) {
       const time = this.formatTime(msg.timestamp);
       const agent = msg.from;
@@ -606,6 +725,114 @@ export class NexusChatTUI {
     output += "\n";
     
     return output;
+  }
+  
+  // ─────────────────────────────────────────────────────────────────────────────
+  // PHASE 5: JOURNAL SIDEBAR
+  // ─────────────────────────────────────────────────────────────────────────────
+  
+  private renderJournalSidebar(): string {
+    if (!this.showJournalSidebar || this.recentJournal.length === 0) {
+      return "";
+    }
+    
+    let output = "\n";
+    output += chalk.bold(this.theme.primary("📖 Recent Journal")) + "\n";
+    output += this.theme.muted("─".repeat(30)) + "\n";
+    
+    for (const entry of this.recentJournal.slice(0, 10)) {
+      const time = this.formatTime(entry.timestamp);
+      const preview = entry.content.substring(0, 50) + (entry.content.length > 50 ? "..." : "");
+      output += `  ${this.theme.muted(`#${entry.index}`)} ${this.theme.muted(time)}\n`;
+      output += `  ${preview}\n\n`;
+    }
+    
+    output += this.theme.muted(`${this.recentJournal.length} entries`) + "\n";
+    
+    return output;
+  }
+  
+  // ─────────────────────────────────────────────────────────────────────────────
+  // PHASE 5: CONFIG EXPORT/IMPORT
+  // ─────────────────────────────────────────────────────────────────────────────
+  
+  private exportConfig() {
+    const exportPath = path.join(process.env.HOME || "/root", ".memphis", "tui-config-export.json");
+    
+    try {
+      const exportData = {
+        ...this.config,
+        commandHistory: this.commandHistory.slice(-50),
+        exportedAt: new Date().toISOString()
+      };
+      
+      fs.writeFileSync(exportPath, JSON.stringify(exportData, null, 2), "utf8");
+      this.addSystemMessage(`✓ Config exported to: ${exportPath}`);
+    } catch (error) {
+      this.addSystemMessage(`✗ Export failed: ${error}`);
+    }
+  }
+  
+  private importConfig() {
+    const importPath = path.join(process.env.HOME || "/root", ".memphis", "tui-config-export.json");
+    
+    try {
+      if (!fs.existsSync(importPath)) {
+        this.addSystemMessage(`✗ No export file found at: ${importPath}`);
+        return;
+      }
+      
+      const data = JSON.parse(fs.readFileSync(importPath, "utf8"));
+      
+      // Apply imported config
+      this.config = { ...this.config, ...data };
+      this.theme = this.config.theme === 'dark' ? DARK_THEME : LIGHT_THEME;
+      this.showJournalSidebar = this.config.sidebarEnabled;
+      
+      if (data.commandHistory) {
+        this.commandHistory = data.commandHistory;
+      }
+      
+      // Save to main config
+      saveTUIConfig(this.config);
+      
+      this.addSystemMessage(`✓ Config imported from: ${importPath}`);
+      this.addSystemMessage(`  Theme: ${this.theme.mode} | Sidebar: ${this.showJournalSidebar ? 'on' : 'off'} | History: ${this.commandHistory.length} items`);
+      
+      this.updateChatBox();
+    } catch (error) {
+      this.addSystemMessage(`✗ Import failed: ${error}`);
+    }
+  }
+  
+  private showConfig() {
+    const configInfo = `
+${chalk.bold(this.theme.primary("TUI Configuration"))}
+
+${this.theme.warning("Theme:")} ${this.theme.mode}
+${this.theme.warning("Sidebar:")} ${this.config.sidebarEnabled ? 'enabled' : 'disabled'} (${this.config.sidebarWidth}% width)
+${this.theme.warning("History Size:")} ${this.config.maxHistorySize} commands
+
+${this.theme.warning("Keybindings:")}
+  Quick Journal: ${this.config.keybindings.quickJournal}
+  Search:        ${this.config.keybindings.search}
+  Toggle Sidebar: ${this.config.keybindings.toggleSidebar}
+  Toggle Theme:  ${this.config.keybindings.toggleTheme}
+
+${this.theme.muted("Commands: /export-config, /import-config, /reset-config")}
+`;
+    this.addSystemMessage(configInfo);
+  }
+  
+  private resetConfig() {
+    this.config = DEFAULT_TUI_CONFIG;
+    this.theme = DARK_THEME;
+    this.showJournalSidebar = false;
+    
+    saveTUIConfig(this.config);
+    
+    this.addSystemMessage("✓ Config reset to defaults");
+    this.updateChatBox();
   }
 
   private renderStatusBar(): string {
@@ -650,6 +877,9 @@ export class NexusChatTUI {
     const themeIcon = this.theme.mode === 'dark' ? "🌙" : "☀️";
     const themeStr = `${themeIcon}`;
     
+    // Sidebar indicator
+    const sidebarStr = this.showJournalSidebar ? "📖" : "";
+    
     // Compose status bar
     const parts = [
       chainStr,
@@ -658,6 +888,7 @@ export class NexusChatTUI {
       intelStr,
       suggestionStr,
       syncStr,
+      sidebarStr,
       themeStr,
       this.theme.muted(hints),
       this.theme.muted(`⏱️ ${this.formatTime(new Date())}`)
@@ -740,6 +971,18 @@ export class NexusChatTUI {
         break;
       case "/history":
         this.showHistory();
+        break;
+      case "/config":
+        this.showConfig();
+        break;
+      case "/export-config":
+        this.exportConfig();
+        break;
+      case "/import-config":
+        this.importConfig();
+        break;
+      case "/reset-config":
+        this.resetConfig();
         break;
       case "/a":
       case "/accept":
@@ -914,15 +1157,19 @@ ${this.theme.warning("Commands:")}
   /recall <query> Recall from chains
   /s <query>      Short search alias
   /sync           Show network sync status
-  /theme          Toggle theme
+  /theme          Toggle theme (dark/light)
   /sidebar        Toggle journal sidebar
   /history        Show command history
+  /config         Show TUI configuration
+  /export-config  Export config to file
+  /import-config  Import config from file
+  /reset-config   Reset to defaults
   /clear          Clear chat
   /status         Show system status
   /help           Show this help
   /quit           Exit TUI
 
-${this.theme.muted("Theme: " + this.theme.mode + " mode")}
+${this.theme.muted("Theme: " + this.theme.mode + " mode | Sidebar: " + (this.showJournalSidebar ? "on" : "off"))}
 `;
     this.addSystemMessage(helpText);
   }
