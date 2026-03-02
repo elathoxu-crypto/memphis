@@ -6,6 +6,8 @@
 import { TUI, Text, Box, Container, ProcessTerminal, Editor } from "@mariozechner/pi-tui";
 import chalk from "chalk";
 import { NexusChainIntegration } from "./nexus-chain.js";
+import * as fs from "fs";
+import * as path from "path";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // AGENT IDENTITY
@@ -25,6 +27,176 @@ const NEXUS_AGENTS: AgentIdentity[] = [
 ];
 
 const CURRENT_AGENT = NEXUS_AGENTS[0]; // Memphis
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CHAIN STATS LOADER
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface ChainStats {
+  journal: number;
+  ask: number;
+  decisions: number;
+  summary: number;
+  lastActivity: Date | null;
+}
+
+interface IntelligenceStats {
+  acceptedPatterns: number;
+  rejectedPatterns: number;
+  totalFeedback: number;
+}
+
+interface ProviderStatus {
+  name: string;
+  model: string;
+  ready: boolean;
+}
+
+function loadChainStats(): ChainStats {
+  const chainsPath = path.join(process.env.HOME || "/root", ".memphis", "chains");
+  
+  const countBlocks = (chainName: string): number => {
+    const chainPath = path.join(chainsPath, chainName);
+    try {
+      return fs.readdirSync(chainPath).filter(f => f.endsWith(".json")).length;
+    } catch {
+      return 0;
+    }
+  };
+  
+  const getLastActivity = (): Date | null => {
+    const journalPath = path.join(chainsPath, "journal");
+    try {
+      const files = fs.readdirSync(journalPath)
+        .filter(f => f.endsWith(".json"))
+        .map(f => ({
+          name: f,
+          time: fs.statSync(path.join(journalPath, f)).mtime.getTime()
+        }))
+        .sort((a, b) => b.time - a.time);
+      
+      return files.length > 0 ? new Date(files[0].time) : null;
+    } catch {
+      return null;
+    }
+  };
+  
+  return {
+    journal: countBlocks("journal"),
+    ask: countBlocks("ask"),
+    decisions: countBlocks("decision"),
+    summary: countBlocks("summary"),
+    lastActivity: getLastActivity()
+  };
+}
+
+function loadIntelligenceStats(): IntelligenceStats {
+  const intelPath = path.join(process.env.HOME || "/root", ".memphis", "intelligence", "learning-data.json");
+  
+  try {
+    const data = JSON.parse(fs.readFileSync(intelPath, "utf8"));
+    const accepted = Object.keys(data.acceptedPatterns || {}).reduce((sum, key) => {
+      return sum + (data.acceptedPatterns[key] || 0);
+    }, 0);
+    const rejected = Object.keys(data.rejectedPatterns || {}).reduce((sum, key) => {
+      return sum + (data.rejectedPatterns[key] || 0);
+    }, 0);
+    
+    return {
+      acceptedPatterns: Object.keys(data.acceptedPatterns || {}).length,
+      rejectedPatterns: Object.keys(data.rejectedPatterns || {}).length,
+      totalFeedback: accepted + rejected
+    };
+  } catch {
+    return { acceptedPatterns: 0, rejectedPatterns: 0, totalFeedback: 0 };
+  }
+}
+
+function loadProviderStatus(): ProviderStatus {
+  const configPath = path.join(process.env.HOME || "/root", ".memphis", "config.yaml");
+  
+  try {
+    const config = fs.readFileSync(configPath, "utf8");
+    const providerMatch = config.match(/providers:\s*\n\s+(\w+):\s*\n\s+url:.*\n\s+model:\s*(\S+)/);
+    
+    if (providerMatch) {
+      return {
+        name: providerMatch[1],
+        model: providerMatch[2],
+        ready: true // Could add actual health check
+      };
+    }
+  } catch {}
+  
+  return { name: "unknown", model: "unknown", ready: false };
+}
+
+function formatTimeSince(date: Date): string {
+  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+  
+  if (seconds < 60) return `${seconds}s`;
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h`;
+  return `${Math.floor(seconds / 86400)}d`;
+}
+
+function loadRecentMessages(count: number = 5): NexusMessage[] {
+  const askPath = path.join(process.env.HOME || "/root", ".memphis", "chains", "ask");
+  const messages: NexusMessage[] = [];
+  
+  try {
+    const files = fs.readdirSync(askPath)
+      .filter(f => f.endsWith(".json"))
+      .sort((a, b) => {
+        const numA = parseInt(a.replace(".json", ""));
+        const numB = parseInt(b.replace(".json", ""));
+        return numB - numA; // Descending order
+      })
+      .slice(0, count);
+    
+    for (const file of files) {
+      try {
+        const blockPath = path.join(askPath, file);
+        const content = fs.readFileSync(blockPath, "utf8");
+        const block = JSON.parse(content);
+        
+        // Extract content from data.content
+        const fullContent = block.data?.content || block.prompt || block.text || "";
+        
+        // Split Q&A if present
+        const parts = fullContent.split("\n\nA:");
+        const question = parts[0].replace("Q: ", "").substring(0, 150);
+        const answer = parts[1] ? parts[1].split("\n\n---")[0].trim().substring(0, 150) : "";
+        
+        // Add question
+        messages.push({
+          id: `${file}-q`,
+          from: { id: "user", name: "User", emoji: "👤", status: "online" },
+          to: "all",
+          content: question,
+          timestamp: new Date(block.timestamp || Date.now()),
+          type: "chat"
+        });
+        
+        // Add answer if present
+        if (answer) {
+          messages.push({
+            id: `${file}-a`,
+            from: NEXUS_AGENTS[0], // Memphis
+            to: "all",
+            content: answer + (answer.length >= 150 ? "..." : ""),
+            timestamp: new Date(block.timestamp || Date.now()),
+            type: "chat"
+          });
+        }
+      } catch {}
+    }
+    
+    return messages.reverse(); // Oldest first
+  } catch {
+    return [];
+  }
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MESSAGE TYPES
@@ -51,24 +223,22 @@ export class NexusChatTUI {
   private statusBar: Text;
 
   constructor() {
-    this.messages = [
-      {
-        id: "1",
-        from: NEXUS_AGENTS[1], // Watra
-        to: "all",
-        content: "Hej chłopaki, nad czym pracujemy?",
-        timestamp: new Date(Date.now() - 60000),
-        type: "chat"
-      },
-      {
-        id: "2",
-        from: NEXUS_AGENTS[0], // Memphis
-        to: "all",
-        content: "Testuje nowy TUI z multi-agent chat!",
-        timestamp: new Date(Date.now() - 30000),
-        type: "chat"
-      }
-    ];
+    // Load recent messages from ask chain
+    this.messages = loadRecentMessages(5);
+    
+    // Add welcome message if no messages loaded
+    if (this.messages.length === 0) {
+      this.messages = [
+        {
+          id: "welcome",
+          from: NEXUS_AGENTS[0], // Memphis
+          to: "all",
+          content: "Welcome to Memphis Nexus! Type a message or /help for commands.",
+          timestamp: new Date(),
+          type: "status"
+        }
+      ];
+    }
 
     const terminal = new ProcessTerminal();
     this.tui = new TUI(terminal);
@@ -138,10 +308,41 @@ export class NexusChatTUI {
   }
 
   private renderStatusBar(): string {
-    const onlineAgents = NEXUS_AGENTS.filter(a => a.status === "online");
-    const agentStr = onlineAgents.map(a => `${a.emoji}${a.name}`).join(" ");
+    const stats = loadChainStats();
+    const intel = loadIntelligenceStats();
+    const provider = loadProviderStatus();
     
-    return `Agents: ${agentStr} | Chains: 880+ blocks | Provider: ollama | ⏱️ ${this.formatTime(new Date())}`;
+    // Time since last activity
+    const lastActivity = stats.lastActivity 
+      ? `Last: ${formatTimeSince(stats.lastActivity)} ago`
+      : "No activity";
+    
+    // Provider status indicator
+    const providerIcon = provider.ready ? "✓" : "✗";
+    const providerStr = `${providerIcon} ${provider.name}/${provider.model.split(":")[0]}`;
+    
+    // Intelligence stats
+    const intelStr = intel.totalFeedback > 0 
+      ? `🧠 ${intel.totalFeedback} learned`
+      : "";
+    
+    // Chain summary
+    const chainStr = `📚 ${stats.journal} journal`;
+    
+    // Keyboard hints (context-aware)
+    const hints = "[q] quit [h] help";
+    
+    // Compose status bar
+    const parts = [
+      chainStr,
+      lastActivity,
+      providerStr,
+      intelStr,
+      chalk.gray(hints),
+      chalk.gray(`⏱️ ${this.formatTime(new Date())}`)
+    ].filter(p => p); // Remove empty parts
+    
+    return parts.join(" │ ");
   }
 
   private formatTime(date: Date): string {
@@ -175,7 +376,15 @@ export class NexusChatTUI {
         this.addSystemMessage(`Agents: ${agentsList}`);
         break;
       case "/status":
-        this.addSystemMessage("Status: OK | Chains: 880+ | Provider: ollama");
+        const stats = loadChainStats();
+        const intel = loadIntelligenceStats();
+        const provider = loadProviderStatus();
+        
+        let statusMsg = `Status: OK | Journal: ${stats.journal} | Ask: ${stats.ask} | Provider: ${provider.name}/${provider.model}`;
+        if (intel.totalFeedback > 0) {
+          statusMsg += ` | Learned: ${intel.totalFeedback}`;
+        }
+        this.addSystemMessage(statusMsg);
         break;
       default:
         this.addSystemMessage(`Unknown command: ${command}`);
