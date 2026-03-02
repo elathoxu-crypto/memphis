@@ -20,7 +20,7 @@ export interface TimeTriggers {
 }
 
 const DEFAULT_TRIGGERS: TimeTriggers = {
-  hoursSinceLastJournal: 0.08,   // TEMP: 5min for testing (restore to 6)
+  hoursSinceLastJournal: 6,   // 6 hours inactivity threshold
   endOfDayHour: 17,           // 5 PM
   weeklyDay: 0,               // Sunday
   weeklyHour: 18              // 6 PM
