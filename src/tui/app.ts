@@ -165,7 +165,13 @@ export class MemphisTUI {
   }
 
   private buildStatusBar(extra?: string): string {
-    const shortcuts = `{bold}1-9{/bold} Nawigacja | {bold}j/k{/bold} Góra/Dół | {bold}q{/bold} Wyjdź | {bold}n{/bold} Nexus | {bold}r{/bold} Rola | {bold}s{/bold} Sync | {bold}b{/bold} Backup | {bold}g{/bold} Guard | {bold}h{/bold} Help | {bold}u{/bold} USB`;
+    let shortcuts = `{bold}1-9{/bold} Nawigacja | {bold}j/k{/bold} Góra/Dół | {bold}q{/bold} Wyjdź | {bold}n{/bold} Nexus | {bold}r{/bold} Rola | {bold}s{/bold} Sync | {bold}b{/bold} Backup | {bold}g{/bold} Guard | {bold}h{/bold} Help | {bold}u{/bold} USB`;
+
+    // Add suggestion shortcuts when on dashboard with suggestions
+    if (this.state.currentScreen === "dashboard" && this.state.activeSuggestions && this.state.activeSuggestions.length > 0) {
+      shortcuts += ` | {cyan}{bold}a{/bold} Accept | {bold}d{/bold} Dismiss{/cyan}`;
+    }
+
     if (!extra || extra.length === 0) {
       return shortcuts;
     }
@@ -320,6 +326,35 @@ export class MemphisTUI {
     this.screen.key(["k", "up"],   () => this.moveMenu(-1));
 
     this.screen.key(["enter"], () => this.navigateTo(this.state.currentScreen));
+
+    // Suggestion handlers (context-aware on dashboard)
+    this.screen.key(["a"], () => this.handleAcceptSuggestion());
+    this.screen.key(["d"], () => this.handleDismissSuggestion());
+  }
+
+  private handleAcceptSuggestion(): void {
+    // Only works on dashboard with active suggestions
+    if (this.state.currentScreen !== "dashboard") return;
+    if (!this.state.activeSuggestions || this.state.activeSuggestions.length === 0) return;
+
+    // Navigate to journal screen
+    this.navigateTo("journal");
+    this.showStatus("📝 Journal opened - capture your thoughts!");
+  }
+
+  private handleDismissSuggestion(): void {
+    // Only works on dashboard with active suggestions
+    if (this.state.currentScreen !== "dashboard") return;
+    if (!this.state.activeSuggestions || this.state.activeSuggestions.length === 0) return;
+
+    // Clear suggestions
+    const count = this.state.activeSuggestions.length;
+    this.state.activeSuggestions = [];
+
+    // Re-render dashboard
+    this.contentBox.setContent(renderDashboard(this.store, this.config, this.state));
+    this.showStatus(`💡 ${count} suggestion(s) dismissed`);
+    this.screen.render();
   }
 
   private moveMenu(delta: number): void {

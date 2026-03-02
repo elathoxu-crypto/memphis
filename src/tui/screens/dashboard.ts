@@ -148,7 +148,7 @@ export function renderDashboard(store: Store, config: MemphisConfig, state: TUIS
 
   // Suggestions Widget (Time-Based)
   if (state.activeSuggestions && state.activeSuggestions.length > 0) {
-    content += `{bold}💡 Suggestions:{/bold}\n`;
+    content += `{bold}💡 Suggestions:{/bold} {gray}(press {bold}a{/bold} to accept, {bold}d{/bold} to dismiss){/gray}\n`;
     for (const suggestion of state.activeSuggestions) {
       const icons = {
         journal: '📝',

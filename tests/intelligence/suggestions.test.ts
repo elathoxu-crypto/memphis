@@ -50,9 +50,9 @@ describe('Time-Based Suggestions', () => {
     });
 
     it('should NOT trigger end-of-day if <4h since journal', () => {
-      const lastJournal = Date.now() - 3 * 60 * 60 * 1000; // 3h ago
       const now = new Date();
       now.setHours(17, 0, 0, 0);
+      const lastJournal = now.getTime() - 3 * 60 * 60 * 1000; // 3h ago from "now"
 
       const suggestions = checkTimeTriggers(lastJournal, now);
 
