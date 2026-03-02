@@ -9,6 +9,8 @@ import { NexusChainIntegration } from "./nexus-chain.js";
 import * as fs from "fs";
 import * as path from "path";
 import { checkTimeTriggers, type Suggestion } from "../intelligence/suggestions.js";
+import { recall, type RecallQuery, type RecallHit } from "../core/recall.js";
+import { Store } from "../memory/store.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // AGENT IDENTITY
@@ -224,6 +226,7 @@ export class NexusChatTUI {
   private editor: any;
   private statusBar: Text;
   private suggestionsWidget: Text;
+  private similarMessages: RecallHit[] = [];
 
   constructor() {
     // Load recent messages from ask chain
@@ -260,6 +263,32 @@ export class NexusChatTUI {
     if (!stats.lastActivity) return [];
     
     return checkTimeTriggers(stats.lastActivity.getTime());
+  }
+  
+  private async loadSimilarMessages(content: string): Promise<void> {
+    if (content.length < 10) {
+      this.similarMessages = [];
+      return;
+    }
+    
+    try {
+      const memphisHome = process.env.HOME || "/root";
+      const store = new Store(path.join(memphisHome, ".memphis", "chains"));
+      const query: RecallQuery = {
+        text: content,
+        limit: 3
+      };
+      
+      const result = await recall(store, query);
+      this.similarMessages = result.hits.filter(h => h.score > 0.7);
+      
+      // Update widget if we have similar messages
+      if (this.similarMessages.length > 0) {
+        this.updateSimilarMessagesWidget();
+      }
+    } catch {
+      this.similarMessages = [];
+    }
   }
 
   private setupUI() {
@@ -352,6 +381,7 @@ export class NexusChatTUI {
     const stats = loadChainStats();
     const intel = loadIntelligenceStats();
     const provider = loadProviderStatus();
+    const syncStatus = this.getSyncStatus();
     
     // Time since last activity
     const lastActivity = stats.lastActivity 
@@ -370,6 +400,11 @@ export class NexusChatTUI {
     // Chain summary
     const chainStr = `📚 ${stats.journal} journal`;
     
+    // Sync status
+    const syncIcon = syncStatus.startsWith("✅") ? "✅" : 
+                     syncStatus.startsWith("🔄") ? "🔄" : "○";
+    const syncStr = `${syncIcon}`;
+    
     // Suggestions count
     const suggestionStr = this.suggestions.length > 0 
       ? chalk.bold.yellow(`💡 ${this.suggestions.length}`)
@@ -387,6 +422,7 @@ export class NexusChatTUI {
       providerStr,
       intelStr,
       suggestionStr,
+      syncStr,
       chalk.gray(hints),
       chalk.gray(`⏱️ ${this.formatTime(new Date())}`)
     ].filter(p => p); // Remove empty parts
@@ -414,7 +450,7 @@ export class NexusChatTUI {
 
     switch (command) {
       case "/help":
-        this.addSystemMessage("Commands: /help, /clear, /agents, /status, /suggestions");
+        this.addSystemMessage("Commands: /help, /clear, /agents, /status, /suggestions, /search <query>, /sync");
         break;
       case "/clear":
         this.messages = [];
@@ -428,11 +464,13 @@ export class NexusChatTUI {
         const stats = loadChainStats();
         const intel = loadIntelligenceStats();
         const provider = loadProviderStatus();
+        const syncStatus = this.getSyncStatus();
         
         let statusMsg = `Status: OK | Journal: ${stats.journal} | Ask: ${stats.ask} | Provider: ${provider.name}/${provider.model}`;
         if (intel.totalFeedback > 0) {
           statusMsg += ` | Learned: ${intel.totalFeedback}`;
         }
+        statusMsg += ` | Sync: ${syncStatus}`;
         this.addSystemMessage(statusMsg);
         break;
       case "/suggestions":
@@ -441,6 +479,19 @@ export class NexusChatTUI {
         } else {
           this.addSystemMessage(`Pending suggestions: ${this.suggestions.length}`);
         }
+        break;
+      case "/search":
+      case "/recall":
+      case "/s":
+        const searchQuery = parts.slice(1).join(" ");
+        if (!searchQuery) {
+          this.addSystemMessage("Usage: /search <query>");
+        } else {
+          this.searchMemories(searchQuery);
+        }
+        break;
+      case "/sync":
+        this.showSyncStatus();
         break;
       case "/a":
       case "/accept":
@@ -462,6 +513,93 @@ export class NexusChatTUI {
       default:
         this.addSystemMessage(`Unknown command: ${command}. Type /help for available commands.`);
     }
+  }
+  
+  private async searchMemories(query: string) {
+    this.showTypingIndicator();
+    
+    try {
+      const memphisHome = process.env.HOME || "/root";
+      const store = new Store(path.join(memphisHome, ".memphis", "chains"));
+      const recallQuery: RecallQuery = {
+        text: query,
+        limit: 10
+      };
+      
+      const result = await recall(store, recallQuery);
+      
+      this.hideTypingIndicator();
+      
+      if (result.hits.length === 0) {
+        this.addSystemMessage(`No results found for "${query}"`);
+        return;
+      }
+      
+      // Show results inline
+      this.addSystemMessage(`🔍 Found ${result.hits.length} results for "${query}":`);
+      
+      for (const hit of result.hits.slice(0, 5)) {
+        const score = (hit.score * 100).toFixed(0);
+        const emoji = hit.score > 0.8 ? "🎯" : hit.score > 0.6 ? "✓" : "○";
+        this.addSystemMessage(`${emoji} [${score}%] ${hit.chain}#${hit.index} — ${hit.snippet.substring(0, 100)}...`);
+      }
+      
+      if (result.hits.length > 5) {
+        this.addSystemMessage(`  ...and ${result.hits.length - 5} more`);
+      }
+      
+    } catch (error) {
+      this.hideTypingIndicator();
+      this.addSystemMessage(`✗ Search failed: ${error}`);
+    }
+  }
+  
+  private getSyncStatus(): string {
+    const networkPath = path.join(process.env.HOME || "/root", ".memphis", "network-chain.jsonl");
+    
+    try {
+      if (!fs.existsSync(networkPath)) {
+        return "○ Not configured";
+      }
+      
+      const stats = fs.statSync(networkPath);
+      const age = Date.now() - stats.mtime.getTime();
+      
+      if (age < 60000) { // < 1 min
+        return "🔄 Syncing";
+      } else if (age < 3600000) { // < 1 hour
+        const mins = Math.floor(age / 60000);
+        return `✅ Synced ${mins}m ago`;
+      } else {
+        const hours = Math.floor(age / 3600000);
+        return `✅ Synced ${hours}h ago`;
+      }
+    } catch {
+      return "⚠ Unknown";
+    }
+  }
+  
+  private showSyncStatus() {
+    const status = this.getSyncStatus();
+    const networkPath = path.join(process.env.HOME || "/root", ".memphis", "network-chain.jsonl");
+    
+    let message = `Sync Status: ${status}`;
+    
+    try {
+      if (fs.existsSync(networkPath)) {
+        const content = fs.readFileSync(networkPath, "utf8");
+        const lines = content.trim().split("\n").filter(l => l.trim());
+        const ops = lines.length;
+        message += `\n  Network operations: ${ops}`;
+        
+        if (ops > 0) {
+          const lastOp = JSON.parse(lines[lines.length - 1]);
+          message += `\n  Last op: ${lastOp.type || "unknown"}`;
+        }
+      }
+    } catch {}
+    
+    this.addSystemMessage(message);
   }
   
   private acceptSuggestion() {
@@ -500,6 +638,22 @@ export class NexusChatTUI {
     } else {
       // Clear widget
     }
+    this.tui.requestRender();
+  }
+  
+  private updateSimilarMessagesWidget() {
+    if (this.similarMessages.length === 0) return;
+    
+    let output = "\n" + chalk.bold.blue("💬 Similar Messages") + "\n";
+    
+    for (const hit of this.similarMessages) {
+      const score = (hit.score * 100).toFixed(0);
+      output += `  ${chalk.gray(`[${score}%]`)} ${hit.snippet.substring(0, 80)}...\n`;
+    }
+    
+    output += chalk.gray("  Press ESC to dismiss") + "\n";
+    
+    this.suggestionsWidget.setText(output);
     this.tui.requestRender();
   }
   
