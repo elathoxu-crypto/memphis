@@ -193,17 +193,27 @@ describe('Categorizer', () => {
 
   describe('Learning from Feedback', () => {
     it('should learn from accepted suggestions', async () => {
-      categorizer.learnFromFeedback('meeting', true);
-      categorizer.learnFromFeedback('meeting', true);
-      categorizer.learnFromFeedback('meeting', false);
+      // Clear learning data to ensure clean state
+      const freshCategorizer = new Categorizer();
+      freshCategorizer['learningStorage'].clear();
+
+      freshCategorizer.learnFromFeedback('meeting', true);
+      freshCategorizer.learnFromFeedback('meeting', true);
+      freshCategorizer.learnFromFeedback('meeting', false);
       
-      const stats = categorizer.getLearningStats();
-      const meetingStats = stats.get('meeting');
-      
+      const stats = freshCategorizer.getLearningStats();
+
+      // Find meeting in topAccepted array
+      const meetingStats = stats.topAccepted.find(t => t.tag === 'meeting');
+
       expect(meetingStats).toBeDefined();
-      expect(meetingStats!.accepted).toBe(2);
-      expect(meetingStats!.rejected).toBe(1);
-      expect(meetingStats!.accuracy).toBeCloseTo(0.666, 2);
+      expect(meetingStats!.count).toBe(2);
+      
+      // Check acceptance rate using getAcceptanceRate()
+      const acceptanceRate = freshCategorizer.getAcceptanceRate('meeting');
+      expect(acceptanceRate).toBeCloseTo(0.666, 2);
+    });
+      expect(acceptanceRate).toBeCloseTo(0.666, 2);
     });
 
     it('should adjust confidence based on learning', async () => {
