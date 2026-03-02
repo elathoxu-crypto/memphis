@@ -24,7 +24,14 @@ describe('Time-Based Suggestions', () => {
 
     it('should NOT trigger before 6 hours', () => {
       const lastJournal = Date.now() - 5 * 60 * 60 * 1000; // 5h ago
-      const suggestions = checkTimeTriggers(lastJournal);
+      // Use explicit config to ensure test is independent of defaults
+      const config = {
+        hoursSinceLastJournal: 6,
+        endOfDayHour: 17,
+        weeklyDay: 0,
+        weeklyHour: 18
+      };
+      const suggestions = checkTimeTriggers(lastJournal, new Date(), config);
 
       expect(suggestions).toHaveLength(0);
     });

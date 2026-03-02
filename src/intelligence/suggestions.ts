@@ -20,10 +20,10 @@ export interface TimeTriggers {
 }
 
 const DEFAULT_TRIGGERS: TimeTriggers = {
-  hoursSinceLastJournal: 6,
-  endOfDayHour: 17, // 5 PM
-  weeklyDay: 0,     // Sunday
-  weeklyHour: 18    // 6 PM
+  hoursSinceLastJournal: 6,   // 6 hours inactivity threshold
+  endOfDayHour: 17,           // 5 PM
+  weeklyDay: 0,               // Sunday
+  weeklyHour: 18              // 6 PM
 };
 
 /**
@@ -39,9 +39,12 @@ export function checkTimeTriggers(
 
   // 1. 6-hour inactivity trigger
   if (hoursSince >= config.hoursSinceLastJournal) {
+    const hoursDisplay = hoursSince < 1 
+      ? `${Math.floor(hoursSince * 60)}m` 
+      : `${Math.floor(hoursSince)}h`;
     suggestions.push({
       type: 'journal',
-      message: `Haven't journaled in ${Math.floor(hoursSince)}h. Anything to capture?`,
+      message: `Haven't journaled in ${hoursDisplay}. Anything to capture?`,
       priority: 'medium',
       trigger: '6h-inactivity',
       timestamp: now.getTime()

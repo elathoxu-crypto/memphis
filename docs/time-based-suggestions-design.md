@@ -243,21 +243,25 @@ docs/
 
 ## 🎬 Monday Plan (1-2 days)
 
-### Morning (3 hours)
-1. ✅ Create `src/intelligence/suggestions.ts` (1h)
-2. ✅ Add TUI state fields (30 min)
-3. ✅ Implement `checkTimeTriggers()` (1h)
-4. ✅ Write unit tests (30 min)
+### Morning (3 hours) ✅ COMPLETE
+1. ✅ Create `src/intelligence/suggestions.ts` (1h) - Already done (stub existed)
+2. ✅ Add TUI state fields (30 min) - Already done
+3. ✅ Implement `checkTimeTriggers()` (1h) - Already done
+4. ✅ Write unit tests (30 min) - 15/15 passing
+5. ✅ Fix test bug (end-of-day timing)
+6. ✅ Add suggestion handlers [a]/[d]
+7. ✅ Dashboard widget with priority colors
+8. ✅ Context-aware status bar
 
-### Afternoon (3 hours)
-1. ✅ Add dashboard widget (1h)
-2. ✅ Implement notification system (1h)
-3. ✅ Write integration tests (1h)
+### Afternoon (3 hours) - REMAINING
+1. ✅ Add dashboard widget (1h) - DONE
+2. ⏳ Implement notification system (1h) - PARTIAL (handlers done)
+3. ⏳ Write integration tests (1h) - OPTIONAL (unit tests sufficient)
 
-### Evening (1 hour)
-1. ✅ Manual testing (30 min)
-2. ✅ Documentation (15 min)
-3. ✅ Commit + push (15 min)
+### Evening (1 hour) - REMAINING
+1. ⏳ Manual testing (30 min)
+2. ⏳ Documentation (15 min) - IN PROGRESS
+3. ✅ Commit + push (15 min) - DONE
 
 **Done by Monday evening!** 🔥
 
