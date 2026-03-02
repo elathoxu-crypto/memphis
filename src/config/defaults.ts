@@ -7,7 +7,7 @@ import {
   WORKSPACE_TAG_PREFIX,
 } from "../security/constants.js";
 
-export const MEMPHIS_HOME = join(homedir(), ".memphis");
+export const MEMPHIS_HOME = process.env.MEMPHIS_HOME || join(homedir(), ".memphis");
 export const CHAINS_PATH = join(MEMPHIS_HOME, "chains");
 export const CONFIG_PATH = join(MEMPHIS_HOME, "config.yaml");
 export const EMBEDDINGS_PATH = join(MEMPHIS_HOME, "embeddings");

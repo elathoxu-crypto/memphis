@@ -81,7 +81,7 @@ const SecurityConfigSchema = z.object({
 });
 
 const MemphisConfigSchema = z.object({
-  providers: z.record(z.string(), ProviderSchema).optional(),
+  providers: z.record(z.string(), ProviderSchema).nullable().optional(),
   memory: MemoryConfigSchema.optional(),
   embeddings: EmbeddingsConfigSchema.optional(),
   agents: z.record(z.string(), AgentConfigSchema).optional(),

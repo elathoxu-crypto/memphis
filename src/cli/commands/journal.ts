@@ -122,6 +122,11 @@ export async function journalCommand(message: string, options: { tags?: string; 
   log.block(chain, block.index, block.hash);
   log.info(message);
 
+  // Show tags if present
+  if (tags && tags.length > 0) {
+    console.log(chalk.dim(`  Tags: ${tags.join(", ")}`));
+  }
+
   // Check for decision (async, non-blocking)
   try {
     const decisionBlock = await checkAndSaveDecision(guard, block);
