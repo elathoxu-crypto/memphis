@@ -110,7 +110,7 @@ export class NexusChatTUI {
     this.editor = new Editor(this.tui, editorTheme);
     this.editor.onSubmit = (text: string) => {
       this.handleInput(text);
-      this.editor.clear();
+      // Note: pi-tui Editor clears itself after onSubmit
     };
     root.addChild(this.editor);
 
