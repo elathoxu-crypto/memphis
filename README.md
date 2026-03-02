@@ -2,7 +2,7 @@
 
 **Local-first cognitive engine with AI-powered intelligence features.**
 
-**Latest: v1.7.0 — Phase 6 Intelligence (Auto-categorization + Smart Suggestions)**
+**Latest: v1.7.2 — Interactive Wizard + Doctor + ZAI Provider**
 
 [English](#english) | [Polski](#polski)
 
