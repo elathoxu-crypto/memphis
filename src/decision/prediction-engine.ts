@@ -11,6 +11,9 @@ import { PatternLearner, DecisionPattern, Prediction, DecisionContext } from './
 import { ContextAnalyzer, CurrentContext } from './context-analyzer.js';
 import { ContextMatcher, ContextMatch } from './context-matcher.js';
 
+// Re-export Prediction for other modules
+export { Prediction };
+
 // ============================================================================
 // TYPES
 // ============================================================================

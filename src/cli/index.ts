@@ -471,6 +471,77 @@ program
     }
   });
 
+// Model C: Accuracy command
+program
+  .command("accuracy [action]")
+  .description("📊 Track prediction accuracy (Model C)")
+  .option("--json", "Output as JSON")
+  .action(async (action, opts) => {
+    const { AccuracyTracker } = await import("../decision/accuracy-tracker.js");
+
+    const tracker = new AccuracyTracker();
+    const actionType = action || 'stats';
+
+    if (actionType === 'stats') {
+      const stats = tracker.calculateStats();
+      
+      if (opts.json) {
+        const output = {
+          ...stats,
+          byPattern: Object.fromEntries(stats.byPattern),
+          byConfidenceRange: Object.fromEntries(stats.byConfidenceRange),
+        };
+        console.log(JSON.stringify(output, null, 2));
+        return;
+      }
+
+      console.log('📊 PREDICTION ACCURACY\n');
+      
+      if (stats.totalPredictions === 0) {
+        console.log('No predictions tracked yet.');
+        console.log('');
+        console.log('💡 Start using predictions to build accuracy data:');
+        console.log('   memphis predict --learn');
+        console.log('   memphis predict');
+        return;
+      }
+
+      console.log(`Total predictions: ${stats.totalPredictions}`);
+      console.log(`Correct: ${stats.correctPredictions}`);
+      console.log(`Accuracy: ${(stats.accuracy * 100).toFixed(1)}%`);
+      console.log(`Trend: ${stats.recentTrend}`);
+      console.log('');
+
+      // By confidence range
+      console.log('By Confidence Range:');
+      for (const [range, rangeStats] of stats.byConfidenceRange) {
+        if (rangeStats.total > 0) {
+          console.log(`  ${range}: ${(rangeStats.accuracy * 100).toFixed(0)}% (${rangeStats.total} predictions)`);
+        }
+      }
+      console.log('');
+
+      // Calibration
+      const calibration = tracker.getCalibration();
+      console.log('Calibration (predicted vs actual):');
+      for (const cal of calibration) {
+        if (cal.samples > 0) {
+          const diff = cal.actualAccuracy - cal.predictedConfidence;
+          const emoji = Math.abs(diff) < 0.05 ? '✓' : diff > 0 ? '↑' : '↓';
+          console.log(`  ${emoji} ${cal.confidenceRange}: predicted ${(cal.predictedConfidence * 100).toFixed(0)}%, actual ${(cal.actualAccuracy * 100).toFixed(0)}% (${cal.samples} samples)`);
+        }
+      }
+
+    } else if (actionType === 'clear') {
+      console.log('⚠️  This will clear all accuracy tracking data.');
+      tracker.clear();
+      console.log('✅ Accuracy data cleared');
+
+    } else if (actionType === 'export') {
+      console.log(tracker.export());
+    }
+  });
+
 program
   .command("vault")
   .description("Manage encrypted secrets (SSI Vault)")
