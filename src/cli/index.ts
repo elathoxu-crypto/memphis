@@ -480,65 +480,64 @@ program
     const { AccuracyTracker } = await import("../decision/accuracy-tracker.js");
 
     const tracker = new AccuracyTracker();
-    const actionType = action || 'stats';
 
-    if (actionType === 'stats') {
-      const stats = tracker.calculateStats();
-      
-      if (opts.json) {
-        const output = {
-          ...stats,
-          byPattern: Object.fromEntries(stats.byPattern),
-          byConfidenceRange: Object.fromEntries(stats.byConfidenceRange),
-        };
-        console.log(JSON.stringify(output, null, 2));
-        return;
-      }
+    if (action === 'clear') {
+      tracker.clear();
+      console.log('✅ Accuracy data cleared');
+      return;
+    }
 
-      console.log('📊 PREDICTION ACCURACY\n');
-      
-      if (stats.totalPredictions === 0) {
+    const stats = tracker.getStats();
+
+    if (opts.json) {
+      console.log(JSON.stringify(stats, null, 2));
+    } else {
+      if (stats.totalEvents === 0) {
+        console.log('📊 PREDICTION ACCURACY\n');
         console.log('No predictions tracked yet.');
         console.log('');
         console.log('💡 Start using predictions to build accuracy data:');
         console.log('   memphis predict --learn');
         console.log('   memphis predict');
-        return;
+      } else {
+        console.log(tracker.formatStats(stats));
       }
+    }
+  });
 
-      console.log(`Total predictions: ${stats.totalPredictions}`);
-      console.log(`Correct: ${stats.correctPredictions}`);
-      console.log(`Accuracy: ${(stats.accuracy * 100).toFixed(1)}%`);
-      console.log(`Trend: ${stats.recentTrend}`);
+// Model C: Suggest command (proactive)
+program
+  .command("suggest")
+  .description("💡 Check for proactive decision suggestions (Model C)")
+  .option("--force", "Force check (ignore cooldown)")
+  .option("--channel <channel>", "Notification channel", "terminal")
+  .action(async (opts) => {
+    const { createWorkspaceStore } = await import("./utils/workspace-store.js");
+    const { PatternLearner } = await import("../decision/pattern-learner.js");
+    const { ContextAnalyzer } = await import("../decision/context-analyzer.js");
+    const { PredictionEngine } = await import("../decision/prediction-engine.js");
+    const { ProactiveSuggester } = await import("../decision/proactive-suggester.js");
+
+    const { guard } = createWorkspaceStore();
+    const learner = new PatternLearner(guard);
+    const analyzer = new ContextAnalyzer();
+    const engine = new PredictionEngine(learner, analyzer);
+    const suggester = new ProactiveSuggester(engine, analyzer, learner, {
+      minConfidence: 0.7,
+      minInterval: opts.force ? 0 : 30,
+      maxSuggestions: 3,
+      channels: [opts.channel as any],
+    });
+
+    const suggestions = await suggester.checkAndSuggest();
+
+    if (suggestions && suggestions.length > 0) {
+      console.log(suggester.formatSuggestions(suggestions));
+    } else {
+      console.log('✓ No suggestions at this time.');
       console.log('');
-
-      // By confidence range
-      console.log('By Confidence Range:');
-      for (const [range, rangeStats] of stats.byConfidenceRange) {
-        if (rangeStats.total > 0) {
-          console.log(`  ${range}: ${(rangeStats.accuracy * 100).toFixed(0)}% (${rangeStats.total} predictions)`);
-        }
-      }
-      console.log('');
-
-      // Calibration
-      const calibration = tracker.getCalibration();
-      console.log('Calibration (predicted vs actual):');
-      for (const cal of calibration) {
-        if (cal.samples > 0) {
-          const diff = cal.actualAccuracy - cal.predictedConfidence;
-          const emoji = Math.abs(diff) < 0.05 ? '✓' : diff > 0 ? '↑' : '↓';
-          console.log(`  ${emoji} ${cal.confidenceRange}: predicted ${(cal.predictedConfidence * 100).toFixed(0)}%, actual ${(cal.actualAccuracy * 100).toFixed(0)}% (${cal.samples} samples)`);
-        }
-      }
-
-    } else if (actionType === 'clear') {
-      console.log('⚠️  This will clear all accuracy tracking data.');
-      tracker.clear();
-      console.log('✅ Accuracy data cleared');
-
-    } else if (actionType === 'export') {
-      console.log(tracker.export());
+      console.log('💡 Keep making decisions to train the prediction engine.');
+      console.log('   Patterns learned:', learner.getPatterns().length);
     }
   });
 
