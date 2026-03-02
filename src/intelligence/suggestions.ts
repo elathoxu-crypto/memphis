@@ -4,6 +4,9 @@
  * Generates proactive journaling suggestions based on time patterns
  */
 
+import { type MemphisEvent } from './event-types.js';
+import { checkEventTriggers } from './event-detector.js';
+
 export interface Suggestion {
   type: 'journal' | 'reflect' | 'summarize';
   message: string;
@@ -76,6 +79,31 @@ export function checkTimeTriggers(
   }
 
   return suggestions;
+}
+
+/**
+ * Check ALL triggers (time + events)
+ */
+export function checkAllTriggers(
+  lastJournalTime: number,
+  recentEvents: MemphisEvent[] = [],
+  now: Date = new Date(),
+  timeConfig: TimeTriggers = DEFAULT_TRIGGERS
+): Suggestion[] {
+  // Get time-based suggestions
+  const timeSuggestions = checkTimeTriggers(lastJournalTime, now, timeConfig);
+  
+  // Get event-based suggestions
+  const eventSuggestions = checkEventTriggers(recentEvents);
+  
+  // Combine and deduplicate
+  const allSuggestions = [...timeSuggestions, ...eventSuggestions];
+  
+  // Sort by priority (high first)
+  const priorityOrder = { high: 3, medium: 2, low: 1 };
+  allSuggestions.sort((a, b) => priorityOrder[b.priority] - priorityOrder[a.priority]);
+  
+  return allSuggestions;
 }
 
 /**
