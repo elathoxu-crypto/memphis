@@ -308,6 +308,78 @@ program
     showCommand(kind, id);
   });
 
+// Model C: Predict command
+program
+  .command("predict")
+  .description("🔮 Show predicted decisions based on learned patterns (Model C)")
+  .option("--learn", "Learn patterns from decision history first")
+  .option("--since <days>", "Days to analyze for learning", "30")
+  .option("--min-confidence <n>", "Minimum confidence threshold (0-1)", "0.6")
+  .option("--max <n>", "Maximum predictions to show", "5")
+  .option("--json", "Output as JSON")
+  .action(async (opts) => {
+    const { createWorkspaceStore } = await import("./utils/workspace-store.js");
+    const { PatternLearner } = await import("../decision/pattern-learner.js");
+    const { ContextAnalyzer } = await import("../decision/context-analyzer.js");
+    const { PredictionEngine } = await import("../decision/prediction-engine.js");
+
+    const { guard } = createWorkspaceStore();
+
+    const learner = new PatternLearner(guard, {
+      minOccurrences: 3,
+      confidenceCap: 0.95,
+      contextSimilarityThreshold: 0.7,
+    });
+
+    const analyzer = new ContextAnalyzer({
+      recentFilesMinutes: 60,
+      recentCommitsHours: 24,
+      maxActiveFiles: 20,
+    });
+
+    const engine = new PredictionEngine(learner, analyzer, {
+      minConfidence: parseFloat(opts.minConfidence),
+      maxPredictions: parseInt(opts.max),
+    });
+
+    // Learn patterns if requested
+    if (opts.learn) {
+      console.log(`📚 Learning patterns from last ${opts.since} days...\n`);
+      
+      const newPatterns = await learner.learnFromHistory(parseInt(opts.since));
+      const stats = learner.getStats();
+      
+      console.log(`✅ Learned ${newPatterns.length} new patterns`);
+      console.log(`   Total patterns: ${stats.totalPatterns}`);
+      console.log(`   Avg occurrences: ${stats.avgOccurrences.toFixed(1)}`);
+      console.log('');
+    }
+
+    // Check if patterns exist
+    const patterns = learner.getPatterns();
+    if (patterns.length === 0) {
+      console.log('⚠️  No patterns learned yet.');
+      console.log('');
+      console.log('💡 Run with --learn to learn from your decision history:');
+      console.log('   memphis predict --learn');
+      console.log('');
+      console.log('   Or make more decisions first:');
+      console.log('   memphis decide "Title" "Choice" -r "Reason"');
+      return;
+    }
+
+    // Generate predictions
+    console.log('🔮 Analyzing current context...\n');
+    
+    const result = await engine.predict();
+
+    if (opts.json) {
+      console.log(JSON.stringify(result, null, 2));
+    } else {
+      console.log(engine.formatPredictions(result));
+    }
+  });
+
 program
   .command("vault")
   .description("Manage encrypted secrets (SSI Vault)")
