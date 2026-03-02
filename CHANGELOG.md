@@ -2,6 +2,90 @@
 
 All notable changes to Memphis are documented in this file.
 
+## [2.1.1] - 2026-03-02
+
+### Added - Automated Multi-Agent Communication
+
+**Encrypted Messaging System**
+- End-to-end encryption (AES-256-CBC + PBKDF2)
+- Shared 256-bit key for agent communication
+- Message signing with SHA256
+- Automatic encryption/decryption
+
+**Automated Communication Scripts**
+- `send-message.sh` — Unified sender (works on both PCs)
+- `receive-messages.sh` — Unified receiver
+- `check-messages-daemon.sh` — Auto-check daemon (cron 5 min)
+- `pinata-upload.sh` — Pinata upload helper
+- `pinata-download.sh` — Pinata download helper
+
+**Message Queue System**
+- Inbox/outbox/processed directories
+- Automatic message processing
+- Message ID tracking
+- Timestamp-based naming
+- ACK system (acknowledgments)
+
+**Pinata Integration**
+- Pinata as message broker
+- Fast CID propagation
+- Works even if one PC offline
+- sanitizeJSONData() method (fixes control characters)
+
+**IPFS 0.27.0 Upgrade**
+- Both PCs upgraded from 0.21.0 to 0.27.0
+- QUIC v1 protocol support
+- WebTransport protocols
+- Relay circuits for better connectivity
+- 152 peers (9x increase from 16)
+
+**Communication Architecture**
+- Share chain as inbox (metadata)
+- Pinata as message broker (content)
+- Local IPFS as backup (decentralization)
+- Hybrid approach (reliability + decentralization)
+
+### Changed
+- Unified agent identity detection (hostname → ~/.agent_name)
+- Improved Pinata config parsing (grep instead of js-yaml)
+- Better error handling in scripts
+
+### Fixed
+- IPFS version conflict (0.21.0 vs repo v18)
+- Pinata JSON sanitization (control characters)
+- Agent name detection (watra/memphis)
+- Message encryption flow
+
+### Documentation
+- MEMPHIS_COMMUNICATION_SETUP.md — Full setup guide (5.5KB)
+- MEMPHIS_NETWORK_STATUS.md — Network status (2.4KB)
+- COMMUNICATION_REAL_SOLUTION.md — Architecture (5.9KB)
+- IPFS_UPGRADE_GUIDE.md — Upgrade instructions (1.9KB)
+
+### Scripts (5 new)
+- send-message.sh (2.5KB)
+- receive-messages.sh (3.7KB)
+- check-messages-daemon.sh (2.6KB)
+- pinata-upload.sh (846B)
+- pinata-download.sh (653B)
+
+### Total Package Size
+- Scripts: 10.3KB
+- Documentation: 15.7KB
+- Total: 26KB
+
+### Network Impact
+- Peers: 16 → 182 (11x increase)
+- IPFS Version: 0.21.0 → 0.27.0
+- Protocols: QUIC v1 + WebTransport
+- Relay: Full circuit support
+
+### Multi-Agent Status
+- Watra (PC #1): 1,225 blocks, 30 peers
+- Memphis (PC #2): 83 blocks, 152 peers
+- Communication: Fully automated
+- Encryption: AES-256-CBC active
+
 ## [2.0.0] - 2026-03-02
 
 ### Added - Model C (Predictive Decisions)
