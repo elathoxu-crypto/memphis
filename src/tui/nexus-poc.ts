@@ -13,6 +13,55 @@ import { recall, type RecallQuery, type RecallHit } from "../core/recall.js";
 import { Store } from "../memory/store.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
+// THEME SYSTEM
+// ─────────────────────────────────────────────────────────────────────────────
+
+type ThemeMode = 'dark' | 'light';
+
+interface Theme {
+  mode: ThemeMode;
+  primary: (s: string) => string;
+  secondary: (s: string) => string;
+  accent: (s: string) => string;
+  muted: (s: string) => string;
+  error: (s: string) => string;
+  success: (s: string) => string;
+  warning: (s: string) => string;
+}
+
+const DARK_THEME: Theme = {
+  mode: 'dark',
+  primary: chalk.cyan,
+  secondary: chalk.blue,
+  accent: chalk.magenta,
+  muted: chalk.gray,
+  error: chalk.red,
+  success: chalk.green,
+  warning: chalk.yellow
+};
+
+const LIGHT_THEME: Theme = {
+  mode: 'light',
+  primary: chalk.blue,
+  secondary: chalk.cyan,
+  accent: chalk.magenta,
+  muted: chalk.gray,
+  error: chalk.red,
+  success: chalk.green,
+  warning: chalk.yellow
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// KEYBOARD SHORTCUTS
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface KeyboardShortcut {
+  key: string;
+  description: string;
+  action: () => void;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // AUTOCOMPLETE PROVIDER
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -29,6 +78,10 @@ class MemphisAutocompleteProvider implements AutocompleteProvider {
     { value: "/recall ", label: "/recall", description: "Recall from chains" },
     { value: "/s ", label: "/s", description: "Short alias for /search" },
     { value: "/sync", label: "/sync", description: "Show network sync status" },
+    { value: "/theme", label: "/theme", description: "Toggle theme (dark/light)" },
+    { value: "/sidebar", label: "/sidebar", description: "Toggle journal sidebar" },
+    { value: "/history", label: "/history", description: "Show command history" },
+    { value: "/status", label: "/status", description: "Show system status" },
     { value: "/help", label: "/help", description: "Show available commands" },
     { value: "/clear", label: "/clear", description: "Clear chat history" },
     { value: "/quit", label: "/quit", description: "Exit TUI (or press q)" },
@@ -292,6 +345,13 @@ export class NexusChatTUI {
   private statusBar: Text;
   private suggestionsWidget: Text;
   private similarMessages: RecallHit[] = [];
+  
+  // Phase 4: Theme system
+  private theme: Theme = DARK_THEME;
+  private showJournalSidebar: boolean = false;
+  private journalSidebarText: Text | null = null;
+  private commandHistory: string[] = [];
+  private historyIndex: number = -1;
 
   constructor() {
     // Load recent messages from ask chain
@@ -411,6 +471,106 @@ export class NexusChatTUI {
     // ─── Setup TUI ───────────────────────────────────────────────────────────
     this.tui.addChild(root);
     this.tui.setFocus(this.editor);
+    
+    // Phase 4: Setup keyboard shortcuts
+    this.setupKeyboardShortcuts();
+  }
+  
+  // ─────────────────────────────────────────────────────────────────────────────
+  // PHASE 4: KEYBOARD SHORTCUTS
+  // ─────────────────────────────────────────────────────────────────────────────
+  
+  private setupKeyboardShortcuts() {
+    // Add global input listener for keyboard shortcuts
+    this.tui.addInputListener((data: string) => {
+      // Ctrl+J: Quick journal
+      if (data === '\u0010' || data === '\x10') {
+        this.triggerQuickJournal();
+        return { consume: true };
+      }
+      
+      // Ctrl+R: Search/Recall
+      if (data === '\u0012' || data === '\x12') {
+        this.triggerSearch();
+        return { consume: true };
+      }
+      
+      // Ctrl+S: Toggle sidebar
+      if (data === '\u0013' || data === '\x13') {
+        this.toggleJournalSidebar();
+        return { consume: true };
+      }
+      
+      // Ctrl+T: Toggle theme
+      if (data === '\u0014' || data === '\x14') {
+        this.toggleTheme();
+        return { consume: true };
+      }
+      
+      return undefined;
+    });
+  }
+  
+  private triggerQuickJournal() {
+    // Pre-fill editor with /j command
+    this.editor.setText("/j ");
+    this.addSystemMessage("📝 Quick journal mode - type your entry and press Enter");
+  }
+  
+  private triggerSearch() {
+    // Pre-fill editor with /search command
+    this.editor.setText("/search ");
+    this.addSystemMessage("🔍 Search mode - type your query and press Enter");
+  }
+  
+  private toggleJournalSidebar() {
+    this.showJournalSidebar = !this.showJournalSidebar;
+    if (this.showJournalSidebar) {
+      this.addSystemMessage("📖 Journal sidebar enabled (Ctrl+S to toggle)");
+    } else {
+      this.addSystemMessage("📖 Journal sidebar disabled");
+    }
+    this.updateChatBox();
+  }
+  
+  private toggleTheme() {
+    this.theme = this.theme.mode === 'dark' ? LIGHT_THEME : DARK_THEME;
+    this.addSystemMessage(`🎨 Theme: ${this.theme.mode} mode`);
+    this.updateChatBox();
+  }
+  
+  private addToCommandHistory(command: string) {
+    // Avoid duplicates
+    if (this.commandHistory[this.commandHistory.length - 1] !== command) {
+      this.commandHistory.push(command);
+      // Keep last 100 commands
+      if (this.commandHistory.length > 100) {
+        this.commandHistory.shift();
+      }
+    }
+    // Also add to editor history for up/down navigation
+    this.editor.addToHistory?.(command);
+  }
+  
+  // ─────────────────────────────────────────────────────────────────────────────
+  // PHASE 4: THEME HELPERS
+  // ─────────────────────────────────────────────────────────────────────────────
+  
+  private getEditorTheme() {
+    return {
+      borderColor: this.theme.primary,
+      selectList: {
+        borderColor: this.theme.muted,
+        itemColor: (s: string) => s,
+        selectedColor: this.theme.primary,
+        descriptionColor: this.theme.muted,
+        selectedPrefix: (s: string) => this.theme.primary("→ " + s),
+        selectedText: this.theme.primary,
+        description: this.theme.muted,
+        scrollInfo: this.theme.muted,
+        noMatch: this.theme.error
+      }
+    };
   }
 
   private renderChatHistory(): string {
@@ -484,7 +644,11 @@ export class NexusChatTUI {
     // Keyboard hints (context-aware)
     const hints = this.suggestions.length > 0 
       ? "[a] accept [d] dismiss [q] quit"
-      : "[q] quit [h] help";
+      : "Ctrl+J journal Ctrl+R search [q] quit";
+    
+    // Theme indicator
+    const themeIcon = this.theme.mode === 'dark' ? "🌙" : "☀️";
+    const themeStr = `${themeIcon}`;
     
     // Compose status bar
     const parts = [
@@ -494,8 +658,9 @@ export class NexusChatTUI {
       intelStr,
       suggestionStr,
       syncStr,
-      chalk.gray(hints),
-      chalk.gray(`⏱️ ${this.formatTime(new Date())}`)
+      themeStr,
+      this.theme.muted(hints),
+      this.theme.muted(`⏱️ ${this.formatTime(new Date())}`)
     ].filter(p => p); // Remove empty parts
     
     return parts.join(" │ ");
@@ -507,6 +672,9 @@ export class NexusChatTUI {
 
   private handleInput(text: string) {
     if (!text.trim()) return;
+    
+    // Phase 4: Add to command history
+    this.addToCommandHistory(text);
 
     if (text.startsWith("/")) {
       this.handleCommand(text);
@@ -521,7 +689,7 @@ export class NexusChatTUI {
 
     switch (command) {
       case "/help":
-        this.addSystemMessage("Commands: /help, /clear, /agents, /status, /suggestions, /search <query>, /sync");
+        this.showHelp();
         break;
       case "/clear":
         this.messages = [];
@@ -563,6 +731,15 @@ export class NexusChatTUI {
         break;
       case "/sync":
         this.showSyncStatus();
+        break;
+      case "/theme":
+        this.toggleTheme();
+        break;
+      case "/sidebar":
+        this.toggleJournalSidebar();
+        break;
+      case "/history":
+        this.showHistory();
         break;
       case "/a":
       case "/accept":
@@ -710,6 +887,58 @@ export class NexusChatTUI {
       // Clear widget
     }
     this.tui.requestRender();
+  }
+  
+  // ─────────────────────────────────────────────────────────────────────────────
+  // PHASE 4: HELP SYSTEM
+  // ─────────────────────────────────────────────────────────────────────────────
+  
+  private showHelp() {
+    const helpText = `
+${chalk.bold(this.theme.primary("Memphis Nexus TUI - Help"))}
+
+${this.theme.warning("Keyboard Shortcuts:")}
+  Ctrl+J  Quick journal entry
+  Ctrl+R  Search/Recall memories
+  Ctrl+S  Toggle journal sidebar
+  Ctrl+T  Toggle theme (dark/light)
+  Tab     Autocomplete commands
+  ↑/↓     Command history
+  q       Quit
+
+${this.theme.warning("Commands:")}
+  /j <text>       Quick journal entry
+  /a <question>   Ask Memphis
+  /d <decision>   Record a decision
+  /search <query> Search memories
+  /recall <query> Recall from chains
+  /s <query>      Short search alias
+  /sync           Show network sync status
+  /theme          Toggle theme
+  /sidebar        Toggle journal sidebar
+  /history        Show command history
+  /clear          Clear chat
+  /status         Show system status
+  /help           Show this help
+  /quit           Exit TUI
+
+${this.theme.muted("Theme: " + this.theme.mode + " mode")}
+`;
+    this.addSystemMessage(helpText);
+  }
+  
+  private showHistory() {
+    if (this.commandHistory.length === 0) {
+      this.addSystemMessage("No command history yet");
+      return;
+    }
+    
+    const recent = this.commandHistory.slice(-10).reverse();
+    let historyText = chalk.bold(this.theme.primary("Command History (last 10):\n\n"));
+    recent.forEach((cmd, i) => {
+      historyText += `  ${this.theme.muted(String(i + 1))}  ${cmd}\n`;
+    });
+    this.addSystemMessage(historyText);
   }
   
   private updateSimilarMessagesWidget() {
