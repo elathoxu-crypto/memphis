@@ -1,0 +1,184 @@
+# Memphis Configuration Template
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Memphis Brain Configuration
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# ━━━ LLM Providers ━━━
+# Configure your AI providers for cognitive features
+
+providers:
+  # Primary provider (OpenAI)
+  openai:
+    url: https://api.openai.com/v1
+    model: gpt-4
+    api_key: ${OPENAI_API_KEY}  # Set in environment: export OPENAI_API_KEY="your-key"
+    role: primary
+
+  # Fallback provider (Anthropic)
+  anthropic:
+    url: https://api.anthropic.com/v1
+    model: claude-sonnet-4
+    api_key: ${ANTHROPIC_API_KEY}
+    role: fallback
+
+  # Offline provider (Ollama)
+  ollama:
+    url: http://localhost:11434/v1
+    model: llama3.1
+    role: offline
+
+# ━━━ Memory Configuration ━━━
+# Chain storage and management
+
+memory:
+  path: ~/.memphis/chains
+  auto_git: false           # Auto-commit chains to git
+  auto_git_push: false      # Auto-push to remote
+  compression_threshold: 1000  # Compress when chain > 1000 blocks
+
+# ━━━ Agent Configuration ━━━
+# Agent-specific settings
+
+agents:
+  journal:
+    chain: journal
+    context_window: 20      # Last N blocks for context
+    auto_tag: true          # Auto-generate tags
+
+  builder:
+    chain: build
+    context_window: 30
+
+  architect:
+    chain: adr
+    context_window: 15
+
+  ops:
+    chain: ops
+    context_window: 10
+
+# ━━━ Multi-Agent Network ━━━
+# Network configuration for agent cooperation
+
+multi_agent:
+  enabled: {NETWORK_ENABLED}
+  protocol: {PROTOCOL}
+
+  # Partner agents
+  partners:
+    - name: {PARTNER_NAME}
+      location: {PARTNER_LOCATION}
+      role: partner
+
+  # Network sync settings
+  sync:
+    enabled: true
+    interval: 30m
+    method: ipfs           # ipfs, ssh, or http
+
+# ━━━ Self-Loop Configuration ━━━
+# Memphis using its own commands
+
+self_loop:
+  enabled: {SELF_LOOP_ENABLED}
+
+  # Auto-journaling
+  auto_journal:
+    enabled: true
+    interval: 5m           # Journal automatically every 5 min
+    tags: [auto, self-loop]
+
+  # Decision tracking
+  decision_tracking:
+    enabled: true
+    auto_record: true      # Auto-detect decisions
+
+  # Pattern learning
+  pattern_learning:
+    enabled: true
+    scan_interval: 1h      # Scan for patterns every hour
+
+  # Self-reflection
+  reflection:
+    enabled: true
+    schedule: "0 22 * * *"  # Daily at 22:00
+
+# ━━━ Security ━━━
+# Encryption and access control
+
+security:
+  vault:
+    enabled: true
+    encryption: aes-256-gcm
+    location: ~/.memphis/chains/vault
+
+  # API key storage
+  api_keys:
+    storage: vault         # vault or environment
+    rotate_days: 90        # Rotate keys every 90 days
+
+# ━━━ Embeddings ━━━
+# Semantic search configuration
+
+embeddings:
+  enabled: true
+  provider: openai         # openai or local
+  model: text-embedding-3-small
+  cache_size: 1000         # Cache last 1000 embeddings
+
+# ━━━ Logging ━━━
+# System logging
+
+logging:
+  level: info              # debug, info, warn, error
+  file: ~/.memphis/logs/memphis.log
+  max_size: 10MB
+  max_files: 5
+
+# ━━━ Backup ━━━
+# Automatic backups
+
+backup:
+  enabled: true
+  interval: 24h
+  retention: 30            # Keep last 30 backups
+  location: ~/.memphis/backups
+
+# ━━━ Performance ━━━
+# Performance tuning
+
+performance:
+  chain_cache_size: 100
+  embedding_batch_size: 50
+  max_concurrent_searches: 10
+
+# ━━━ Experimental Features ━━━
+# Beta features
+
+experimental:
+  predictive_decisions: true  # Model C predictions
+  collective_intelligence: false  # Model D (not ready)
+  meta_cognitive: false       # Model E (not ready)
+
+# ━━━ Workspace Configuration ━━━
+# OpenClaw workspace settings
+
+workspace:
+  path: ~/.openclaw/workspace
+  auto_sync: true
+  files:
+    - SOUL.md
+    - IDENTITY.md
+    - MEMORY.md
+    - USER.md
+    - TOOLS.md
+
+# ━━━ CLI Settings ━━━
+# Command-line interface
+
+cli:
+  color_output: true
+  progress_bars: true
+  interactive: true
+  default_format: json     # json or yaml
