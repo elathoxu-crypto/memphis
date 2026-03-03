@@ -29,15 +29,31 @@ export class VotingEngine {
 
   /**
    * Tally votes for a proposal
+   * Supports both:
+   * - tallyVotes(proposal: Proposal, votes: Vote[])
+   * - tallyVotes(method: VotingMethod, votes: Vote[])
    */
-  tallyVotes(proposal: Proposal, votes: Vote[]): VoteResult {
-    const method = proposal.config.defaultMethod || this.config.defaultMethod;
+  tallyVotes(proposalOrMethod: Proposal | VotingMethod, votes: Vote[]): VoteResult {
+    // Support both calling patterns
+    let method: VotingMethod;
+    let proposalId: string;
+    let participation: number;
+    
+    if (typeof proposalOrMethod === 'string') {
+      // Called with method name
+      method = proposalOrMethod;
+      proposalId = votes[0]?.proposalId || 'unknown';
+      participation = 1.0; // Assume full participation for simple calls
+    } else {
+      // Called with full proposal
+      const proposal = proposalOrMethod;
+      method = proposal.config?.defaultMethod || this.config.defaultMethod;
+      proposalId = proposal.id;
+      participation = votes.length / (proposal.options?.length || 1);
+    }
     
     // Count votes by option
     const voteCounts = this.countVotes(votes);
-    
-    // Calculate participation
-    const participation = votes.length / (proposal.options.length || 1);
     
     // Determine winner based on method
     const winner = this.determineWinner(voteCounts, method, votes);
@@ -46,7 +62,7 @@ export class VotingEngine {
     const consensus = this.calculateConsensus(voteCounts, votes);
     
     return {
-      proposalId: proposal.id,
+      proposalId,
       winner,
       participation,
       consensus,
