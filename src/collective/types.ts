@@ -223,7 +223,7 @@ export interface CollectiveConfig {
   };
   reputation: {
     initial: number;           // Starting score
-    decay: number;             // Daily decay
+    decayRate: number;         // Daily decay rate
     boost: number;             // Success boost
     penalty: number;           // Failure penalty
   };

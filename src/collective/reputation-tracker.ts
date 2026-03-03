@@ -20,16 +20,19 @@ import type {
  */
 export class ReputationTracker {
   private agentReputations: Map<string, ReputationScore>;
+  private initialScore: number;
   private decayRate: number;
   private boostAmount: number;
   private penaltyAmount: number;
 
   constructor(config: {
+    initial?: number;
     decayRate: number;
     boost: number;
     penalty: number;
   }) {
     this.agentReputations = new Map();
+    this.initialScore = config.initial || 0.5;
     this.decayRate = config.decayRate;
     this.boostAmount = config.boost;
     this.penaltyAmount = config.penalty;
@@ -236,7 +239,7 @@ export class ReputationTracker {
     let reputation = this.agentReputations.get(agentId);
     
     if (!reputation) {
-      reputation = this.initializeReputation(agentId);
+      reputation = this.initializeReputation(agentId, this.initialScore);
     }
     
     return reputation;
