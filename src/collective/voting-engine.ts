@@ -28,6 +28,19 @@ export class VotingEngine {
   }
 
   /**
+   * Cast a vote on a proposal
+   * Convenience method that adds a vote and tallies results
+   */
+  castVote(proposal: Proposal, vote: Vote): VoteResult {
+    // Get existing votes from proposal result, if any
+    const existingVotes = proposal.result?.votes || [];
+    const allVotes = [...existingVotes, vote];
+    
+    // Tally all votes
+    return this.tallyVotes(proposal, allVotes);
+  }
+
+  /**
    * Tally votes for a proposal
    * Supports both:
    * - tallyVotes(proposal: Proposal, votes: Vote[])

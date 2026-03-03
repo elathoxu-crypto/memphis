@@ -276,6 +276,35 @@ export class ReputationTracker {
   }
 
   /**
+   * Get top experts by reputation
+   * @param domain Optional domain filter
+   * @param limit Maximum number of experts to return
+   * @returns Array of agent IDs sorted by reputation
+   */
+  getExperts(domain?: string, limit: number = 10): string[] {
+    const agents = Array.from(this.agentReputations.entries());
+    
+    if (domain) {
+      // Filter agents with domain expertise
+      return agents
+        .filter(([id, rep]) => rep.domains.has(domain))
+        .sort((a, b) => {
+          const aScore = a[1].domains.get(domain) || 0;
+          const bScore = b[1].domains.get(domain) || 0;
+          return bScore - aScore;
+        })
+        .slice(0, limit)
+        .map(([id]) => id);
+    }
+    
+    // Return by overall reputation
+    return agents
+      .sort((a, b) => b[1].overall - a[1].overall)
+      .slice(0, limit)
+      .map(([id]) => id);
+  }
+
+  /**
    * Export reputation data
    */
   export(): Array<{ agentId: string; reputation: ReputationScore }> {
