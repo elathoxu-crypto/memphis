@@ -2,7 +2,7 @@
 
 **Local-first cognitive engine with AI-powered decision tracking, collective intelligence, and meta-cognitive reflection.**
 
-**Latest: v3.0.0 — ABCDE Cognitive Models Complete!** 🎉
+**Latest: v3.0.1 — Safety Features & Production Hardening!** 🛡️
 
 [English](#english) | [Polski](#polski) | [Quick Start](docs/QUICKSTART.md) | [Full Docs](docs/)
 
@@ -24,7 +24,39 @@ Memphis is a **complete cognitive engine** with 5 interconnected cognitive model
 
 ---
 
-### ✨ What's New in v3.0.0?
+### ✨ What's New in v3.0.1?
+
+**🛡️ Production Hardening: Safety Features Complete!**
+
+**Pre-Commit Validation:**
+- Automatic chain integrity checks before every commit
+- Broken block detection and prevention
+- Hash validation for all chains
+- Automatic backups before commits
+
+**Automated Backups:**
+- Compressed backups (22 MB, 1993 files)
+- Multiple backup types (manual, pre-commit, repair)
+- 30-day retention policy (configurable)
+- Easy restore procedure
+
+**Chain Repair Automation:**
+- Automatic detection of broken blocks
+- Quarantine system for damaged data
+- Interactive and automatic repair modes
+- Comprehensive logging
+
+**Enhanced Testing:**
+- 87 comprehensive tests (100% passing)
+- Block creation validation tests (19 new)
+- Edge case coverage
+- Hash algorithm verification
+
+**Test Results:** 87/87 tests passing (100%) ✅
+
+---
+
+### ✨ What Was New in v3.0.0?
 
 **🎉 HISTORIC MILESTONE: ABCDE Cognitive Models Complete!**
 
