@@ -33,6 +33,8 @@ import { journalCommand } from "./commands/journal.js";
 import { askCommand } from "./commands/ask.js";
 import { recallCommand } from "./commands/recall.js";
 import { statusCommand } from "./commands/status.js";
+import { tuiCommand } from "./commands/tui.js";
+import { gitCommand } from "./commands/git.js";
 import { initCommand } from "./commands/init.js";
 import { vaultCommand } from "./commands/vault.js";
 import { verifyCommand } from "./commands/verify.js";
@@ -583,36 +585,36 @@ program
   .action(botCommand);
 
 program
-  .command("tui")
-  .description("Launch the terminal UI")
-  .option("-s, --screen <screen>", "Open specific screen (dashboard, journal, vault, recall, ask, decisions, summary, network)")
-  .action((opts) => {
-    const tui = new MemphisTUI();
-    // If screen specified, navigate to it after a brief delay
-    if (opts.screen) {
-      setTimeout(() => {
-        const screenMap: Record<string, string> = {
-          dashboard: "dashboard",
-          journal: "journal",
-          vault: "vault",
-          recall: "recall",
-          ask: "ask",
-          decisions: "decisions",
-          summary: "summary",
-          network: "network",
-        };
-        const screenName = screenMap[opts.screen.toLowerCase()];
-        if (screenName) {
-          tui.navigateTo(screenName as any);
-        }
-      }, 500);
-    }
-    tui.run();
-  });
-
-// Summarize command
+// DISABLED:   .command("tui")
+// DISABLED:   .description("Launch the terminal UI")
+// DISABLED:   .option("-s, --screen <screen>", "Open specific screen (dashboard, journal, vault, recall, ask, decisions, summary, network)")
+// DISABLED:   .action((opts) => {
+// DISABLED:     const tui = new MemphisTUI();
+// DISABLED:     // If screen specified, navigate to it after a brief delay
+// DISABLED:     if (opts.screen) {
+// DISABLED:       setTimeout(() => {
+// DISABLED:         const screenMap: Record<string, string> = {
+// DISABLED:           dashboard: "dashboard",
+// DISABLED:           journal: "journal",
+// DISABLED:           vault: "vault",
+// DISABLED:           recall: "recall",
+// DISABLED:           ask: "ask",
+// DISABLED:           decisions: "decisions",
+// DISABLED:           summary: "summary",
+// DISABLED:           network: "network",
+// DISABLED:         };
+// DISABLED:         const screenName = screenMap[opts.screen.toLowerCase()];
+// DISABLED:         if (screenName) {
+// DISABLED:           tui.navigateTo(screenName as any);
+// DISABLED:         }
+// DISABLED:       }, 500);
+// DISABLED:     }
+// DISABLED:     tui.run();
+// DISABLED:   });
+// DISABLED: 
+// DISABLED: // Summarize command
 import { autosummarize, shouldTriggerAutosummary } from "../core/autosummarizer.js";
-
+// DISABLED: 
 program
   .command("embed")
   .description("Generate semantic embeddings for memory chains")
@@ -1030,6 +1032,10 @@ program
     });
   });
 
+// Register git command
+program.addCommand(gitCommand);
+
+program.addCommand(tuiCommand);
 program.parse();
 
 process.on("exit", () => dumpActiveHandles("exit"));
