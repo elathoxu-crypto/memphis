@@ -12,9 +12,11 @@ export class NexusChainIntegration {
   static saveMessageToChain(from: string, content: string): { blockIndex: number; hash: string } | null {
     try {
       const taggedContent = `${from}: ${content}`;
+      // Use __dirname to find Memphis root (dist/tui -> dist -> memphis root)
+      const memphisRoot = require('path').resolve(__dirname, '..', '..');
       const result = execSync(
         `node dist/cli/index.js journal "${taggedContent}" --tags nexus,chat,${from.toLowerCase()}`,
-        { encoding: "utf-8", cwd: process.cwd() }
+        { encoding: "utf-8", cwd: memphisRoot }
       );
 
       // Parse output: "✓ [journal#123] abc123..."
@@ -36,9 +38,10 @@ export class NexusChainIntegration {
    */
   static async syncToIPFS(): Promise<string | null> {
     try {
+      const memphisRoot = require('path').resolve(__dirname, '..', '..');
       const result = execSync(
         "node dist/cli/index.js share-sync --push",
-        { encoding: "utf-8", cwd: process.cwd() }
+        { encoding: "utf-8", cwd: memphisRoot }
       );
 
       // Parse CID from output

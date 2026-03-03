@@ -3,6 +3,9 @@
 # Usage: ./receive-messages.sh [--daemon]
 # Created: 2026-03-02 21:10 CET
 
+# Fix PATH for cron
+export PATH="/home/linuxbrew/.linuxbrew/bin:/home/memphis/.npm-global/bin:$PATH"
+
 set -e
 
 # Configuration

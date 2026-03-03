@@ -7,7 +7,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { execSync } from 'child_process';
-import { agentEncryption } from '../dist/utils/encryption.js';
+import { agentEncryption } from '../../utils/encryption.js';
 
 const MEMPHIS_CLI = 'node /home/memphis/memphis/dist/cli/index.js';
 
