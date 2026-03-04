@@ -5,6 +5,7 @@ import { log } from "../../utils/logger.js";
 import { promptHidden, promptYesNo } from "../utils/prompt.js";
 import { sha256 } from "../../utils/hash.js";
 import { detectEnvironment, getRecommendedProvider, checkEmbeddingsSupport } from "../../utils/environment.js";
+import { selectivePurge, nuclearReset, runOnboardingWizard, isEmptyState } from "../../core/onboarding.js";
 import chalk from "chalk";
 import * as readline from "readline";
 
@@ -123,9 +124,28 @@ async function promptForPassword(): Promise<SecurityState | null> {
   };
 }
 
-export async function initCommand() {
-  if (existsSync(CONFIG_PATH)) {
+export async function initCommand(options: { clean?: boolean; nuclear?: boolean } = {}) {
+  // ─── Clean Slate Options ───────────────────────────────────────────────
+  if (options.nuclear) {
+    await nuclearReset();
+    console.log(chalk.green("\n✓") + " Nuclear reset complete. Starting fresh setup...\n");
+  } else if (options.clean) {
+    await selectivePurge({
+      removeChains: ['share'],
+      removeTags: ['watra', 'style', 'agent-comm', 'multi-agent', 'campfire-circle'],
+      preserve: ['vault', 'config.yaml', 'embeddings-cache.json']
+    });
+    console.log(chalk.green("\n✓") + " Clean slate ready. Removed deployment-specific blocks.\n");
+  }
+
+  if (existsSync(CONFIG_PATH) && !options.clean && !options.nuclear) {
     log.warn(`Config already exists: ${CONFIG_PATH}`);
+    
+    // Check if empty state - trigger onboarding
+    if (isEmptyState()) {
+      console.log(chalk.cyan("\n🎉 New user detected! Running onboarding..."));
+      await runOnboardingWizard();
+    }
     return;
   }
 

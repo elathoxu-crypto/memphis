@@ -79,7 +79,9 @@ program
 program
   .command("init")
   .description("Initialize Memphis in ~/.memphis")
-  .action(initCommand);
+  .option("--clean", "Clean slate - remove deployment-specific blocks (share chain, watra/style tags)")
+  .option("--nuclear", "Nuclear reset - complete data destruction (dev/testing only)")
+  .action((options) => initCommand(options));
 
 program
   .command("doctor")
