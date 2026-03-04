@@ -1,5 +1,5 @@
 import { Command } from 'commander';
-import * as blessed from 'blessed';
+import blessed from 'blessed';
 import * as path from 'path';
 import * as fs from 'fs';
 import { execSync } from 'child_process';
