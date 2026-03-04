@@ -48,9 +48,7 @@ import { showCommand } from "./commands/show.js";
 import { botCommand } from "./commands/bot.js";
 import { runOpenClawCommands } from "../bridges/openclaw.js";
 import { MemphisTUI } from "../tui/index.js";
-import { shareSyncCommand } from "./share-sync.js";
 import { embedCommand } from "./commands/embed.js";
-import { shareReplicatorCommand } from "./commands/share-replicator.js";
 import { registerTradeCommand } from "./commands/trade.js";
 import { soulStatusCommand } from "./commands/soul-status.js";
 import { intelligenceCommand } from "./commands/intelligence.js";
@@ -76,7 +74,7 @@ const daemonManager = new DaemonManager();
 program
   .name("memphis")
   .description("Local-first AI brain with persistent memory")
-  .version("3.3.0");
+  .version("3.4.0");
 
 program
   .command("init")
@@ -634,53 +632,6 @@ program
       force: opts.force,
       dryRun: opts.dryRun,
       report: opts.report,
-    });
-  });
-
-program
-  .command("share-sync")
-  .description("Sync share-tagged memory blocks via Pinata/IPFS")
-  .option("--push", "Export local share blocks and pin to IPFS")
-  .option("--pull", "Fetch remote share blocks and import them")
-  .option("--all", "Run push (unless disabled) followed by pull")
-  .option("--cleanup", "Remove stale pins and cleanup network log")
-  .option("--limit <n>", "Limit number of blocks per push", "10")
-  .option("--since <time>", "Only include blocks newer than time (e.g. 24h, 2026-02-20)")
-  .option("--dry-run", "Log actions without mutating state")
-  .option("--push-disabled", "Skip push even if --push/--all is provided")
-  .action(async (opts) => {
-    await shareSyncCommand({
-      push: opts.all ? true : opts.push,
-      pull: opts.all ? true : opts.pull,
-      cleanup: opts.cleanup,
-      limit: opts.limit ? parseInt(opts.limit, 10) : undefined,
-      since: opts.since,
-      dryRun: opts.dryRun,
-      pushDisabled: opts.pushDisabled,
-    });
-  });
-
-const shareProgram = program
-  .command("share")
-  .description("Share utilities");
-
-shareProgram
-  .command("replicator")
-  .description("Generate and manage share manifests")
-  .option("--plan", "Show pending manifest actions")
-  .option("--push", "Publish local manifest entries")
-  .option("--pull", "Import remote manifest entries")
-  .option("--file <path>", "Manifest JSONL file for --pull")
-  .option("--limit <n>", "Limit number of manifests per action", "25")
-  .option("--dry-run", "Log actions without mutating state")
-  .action(async (opts) => {
-    await shareReplicatorCommand({
-      plan: opts.plan,
-      push: opts.push,
-      pull: opts.pull,
-      file: opts.file,
-      limit: opts.limit ? parseInt(opts.limit, 10) : undefined,
-      dryRun: opts.dryRun,
     });
   });
 

@@ -12,7 +12,6 @@ import { Collector } from "./types.js";
 import { GitCollector } from "./collectors/git.js";
 import { ShellCollector } from "./collectors/shell.js";
 import { HeartbeatCollector } from "./collectors/heartbeat.js";
-import { ShareCollector } from "./collectors/share.js";
 import { ReflectionCollector } from "./collectors/reflection.js";
 
 const DEFAULT_INTERVAL = 60_000;
@@ -228,15 +227,6 @@ class DaemonRuntime {
       schedules.push({
         collector: heartbeatCollector,
         interval: collectorsConfig.heartbeat?.interval ?? baseInterval * 5,
-        running: false,
-      });
-    }
-
-    if (collectorsConfig.share?.enabled ?? true) {
-      const shareCollector = new ShareCollector(this.store);
-      schedules.push({
-        collector: shareCollector,
-        interval: collectorsConfig.share?.interval ?? 30 * 60_000,
         running: false,
       });
     }
