@@ -5,7 +5,7 @@ import { log } from "../../utils/logger.js";
 import { promptHidden, promptYesNo } from "../utils/prompt.js";
 import { sha256 } from "../../utils/hash.js";
 import { detectEnvironment, getRecommendedProvider, checkEmbeddingsSupport } from "../../utils/environment.js";
-import { selectivePurge, nuclearReset, runOnboardingWizard, isEmptyState } from "../../core/onboarding.js";
+import { selectivePurge, nuclearReset, runOnboardingWizard, isEmptyState, createGenesisBlocks } from "../../core/onboarding.js";
 import chalk from "chalk";
 import * as readline from "readline";
 
@@ -283,6 +283,11 @@ export async function initCommand(options: { clean?: boolean; nuclear?: boolean 
   console.log(chalk.green("✓") + ` Created ${CHAINS_PATH}`);
   console.log("");
 
+  // ─── Create Genesis Blocks ─────────────────────────────────────────────
+  if (selectedProvider !== "manual") {
+    await createGenesisBlocks();
+  }
+
   // ─── First Memory Prompt ────────────────────────────────────────────────
   if (process.stdin.isTTY && selectedProvider !== "manual") {
     console.log(chalk.bold.cyan("╔═══════════════════════════════════════════════════════════╗"));
@@ -359,7 +364,7 @@ function generateConfigYaml(provider: string, model: string, embeddings: boolean
   
   yaml += `\nembeddings:\n`;
   yaml += `  enabled: ${embeddings}\n`;
-  yaml += `  backend: local-ollama\n`;
+  yaml += `  backend: ollama\n`;
   yaml += `  model: nomic-embed-text\n`;
   yaml += `  storage_path: ${EMBEDDINGS_PATH}\n`;
   yaml += `  top_k: 8\n`;

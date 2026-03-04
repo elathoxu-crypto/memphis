@@ -137,7 +137,7 @@ export async function autoOnboarding(): Promise<boolean> {
 /**
  * Create genesis blocks for new users
  */
-async function createGenesisBlocks(): Promise<void> {
+export async function createGenesisBlocks(): Promise<void> {
   // Journal genesis
   await store.appendBlock('journal', {
     type: 'journal',

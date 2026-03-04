@@ -80,9 +80,13 @@ export function getRecommendedProvider(env: EnvironmentInfo): {
       preferredModels.some(pm => m.startsWith(pm))
     ) || env.ollamaModels[0];
     
+    // Keep full model name with tag (e.g., qwen2.5-coder:3b)
+    // Only remove :latest suffix if it's the only tag
+    const modelName = model.endsWith(":latest") ? model.split(":")[0] : model;
+    
     return {
       provider: "ollama",
-      model: model.split(":")[0], // Remove :latest suffix
+      model: modelName,
       reason: "Local, offline-capable, no API costs"
     };
   }
