@@ -9,6 +9,18 @@ function pretty(obj: unknown): string {
 function findDecision(blocks: any[], id: string): { block: any; decision: DecisionV1 } | null {
   const needle = id.trim();
 
+  // 0) Try numeric index first
+  const index = parseInt(needle);
+  if (!isNaN(index) && index >= 0) {
+    // Check both 'decision' and 'decisions' chains
+    for (const block of blocks) {
+      if (block.index === index && block?.data?.type === "decision") {
+        const parsed = safeParseDecisionV1(block.data.content);
+        if (parsed.ok) return { block, decision: parsed.value };
+      }
+    }
+  }
+
   // 1) Try recordId exact
   for (const block of blocks) {
     if (block?.data?.type !== "decision") continue;

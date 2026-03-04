@@ -51,6 +51,7 @@ import { MemphisTUI } from "../tui/index.js";
 import { embedCommand } from "./commands/embed.js";
 import { registerTradeCommand } from "./commands/trade.js";
 import { registerShareSyncCommand } from "./commands/share-sync.js";
+import { registerDecisionsCommand } from "./commands/decisions.js";
 import { soulStatusCommand } from "./commands/soul-status.js";
 import { intelligenceCommand } from "./commands/intelligence.js";
 import { inferCommand } from "./commands/infer.js";
@@ -640,6 +641,7 @@ program
 
 registerTradeCommand(program);
 registerShareSyncCommand(program);
+registerDecisionsCommand(program);
 
 program
   .command("plan")
