@@ -4,8 +4,7 @@
   "description": "Local-first AI brain with persistent memory chains + Vault (SSI)",
   "type": "module",
   "bin": {
-    "memphis": "./dist/cli/index.js",
-    "memphis-tui": "./dist/tui/index.js"
+    "memphis": "./dist/cli/index.js"
   },
   "scripts": {
     "dev": "tsx src/cli/index.ts",
@@ -13,7 +12,8 @@
     "test": "vitest",
     "memphis": "tsx src/cli/index.ts",
     "prepublishOnly": "npm run build",
-    "tui": "tsx src/tui/index.ts"
+    "tui": "tsx src/tui/index.ts",
+    "pack:binaries": "bash scripts/pack-binaries.sh"
   },
   "publishConfig": {
     "registry": "https://npm.pkg.github.com/"
@@ -51,5 +51,9 @@
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "vitest": "^4.0.18"
+  },
+  "pkg": {
+    "scripts": "dist/**/*.js",
+    "assets": "dist/**/*"
   }
 }
