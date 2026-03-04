@@ -76,7 +76,7 @@ const daemonManager = new DaemonManager();
 program
   .name("memphis")
   .description("Local-first AI brain with persistent memory")
-  .version("3.6.1");
+  .version("3.7.0");
 
 program
   .command("init")

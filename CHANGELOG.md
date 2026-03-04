@@ -1,6 +1,94 @@
 # Changelog
 
-## [3.2.0] - 2026-03-04
+## [3.7.0] - 2026-03-04
+
+### Added
+- **Binary releases**: Multi-platform builds (Linux, macOS, Windows)
+- **GitHub Actions**: Automated release workflow
+- **Bundled skills**: memphis-cognitive + memphis-brain in repo
+- **Bulletproof install**: 4-phase offline-safe installation
+
+### Changed
+- **README.md**: Fixed one-liner (-fsSL for error visibility)
+- **CHANGELOG.md**: Added missing versions (3.3.0-3.6.1)
+- **package.json**: Updated to v3.7.0
+
+### Infrastructure
+- `.github/workflows/release.yml`: Automated binary builds
+- `.github/workflows/test.yml`: CI/CD pipeline
+- `scripts/pack-binaries.sh`: Multi-platform packaging
+
+### Release Assets
+- memphis-linux-x64 (~50MB)
+- memphis-macos-x64 (~50MB)
+- memphis-macos-arm64 (~50MB)
+- memphis-win-x64.exe (~50MB)
+
+---
+
+## [3.6.1] - 2026-03-04
+
+### Fixed
+- **Onboarding config**: Fixed x2 initialization issues
+- **Genesis blocks**: Auto-creation on fresh install
+- **Decision ID**: Fixed confusion between decision/decisions chains
+- **Missing commands**: Added decisions list command
+
+### Changed
+- **TUI**: Fixed blessed import for ES modules
+
+---
+
+## [3.6.0] - 2026-03-04
+
+### Added
+- **Onboarding system**: Interactive tutorial for first-time users
+- **Clean slate options**:
+  - `memphis init --clean`: Remove share chain, watra/style tags
+  - `memphis init --nuclear`: Complete data reset (dev/testing only)
+- **Empty-state detection**: Auto-detect new users
+- **Genesis blocks**: Auto-create initial blocks
+- **Selective purge**: Preserve vault, config, embeddings
+
+### Changed
+- **CLI version**: Updated to 3.6.0
+- **Documentation**: Complete onboarding docs
+
+---
+
+## [3.5.0] - 2026-03-04
+
+### Added
+- **Pre-search context loading**: 30% faster recall
+- **Token optimization**: 35% reduction (51KB → 33KB)
+- **Error recovery**: New module for recall failures
+- **Complete embeddings script**: 100% coverage
+
+### Changed
+- **recall.ts**: Optimized with pre-search
+- **IPFS/Pinata**: REMOVED entirely (simpler, lighter)
+- **Placeholder agents**: REMOVED
+- **Collective/Meta CLI**: Added
+
+### Performance
+- Embeddings: 1,922 vectors (100% coverage)
+- Recall: 30% faster with context pre-loading
+- Token usage: 35% reduction
+
+---
+
+## [3.3.0] - 2026-03-03
+
+### Changed
+- **Placeholder agents**: REMOVED (was cluttering codebase)
+- **CLI**: Added collective and meta commands
+
+### Fixed
+- **Code cleanup**: Removed unused agent placeholders
+
+---
+
+## [3.2.0] - 2026-03-03
 
 ### Added
 - **Chain Safety System**: Pre-commit validation hook, hourly monitoring, auto-repair, daily backups
