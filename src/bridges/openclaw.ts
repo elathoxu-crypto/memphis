@@ -50,49 +50,10 @@ export class OpenClawBridge {
   }
 
   private registerDefaultAgents(): void {
-    this.agentRegistry.addAgent({
-      id: "openclaw-001",
-      name: "OpenClaw",
-      did: "did:openclaw:7a3b9c2d1e4f5678901234567890abcd",
-      computeShare: 53,
-      status: "active",
-      capabilities: ["code-analysis", "file-operations", "web-search", "coordination"],
-      model: "llama3",
-      provider: "ollama",
-    });
-
-    this.agentRegistry.addAgent({
-      id: "openclaw-002",
-      name: "CodeMaster",
-      did: "did:openclaw:8b4c0d3e5f6a78901234567890bcde",
-      computeShare: 25,
-      status: "idle",
-      capabilities: ["code-review", "refactoring", "bug-detection"],
-      model: "llama3",
-      provider: "ollama",
-    });
-
-    this.agentRegistry.addAgent({
-      id: "openclaw-003",
-      name: "DataSage",
-      did: "did:openclaw:9c5d1e4f6a7b890123456789012cdef",
-      computeShare: 15,
-      status: "idle",
-      capabilities: ["data-analysis", "visualization", "statistics"],
-      model: "llama3",
-      provider: "ollama",
-    });
-
-    this.agentRegistry.addAgent({
-      id: "openclaw-004",
-      name: "ResearchBot",
-      did: "did:openclaw:0d6e2f5a7b8c901234567890123def0",
-      computeShare: 7,
-      status: "idle",
-      capabilities: ["research", "documentation", "web-search", "summarization"],
-      model: "llama3",
-      provider: "ollama",
-    });
+    // Agents disabled - focus on what actually works
+    // Future: Re-enable when task delegation is implemented
+    console.log("ℹ️  Agent system in foundation mode (task delegation not yet implemented)");
+    console.log("✅ Bridge active for memory integration + semantic search");
   }
 
   private addMemory(content: string): void {
