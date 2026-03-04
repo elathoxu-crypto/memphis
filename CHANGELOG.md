@@ -1,9 +1,22 @@
 # Changelog
 
+## [3.7.1] - 2026-03-04
+
+### Changed
+- **README.md**: Added warnings about experimental binaries
+- **CHANGELOG.md**: Marked all v3.7.0 binaries as NOT TESTED
+
+### Warnings
+- ⚠️ **All binaries** (Linux/macOS/Windows) are experimental and not thoroughly tested
+- ❌ **Windows binary**: Known issue - may spawn multiple processes, high CPU usage
+- ✅ **Recommended**: Use classic installation (Node.js + Git) for production
+
+---
+
 ## [3.7.0] - 2026-03-04
 
 ### Added
-- **Binary releases**: Multi-platform builds (Linux, macOS, Windows)
+- **Binary releases**: Multi-platform builds (Linux, macOS, Windows) ⚠️ **EXPERIMENTAL**
 - **GitHub Actions**: Automated release workflow
 - **Bundled skills**: memphis-cognitive + memphis-brain in repo
 - **Bulletproof install**: 4-phase offline-safe installation
@@ -19,10 +32,15 @@
 - `scripts/pack-binaries.sh`: Multi-platform packaging
 
 ### Release Assets
-- memphis-linux-x64 (~50MB)
-- memphis-macos-x64 (~50MB)
-- memphis-macos-arm64 (~50MB)
-- memphis-win-x64.exe (~50MB)
+- memphis-linux-x64 (~50MB) ⚠️ **NOT TESTED**
+- memphis-macos-x64 (~50MB) ⚠️ **NOT TESTED**
+- memphis-macos-arm64 (~50MB) ⚠️ **NOT TESTED**
+- memphis-win-x64.exe (~50MB) ⚠️ **NOT TESTED - MAY SPAWN MULTIPLE PROCESSES**
+
+### ⚠️ Known Issues
+- **Windows binary**: May spawn multiple processes, high CPU usage
+- **All binaries**: Not thoroughly tested, use at your own risk
+- **Recommended**: Use classic installation (Node.js) for production
 
 ---
 

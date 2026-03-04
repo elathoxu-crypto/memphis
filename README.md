@@ -21,6 +21,23 @@ node dist/cli/index.js init
 
 **That's it! Memphis is ready.**
 
+---
+
+## ⚠️ Binary Releases (EXPERIMENTAL)
+
+Pre-built binaries are available on [GitHub Releases](https://github.com/elathoxu-crypto/memphis/releases), but they are **NOT RECOMMENDED** for production use yet:
+
+- ✅ **Linux x64**: Not thoroughly tested
+- ✅ **macOS x64/ARM64**: Not thoroughly tested
+- ❌ **Windows x64**: Known issues (multiple process spawning, high CPU)
+
+**Recommended approach:**
+- Use classic installation (Node.js + Git) above
+- WSL2 users: Use Linux binary or classic install
+- Windows users: Use WSL2 or wait for fixes
+
+**Binaries will be marked as stable after community testing.**
+
 [→ Full guide: QUICKSTART.md](QUICKSTART.md) | [→ Complete setup: BOOTSTRAP.md](BOOTSTRAP.md)
 
 ---
