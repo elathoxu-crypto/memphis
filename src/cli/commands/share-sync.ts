@@ -40,6 +40,20 @@ export function registerShareSyncCommand(program: Command): void {
 
 async function handleShareSync(options: ShareSyncOptions): Promise<void> {
   const store = await createWorkspaceStore();
+  
+  // Check if 'memphis' SSH host exists in config
+  let useSSHConfig = false;
+  if (!options.remote && !options.user) {
+    try {
+      const sshConfig = await fs.readFile(path.join(process.env.HOME || "", ".ssh", "config"), "utf8");
+      // Check for "Host memphis" or "Host memphis-test"
+      useSSHConfig = /^Host\s+memphis(\s|$)/m.test(sshConfig);
+      if (useSSHConfig) {
+        console.log(chalk.gray("\n  ℹ Using SSH config: memphis\n"));
+      }
+    } catch {}
+  }
+
   const remoteHost = options.remote || "10.0.0.80";
   const remoteUser = options.user || "memphis";
 
@@ -49,32 +63,37 @@ async function handleShareSync(options: ShareSyncOptions): Promise<void> {
   try {
     // Show status only
     if (options.status) {
-      await showSyncStatus(store, remoteHost, remoteUser);
+      await showSyncStatus(store, remoteHost, remoteUser, useSSHConfig);
       return;
     }
 
     // Default: show status if no action specified
     if (!options.push && !options.pull) {
-      await showSyncStatus(store, remoteHost, remoteUser);
+      await showSyncStatus(store, remoteHost, remoteUser, useSSHConfig);
       console.log(chalk.gray("\n💡 Use --push or --pull to sync"));
       return;
     }
 
     // Push local blocks to remote
     if (options.push) {
-      await pushToRemote(store, remoteHost, remoteUser, options.force);
+      await pushToRemote(store, remoteHost, remoteUser, useSSHConfig, options.force);
     }
 
     // Pull remote blocks to local
     if (options.pull) {
-      await pullFromRemote(store, remoteHost, remoteUser, options.force);
+      await pullFromRemote(store, remoteHost, remoteUser, useSSHConfig, options.force);
     }
 
   } catch (error: any) {
     console.error(chalk.red("\n✗ Sync failed:"), error.message);
     console.error(chalk.gray("\nTroubleshooting:"));
-    console.error(chalk.white("  1. Check SSH key: ssh-copy-id " + remoteUser + "@" + remoteHost));
-    console.error(chalk.white("  2. Test connection: ssh " + remoteUser + "@" + remoteHost + " 'memphis status'"));
+    if (useSSHConfig) {
+      console.error(chalk.white("  1. Check SSH config: cat ~/.ssh/config"));
+      console.error(chalk.white("  2. Test connection: ssh memphis 'node ~/memphis/dist/cli/index.js status'"));
+    } else {
+      console.error(chalk.white("  1. Check SSH key: ssh-copy-id " + remoteUser + "@" + remoteHost));
+      console.error(chalk.white("  2. Test connection: ssh " + remoteUser + "@" + remoteHost + " 'memphis status'"));
+    }
     console.error(chalk.white("  3. Verify Memphis installed on remote"));
     process.exit(1);
   }
@@ -83,7 +102,8 @@ async function handleShareSync(options: ShareSyncOptions): Promise<void> {
 async function showSyncStatus(
   store: any,
   remoteHost: string,
-  remoteUser: string
+  remoteUser: string,
+  useSSHConfig: boolean
 ): Promise<void> {
   console.log(chalk.bold.white("\n📊 Sync Status\n"));
 
@@ -96,9 +116,12 @@ async function showSyncStatus(
   let connectionStatus: "ok" | "error" | "unknown" = "unknown";
   let lastSync: string | null = null;
 
+  const sshTarget = useSSHConfig ? "memphis" : `${remoteUser}@${remoteHost}`;
+  const memphisCmd = useSSHConfig ? "node ~/memphis/dist/cli/index.js" : "memphis";
+
   try {
     const remoteStatus = execSync(
-      `ssh -o ConnectTimeout=3 -o BatchMode=yes ${remoteUser}@${remoteHost} 'memphis status 2>/dev/null | grep -A 1 "share" | grep "✓" | grep -oE "[0-9]+" | head -1'`,
+      `ssh -o ConnectTimeout=3 -o BatchMode=yes ${sshTarget} '${memphisCmd} status 2>/dev/null | grep -A 1 "share" | grep "✓" | grep -oE "[0-9]+" | head -1'`,
       { encoding: "utf8", timeout: 5000 }
     ).trim();
     
@@ -140,18 +163,20 @@ async function showSyncStatus(
     console.log(chalk.white("\n  Last sync:"), chalk.gray("Never"));
   }
 
-  console.log(chalk.gray("\n  Remote:"), chalk.white(`${remoteUser}@${remoteHost}`));
+  console.log(chalk.gray("\n  Remote:"), chalk.white(useSSHConfig ? "memphis (SSH config)" : `${remoteUser}@${remoteHost}`));
 }
 
 async function pushToRemote(
   store: any,
   remoteHost: string,
   remoteUser: string,
+  useSSHConfig: boolean,
   force?: boolean
 ): Promise<void> {
   console.log(chalk.bold.white("\n📤 Pushing to remote...\n"));
 
   const sharePath = path.join(CHAINS_PATH, "share");
+  const sshTarget = useSSHConfig ? "memphis" : `${remoteUser}@${remoteHost}`;
   
   // Check if share chain exists
   try {
@@ -175,14 +200,14 @@ async function pushToRemote(
   // Create remote share directory if needed
   console.log(chalk.gray("  Ensuring remote directory..."));
   execSync(
-    `ssh ${remoteUser}@${remoteHost} 'mkdir -p ~/.memphis/chains/share'`,
+    `ssh ${sshTarget} 'mkdir -p ~/.memphis/chains/share'`,
     { stdio: "inherit" }
   );
 
   // Push share blocks
   console.log(chalk.gray("  Syncing blocks..."));
   execSync(
-    `rsync -av --progress ${sharePath}/ ${remoteUser}@${remoteHost}:~/.memphis/chains/share/`,
+    `rsync -av --progress ${sharePath}/ ${sshTarget}:~/.memphis/chains/share/`,
     { stdio: "inherit" }
   );
 
@@ -197,11 +222,13 @@ async function pullFromRemote(
   store: any,
   remoteHost: string,
   remoteUser: string,
+  useSSHConfig: boolean,
   force?: boolean
 ): Promise<void> {
   console.log(chalk.bold.white("\n📥 Pulling from remote...\n"));
 
   const sharePath = path.join(CHAINS_PATH, "share");
+  const sshTarget = useSSHConfig ? "memphis" : `${remoteUser}@${remoteHost}`;
 
   // Ensure local share directory exists
   await fs.mkdir(sharePath, { recursive: true });
@@ -210,7 +237,7 @@ async function pullFromRemote(
   let remoteBlockCount = 0;
   try {
     const count = execSync(
-      `ssh ${remoteUser}@${remoteHost} 'ls ~/.memphis/chains/share/*.json 2>/dev/null | wc -l'`,
+      `ssh ${sshTarget} 'ls ~/.memphis/chains/share/*.json 2>/dev/null | wc -l'`,
       { encoding: "utf8" }
     ).trim();
     remoteBlockCount = parseInt(count) || 0;
@@ -229,7 +256,7 @@ async function pullFromRemote(
   // Pull share blocks
   console.log(chalk.gray("  Syncing blocks..."));
   execSync(
-    `rsync -av --progress ${remoteUser}@${remoteHost}:~/.memphis/chains/share/ ${sharePath}/`,
+    `rsync -av --progress ${sshTarget}:~/.memphis/chains/share/ ${sharePath}/`,
     { stdio: "inherit" }
   );
 
