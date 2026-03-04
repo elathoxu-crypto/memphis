@@ -1,0 +1,77 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Install pkg
+        run: npm install -g @yao-pkg/pkg
+
+      - name: Package binaries
+        run: |
+          mkdir -p dist/binaries
+
+          # Linux x64
+          pkg . --targets node18-linux-x64 --output dist/binaries/memphis-linux-x64 --compress GZip
+
+          # macOS x64
+          pkg . --targets node18-macos-x64 --output dist/binaries/memphis-macos-x64 --compress GZip
+
+          # macOS ARM64
+          pkg . --targets node18-macos-arm64 --output dist/binaries/memphis-macos-arm64 --compress GZip
+
+          # Windows x64
+          pkg . --targets node18-win-x64 --output dist/binaries/memphis-win-x64.exe --compress GZip
+
+      - name: Generate release notes
+        id: notes
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+          # Extract changelog for this version
+          if [ -f CHANGELOG.md ]; then
+            sed -n "/## \[$VERSION\]/,/## \[/p" CHANGELOG.md | head -n -1 > release_notes.md
+          fi
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: dist/binaries/memphis-*
+          body_path: release_notes.md
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload binaries artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: memphis-binaries
+          path: dist/binaries/
+          retention-days: 90
