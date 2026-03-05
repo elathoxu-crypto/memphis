@@ -1,793 +1,395 @@
-# Troubleshooting Guide
+# Memphis Troubleshooting Guide
 
-**Version:** 2.0.0  
-**Date:** 2026-03-02
+Common issues and their solutions.
 
 ---
 
-## 📋 Table of Contents
+## Terminal Issues
 
-- [Installation Issues](#installation-issues)
-- [Configuration Issues](#configuration-issues)
-- [Model A Issues](#model-a-issues)
-- [Model B Issues](#model-b-issues)
-- [Model C Issues](#model-c-issues)
-- [Performance Issues](#performance-issues)
-- [Data Issues](#data-issues)
-- [Network Issues](#network-issues)
+### Debug garbage output (`[DEBUG] Active handles`)
+
+**Status:** ✅ Fixed in v3.7.2+
+
+**Symptom:**
+```
+Status: OK
+[DEBUG] Active handles (exit): [ 'WriteStream', 'ReadStream', 'WriteStream' ]
+[DEBUG] Active requests (exit): []
+[DEBUG] stdin: isTTY=true readable=true
+```
+
+**Fix:**
+```bash
+# Update to v3.7.2 or later
+cd ~/memphis
+git pull
+npm run build
+```
+
+**Workaround for older versions:**
+```bash
+memphis status 2>/dev/null
+```
+
+---
+
+### Terminal line wrap broken
+
+**Status:** ✅ Fixed in v3.7.2+
+
+**Symptom:**
+- Terminal output scrambled
+- Line wrap not working
+- Text overwriting itself
+
+**Fix:**
+```bash
+# Update to v3.7.2+
+cd ~/memphis
+git pull
+npm run build
+```
+
+**Recovery:**
+```bash
+reset
+stty sane
+clear
+```
 
 ---
 
 ## Installation Issues
 
-### Problem: npm install fails with node-gyp error
+### Node.js not found
 
-**Symptoms:**
+**Symptom:**
 ```
-gyp ERR! stack Error: `make` failed with exit code: 2
+bash: node: command not found
 ```
 
-**Cause:** Missing build tools
-
-**Solution:**
-
-**Ubuntu/Debian:**
+**Fix (Ubuntu/Debian):**
 ```bash
-sudo apt-get update
-sudo apt-get install -y build-essential python3-dev
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt install -y nodejs
 ```
 
-**macOS:**
+**Fix (using nvm):**
 ```bash
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
+source ~/.bashrc
+nvm install 20
+nvm use 20
+```
+
+---
+
+### Node.js version too old
+
+**Symptom:**
+```
+❌ Node.js too old: v14.x.x (need 18+)
+```
+
+**Fix:**
+```bash
+# Using nvm
+nvm install 20
+nvm use 20
+
+# Or reinstall Node.js (Ubuntu/Debian)
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt install -y nodejs
+```
+
+---
+
+### Permission denied (npm link)
+
+**Symptom:**
+```
+npm ERR! Error: EACCES: permission denied
+```
+
+**Fix:**
+```bash
+# Fix npm permissions
+sudo chown -R $(whoami) ~/.npm
+
+# Or use sudo for link
+sudo npm link
+```
+
+---
+
+### Ollama not found (embeddings fail)
+
+**Symptom:**
+```
+⚠️ Embeddings failed: Ollama not responding
+```
+
+**Fix:**
+```bash
+# Install Ollama
+curl -fsSL https://ollama.com/install.sh | sh
+
+# Pull embedding model
+ollama pull nomic-embed-text
+
+# Pull primary model
+ollama pull qwen2.5-coder:3b
+
+# Verify
+ollama list
+```
+
+---
+
+### Git not found
+
+**Symptom:**
+```
+bash: git: command not found
+```
+
+**Fix:**
+```bash
+# Ubuntu/Debian
+sudo apt install -y git
+
+# macOS (Xcode Command Line Tools)
 xcode-select --install
-```
 
-**Windows:**
-```bash
-npm install --global windows-build-tools
-```
-
-**Then retry:**
-```bash
-npm install
+# Windows
+# Download from https://git-scm.com/download/win
 ```
 
 ---
 
-### Problem: npm install hangs forever
+## Binary Issues
 
-**Symptoms:**
-```
-npm install
-(hangs for 10+ minutes)
-```
+### Windows binary spawns multiple processes
 
-**Cause:** Network timeout or registry issue
+**Status:** ❌ Known issue (pkg bug)
 
-**Solution:**
+**Symptom:**
+- Multiple `memphis-win-x64.exe` processes
+- High CPU usage
+- System slowdown
+
+**Fix:**
+Use WSL2 or classic installation instead.
+
 ```bash
-# Clear cache
-npm cache clean --force
+# WSL2 (Windows Subsystem for Linux)
+wsl --install -d Ubuntu
+# Then use Linux installation method
+```
 
-# Try with verbose output
-npm install --verbose
+**Track:** [GitHub Issue - Windows Binary](https://github.com/elathoxu-crypto/memphis/issues)
 
-# If still hanging, use different registry
-npm install --registry https://registry.npmjs.org
+---
 
-# Or use yarn
-yarn install
+### Binary won't execute
+
+**Symptom:**
+```
+bash: ./memphis-linux-x64: Permission denied
+```
+
+**Fix:**
+```bash
+# Add execute permission
+chmod +x memphis-linux-x64
+
+# Run
+./memphis-linux-x64
 ```
 
 ---
 
-### Problem: "Cannot find module" after installation
+### Binary segfaults / crashes
 
-**Symptoms:**
+**Symptom:**
 ```
-Error: Cannot find module 'memphis'
+Segmentation fault (core dumped)
 ```
 
-**Cause:** Not built yet
+**Fix:**
+- Use classic installation (Node.js)
+- Binary may be incompatible with your system
+- Check GitHub Issues for similar reports
 
-**Solution:**
+---
+
+## Memory Issues
+
+### Embeddings not generated
+
+**Symptom:**
+```
+⚠ no embeddings stored yet
+```
+
+**Fix:**
 ```bash
-# Build the project
-npm run build
+# Generate embeddings for journal
+memphis embed --chain journal
 
-# Then run
-node dist/cli/index.js init
+# Generate for decisions
+memphis embed --chain decisions
+
+# Check status
+memphis status
 ```
 
 ---
 
-### Problem: "Permission denied" errors
+### Vault not initialized
 
-**Symptoms:**
+**Symptom:**
 ```
-Error: EACCES: permission denied, open '/home/user/.memphis/config.yaml'
+Vault:
+  ✗ not initialized
 ```
 
-**Cause:** Wrong permissions on `~/.memphis`
-
-**Solution:**
+**Fix:**
 ```bash
-# Fix permissions
-sudo chown -R $USER:$USER ~/.memphis
-chmod -R 755 ~/.memphis
+# Initialize vault
+memphis vault init
 
-# Or delete and recreate
-rm -rf ~/.memphis
-node dist/cli/index.js init
+# Set password (will prompt)
+# Password: [your-secure-password]
+
+# Unlock vault
+memphis vault unlock
 ```
 
 ---
 
-## Configuration Issues
+### Memory chains empty
 
-### Problem: "Config file not found"
-
-**Symptoms:**
+**Symptom:**
 ```
-Error: Config file not found at ~/.memphis/config.yaml
+Chains:
+  ⛓ journal — ✓ 0 blocks
 ```
 
-**Cause:** Not initialized
-
-**Solution:**
+**Fix:**
 ```bash
-# Run init
-node dist/cli/index.js init
+# Create first memory
+memphis journal "My first memory" --tags genesis,first
 
 # Verify
-cat ~/.memphis/config.yaml
-```
-
----
-
-### Problem: "Invalid provider" error
-
-**Symptoms:**
-```
-Error: Invalid provider: openai
-```
-
-**Cause:** Provider not configured
-
-**Solution:**
-
-**For Ollama:**
-```yaml
-# ~/.memphis/config.yaml
-provider: ollama
-model: qwen2.5-coder:3b
-embeddings:
-  backend: ollama
-  model: nomic-embed-text
-```
-
-**For OpenAI:**
-```yaml
-provider: openai
-model: gpt-4
-api_key: sk-abc123...
-embeddings:
-  backend: openai
-  model: text-embedding-3-small
-```
-
----
-
-### Problem: "Ollama not responding"
-
-**Symptoms:**
-```
-Error: Ollama not responding at http://localhost:11434
-```
-
-**Cause:** Ollama not running
-
-**Solution:**
-```bash
-# Start Ollama
-ollama serve
-
-# Check if running
-curl http://localhost:11434/api/tags
-
-# If still failing, check port
-lsof -i :11434
-```
-
----
-
-### Problem: "API key invalid"
-
-**Symptoms:**
-```
-Error: Invalid API key
-```
-
-**Cause:** Wrong or missing API key
-
-**Solution:**
-```bash
-# Set environment variable
-export OPENAI_API_KEY="sk-abc123..."
-
-# Or add to config
-# ~/.memphis/config.yaml
-api_key: "sk-abc123..."
-
-# Or use vault
-memphis vault add openai_key "sk-abc123..."
-```
-
----
-
-## Model A Issues
-
-### Problem: Decision capture is slow (>500ms)
-
-**Symptoms:**
-```
-memphis decide "test" "test"
-# Takes 2-3 seconds
-```
-
-**Cause:** Slow provider or network
-
-**Solution:**
-```bash
-# Check provider
-memphis doctor
-
-# Use local Ollama instead
-# ~/.memphis/config.yaml
-provider: ollama
-model: qwen2.5-coder:3b
-
-# Or use frictionless capture
-md "test"  # Should be <100ms
-```
-
----
-
-### Problem: "Block hash mismatch"
-
-**Symptoms:**
-```
-Error: Block hash mismatch
-```
-
-**Cause:** Corrupted chain
-
-**Solution:**
-```bash
-# Verify chain
-memphis verify
-
-# If corrupted, restore from backup
-cp -r ~/backup/memphis/chains ~/.memphis/
-
-# Or rebuild
-rm -rf ~/.memphis/chains
-node dist/cli/index.js init
-```
-
----
-
-### Problem: Cannot revise decision
-
-**Symptoms:**
-```
-Error: Decision not found: dec_abc123
-```
-
-**Cause:** Wrong ID format
-
-**Solution:**
-```bash
-# List decisions
-memphis decisions
-
-# Copy full ID
-# Then revise
-memphis revise dec_abc123def456 "new choice"
-```
-
----
-
-## Model B Issues
-
-### Problem: Inference detects no decisions
-
-**Symptoms:**
-```
-memphis infer --since 30
-# Total detected: 0
-```
-
-**Cause:** No matching commits
-
-**Solution:**
-```bash
-# Check if in git repo
-git status
-
-# Check commit history
-git log --oneline -30
-
-# Lower confidence threshold
-memphis infer --since 30 --min-confidence 0.3
-```
-
----
-
-### Problem: Inference is too slow
-
-**Symptoms:**
-```
-memphis infer --since 90
-# Takes 10+ seconds
-```
-
-**Cause:** Too many commits
-
-**Solution:**
-```bash
-# Limit date range
-memphis infer --since 7
-
-# Or use min-confidence
-memphis infer --since 30 --min-confidence 0.7
-```
-
----
-
-### Problem: False positives in inference
-
-**Symptoms:**
-```
-# Detects decisions that aren't real
-```
-
-**Cause:** Overly broad patterns
-
-**Solution:**
-```bash
-# Increase confidence threshold
-memphis infer --since 30 --min-confidence 0.8
-
-# Use interactive mode
-memphis infer --prompt --since 30
-```
-
----
-
-## Model C Issues
-
-### Problem: "No patterns found"
-
-**Symptoms:**
-```
-memphis patterns list
-# Total patterns: 0
-```
-
-**Cause:** Not enough decisions or not learned
-
-**Solution:**
-```bash
-# Check decision count
-memphis decisions --recent 90
-
-# Need 50+ decisions
-# If enough, learn patterns
-memphis predict --learn --since 90
-
-# Verify
-memphis patterns list
-```
-
----
-
-### Problem: Predictions always wrong
-
-**Symptoms:**
-```
-memphis accuracy
-# Overall accuracy: 30%
-```
-
-**Cause:** Bad patterns or context mismatch
-
-**Solution:**
-```bash
-# Clear patterns
-memphis patterns clear
-
-# Re-learn from recent decisions
-memphis predict --learn --since 30
-
-# Make more decisions to improve training
-memphis decide "test" "test" --reasoning "why"
-
-# Re-learn
-memphis predict --learn --since 30
-```
-
----
-
-### Problem: No proactive suggestions
-
-**Symptoms:**
-```
-memphis suggest
-# No suggestions
-```
-
-**Cause:** Cooldown or low confidence
-
-**Solution:**
-```bash
-# Force check
-memphis suggest --force
-
-# Check patterns
-memphis patterns list
-
-# Check predictions
-memphis predict --min-confidence 0.5
-```
-
----
-
-### Problem: Accuracy tracking not working
-
-**Symptoms:**
-```
-memphis accuracy
-# Total events: 0
-```
-
-**Cause:** Not using suggestions
-
-**Solution:**
-```bash
-# Use suggestions
-memphis suggest --force
-
-# Accept or reject
-# [a]ccept / [n]one
-
-# Check again
-memphis accuracy
-```
-
----
-
-## Performance Issues
-
-### Problem: "Out of memory" error
-
-**Symptoms:**
-```
-FATAL ERROR: Ineffective mark-compacts near heap limit
-```
-
-**Cause:** Large chains or embeddings
-
-**Solution:**
-```bash
-# Increase Node memory
-export NODE_OPTIONS="--max-old-space-size=4096"
-
-# Or limit operations
-memphis recall "query" --limit 5
-memphis decisions --limit 10
-```
-
----
-
-### Problem: Slow semantic search
-
-**Symptoms:**
-```
-memphis recall "test"
-# Takes 5+ seconds
-```
-
-**Cause:** No embeddings or slow provider
-
-**Solution:**
-```bash
-# Check embeddings
-ls ~/.memphis/embeddings/
-
-# If missing, generate
-memphis embeddings generate
-
-# Use local Ollama
-# ~/.memphis/config.yaml
-embeddings:
-  backend: ollama
-  model: nomic-embed-text
-```
-
----
-
-### Problem: TUI is laggy
-
-**Symptoms:**
-```
-memphis tui
-# Slow updates, laggy typing
-```
-
-**Cause:** Terminal or large data
-
-**Solution:**
-```bash
-# Use smaller terminal
-# Or limit data
-memphis tui --screen decisions
-
-# Check terminal compatibility
-echo $TERM
-
-# Use simpler terminal emulator
-```
-
----
-
-## Data Issues
-
-### Problem: Lost all my decisions
-
-**Symptoms:**
-```
-memphis decisions
-# No decisions found
-```
-
-**Cause:** Deleted or corrupted
-
-**Solution:**
-```bash
-# Check if files exist
-ls ~/.memphis/chains/decisions/
-
-# If empty, restore from backup
-cp -r ~/backup/memphis/chains/decisions ~/.memphis/chains/
-
-# Or recover from git (if committed)
-cd memphis
-git checkout HEAD -- ~/.memphis/chains/
-```
-
----
-
-### Problem: Duplicate decisions
-
-**Symptoms:**
-```
-memphis decisions
-# Shows same decision twice
-```
-
-**Cause:** Manual duplication or sync conflict
-
-**Solution:**
-```bash
-# Find duplicates
-memphis decisions --json | jq '.[] | select(.title == "Same Title")'
-
-# Manually edit chain
-nano ~/.memphis/chains/decisions/000042.json
-
-# Remove duplicate block
-# Update chain index
-```
-
----
-
-### Problem: Chain corruption
-
-**Symptoms:**
-```
-Error: Invalid block at index 42
-```
-
-**Cause:** File corruption
-
-**Solution:**
-```bash
-# Find corrupted block
-ls -la ~/.memphis/chains/decisions/
-
-# Check JSON validity
-for f in ~/.memphis/chains/decisions/*.json; do
-  jq . "$f" > /dev/null 2>&1 || echo "Corrupted: $f"
-done
-
-# Restore from backup
-# Or delete corrupted block
-rm ~/.memphis/chains/decisions/000042.json
-
-# Rebuild index
-node dist/cli/index.js rebuild-index
+memphis status
 ```
 
 ---
 
 ## Network Issues
 
-### Problem: Sync fails
+### Multi-agent sync fails
 
-**Symptoms:**
+**Symptom:**
 ```
-memphis share-sync --push
-Error: IPFS connection failed
+❌ Sync failed: Connection refused
 ```
 
-**Cause:** IPFS not running
-
-**Solution:**
+**Fix:**
 ```bash
-# Start IPFS
-ipfs daemon
+# Check if other agent is running
+ssh other-agent 'memphis status'
 
-# Check connection
-ipfs id
-
-# Retry sync
-memphis share-sync --push
-```
-
----
-
-### Problem: Pinata upload fails
-
-**Symptoms:**
-```
-Error: Pinata API error: 401 Unauthorized
-```
-
-**Cause:** Invalid API keys
-
-**Solution:**
-```bash
-# Add Pinata keys
-memphis vault add pinata_api_key "your_key"
-memphis vault add pinata_secret "your_secret"
-
-# Verify
-memphis vault get pinata_api_key
-
-# Retry
-memphis share-sync --push
-```
-
----
-
-### Problem: Multi-agent sync not working
-
-**Symptoms:**
-```
+# Check share chain
 memphis share-sync --pull
-Error: No manifest found
-```
 
-**Cause:** Not configured
-
-**Solution:**
-```bash
-# Create share manifest
-memphis share-init
-
-# Configure peers
-# ~/.memphis/config.yaml
-share:
-  enabled: true
-  peers:
-    - did:memphis:agent1
-    - did:memphis:agent2
-
-# Push first
-memphis share-sync --push
-
-# Then pull
-memphis share-sync --pull
+# Manual sync
+memphis share-sync
 ```
 
 ---
 
-## Emergency Recovery
+## Uninstallation
 
-### Problem: Everything is broken
+### How to uninstall Memphis
 
-**Symptoms:**
-- Cannot run any command
-- Config corrupted
-- Chains corrupted
-
-**Solution:**
+**Using uninstall script:**
 ```bash
-# 1. Backup current state
-cp -r ~/.memphis ~/memphis-emergency-backup
+~/memphis/uninstall.sh
+```
 
-# 2. Fresh install
+**Manual uninstall:**
+```bash
+# Remove repo
+rm -rf ~/memphis
+
+# Remove data (optional)
 rm -rf ~/.memphis
-cd ~/memphis
-npm run build
-node dist/cli/index.js init
 
-# 3. Restore chains from backup
-cp -r ~/memphis-emergency-backup/chains ~/.memphis/
-
-# 4. Verify
-node dist/cli/index.js doctor
+# Remove global command
+npm unlink -g @elathoxu-crypto/memphis
 ```
 
 ---
 
-## Debug Mode
+## Still Having Issues?
 
-### Enable verbose logging
+### 1. Check GitHub Issues
 
-```bash
-# Set debug environment
-export DEBUG=memphis:*
+Search existing issues:
+https://github.com/elathoxu-crypto/memphis/issues
 
-# Run command
-node dist/cli/index.js decide "test" "test"
+### 2. Join Discord
 
-# View logs
-tail -f ~/.memphis/debug.log
+Get help from community:
+https://discord.gg/clawd
+
+### 3. Open New Issue
+
+Provide:
+- OS version: `uname -a`
+- Node.js version: `node --version`
+- Memphis version: `memphis --version`
+- Error message (full output)
+- Steps to reproduce
+
+**Issue Template:**
+```markdown
+**Environment:**
+- OS: Ubuntu 22.04
+- Node.js: v20.11.0
+- Memphis: v3.7.2
+
+**Description:**
+Brief description of the issue
+
+**Steps to Reproduce:**
+1. Run `memphis status`
+2. See error...
+
+**Expected:**
+What should happen
+
+**Actual:**
+What actually happened
+
+**Output:**
+```
+Paste error output here
+```
 ```
 
 ---
 
-## Getting Help
+## Known Limitations
 
-### Before asking for help, gather:
-
-```bash
-# System info
-node --version
-npm --version
-uname -a
-
-# Memphis status
-memphis doctor > doctor-output.txt
-memphis status > status-output.txt
-
-# Recent logs
-tail -100 ~/.memphis/daemon.log > daemon-logs.txt
-
-# Package in one file
-tar -czf memphis-debug.tar.gz \
-  doctor-output.txt \
-  status-output.txt \
-  daemon-logs.txt \
-  ~/.memphis/config.yaml
-```
-
-### Where to get help:
-
-1. **Discord:** https://discord.gg/clawd
-2. **GitHub Issues:** https://github.com/elathoxu-crypto/memphis/issues
-3. **Documentation:** https://docs.openclaw.ai
-
-**Include in your report:**
-- Error message (full text)
-- Command you ran
-- Expected vs actual behavior
-- `doctor` output
-- System info
+- Windows binary broken (use WSL2)
+- Embeddings require Ollama (local LLM)
+- Multi-agent sync requires network access
+- Vault requires password (can't recover if lost)
 
 ---
 
-**Troubleshooting Guide Version:** 2.0.0  
-**Last Updated:** 2026-03-02
+**Updated:** 2026-03-05
+**Version:** v3.7.2
