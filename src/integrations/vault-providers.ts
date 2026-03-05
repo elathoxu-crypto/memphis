@@ -15,6 +15,7 @@ export const VAULT_KEYS = {
   openai: "openai-api-key",
   openrouter: "openrouter-api-key",
   minimax: "minimax-api-key",
+  zai: "zai-api-key",
 } as const;
 
 export type ProviderName = keyof typeof VAULT_KEYS;

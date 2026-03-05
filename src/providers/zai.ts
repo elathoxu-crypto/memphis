@@ -1,6 +1,6 @@
 /**
  * ZAI Provider (GLM models)
- * 
+ *
  * Supports GLM-4.5, GLM-5, etc. via ZAI API
  * API key: 49 characters
  */
@@ -10,10 +10,10 @@ import type { LLMMessage, LLMResponse } from "./index.js";
 
 export class ZAIProvider extends BaseProvider {
   name = "zai";
-  baseUrl = "https://api.zukijourney.com/v1";
-  models = ["zai/glm-5", "zai/glm-4.7", "zai/glm-4.6", "zai/glm-4.5-air"];
+  baseUrl = "https://api.z.ai/api/coding/paas/v4";
+  models = ["glm-5", "glm-4.7", "glm-4.7-flash", "glm-4.7-flashx", "glm-4.5-air"];
   apiKey = "";
-  
+
   private model: string;
 
   constructor(options?: {
@@ -23,7 +23,7 @@ export class ZAIProvider extends BaseProvider {
   }) {
     super();
     this.apiKey = options?.apiKey || process.env.ZAI_API_KEY || "";
-    this.model = options?.model || "zai/glm-5";
+    this.model = options?.model || "glm-4.5-air";
     this.baseUrl = options?.baseUrl || this.baseUrl;
   }
 
@@ -40,7 +40,7 @@ export class ZAIProvider extends BaseProvider {
     }
   ): Promise<LLMResponse> {
     const model = options?.model || this.model;
-    
+
     const response = await fetch(`${this.baseUrl}/chat/completions`, {
       method: "POST",
       headers: {
@@ -64,7 +64,7 @@ export class ZAIProvider extends BaseProvider {
     }
 
     const data = await response.json();
-    
+
     return {
       content: data.choices[0].message.content,
       usage: {

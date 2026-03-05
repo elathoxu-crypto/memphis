@@ -24,11 +24,12 @@ import { OpenRouterProvider } from "./openrouter.js";
 import { CodexProvider } from "./codex.js";
 import { OpenClawProvider, isGatewayAvailable } from "./openclaw.js";
 import { MiniMaxProvider } from "./minimax.js";
+import { ZAIProvider } from "./zai.js";
 import type { Provider } from "./index.js";
 import { getProviderApiKey } from "../integrations/vault-providers.js";
 import { loadConfig } from "../config/loader.js";
 
-export type ProviderName = "openclaw" | "codex" | "openai" | "openrouter" | "minimax" | "ollama";
+export type ProviderName = "openclaw" | "codex" | "openai" | "openrouter" | "minimax" | "zai" | "ollama";
 
 export interface ProviderOptions {
   /** Explicitly request a provider by name */
@@ -52,7 +53,7 @@ export interface ResolvedProvider {
 }
 
 async function tryGetApiKey(
-  providerName: "openai" | "openrouter" | "minimax",
+  providerName: "openai" | "openrouter" | "minimax" | "zai",
   vaultPassword?: string
 ): Promise<string | undefined> {
   // 1. Environment variable
@@ -60,6 +61,7 @@ async function tryGetApiKey(
     openai: "OPENAI_API_KEY",
     openrouter: "OPENROUTER_API_KEY",
     minimax: "MINIMAX_API_KEY",
+    zai: "ZAI_API_KEY",
   };
   const envKey = process.env[envMap[providerName]];
   if (envKey) return envKey;
@@ -98,6 +100,19 @@ export async function resolveProvider(options: ProviderOptions = {}): Promise<Re
   // Auto-resolution chain
 
   const config = loadConfig();
+
+  if (config.providers?.zai?.api_key) {
+    const zaiConfig = config.providers.zai;
+    return {
+      provider: new ZAIProvider({
+        apiKey: zaiConfig.api_key,
+        model: zaiConfig.model || "glm-4.5-air",
+        baseUrl: zaiConfig.url
+      }),
+      name: "zai",
+      model: zaiConfig.model || "glm-4.5-air"
+    };
+  }
 
   if (config.providers?.ollama?.url) {
     process.env.OLLAMA_BASE_URL = config.providers.ollama.url;
@@ -176,10 +191,15 @@ async function resolveExplicit(
       if (!key) throw new Error("MiniMax API key not found (env MINIMAX_API_KEY or vault)");
       return { provider: new MiniMaxProvider(key), name: "minimax", model };
     }
+    case "zai": {
+      const key = await tryGetApiKey("zai", vaultPassword);
+      if (!key) throw new Error("ZAI API key not found (env ZAI_API_KEY or vault)");
+      return { provider: new ZAIProvider({ apiKey: key }), name: "zai", model };
+    }
     case "ollama":
       return { provider: new OllamaProvider(), name: "ollama", model };
     default:
-      throw new Error(`Unknown provider: ${name}. Available: openclaw, codex, openai, openrouter, minimax, ollama`);
+      throw new Error(`Unknown provider: ${name}. Available: openclaw, codex, openai, openrouter, minimax, zai, ollama`);
   }
 }
 
