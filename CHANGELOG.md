@@ -1,5 +1,23 @@
 # Changelog
 
+## [3.7.2] - 2026-03-05
+
+### Fixed
+- **Terminal debug garbage**: Disabled cleanup handlers causing `[DEBUG] Active handles` spam
+- **Terminal corruption**: Fixed line wrap issues from TUI cleanup code
+
+### Changed
+- **src/cli/index.ts**: Commented out `cleanupTerminalHard()` and `dumpActiveHandles()` functions
+- **Removed debug output**: All commands now produce clean output
+
+### Testing
+- ✅ `memphis status` - clean output
+- ✅ `memphis journal` - clean output
+- ✅ `memphis recall` - clean output
+- ✅ No terminal corruption
+
+---
+
 ## [3.7.1] - 2026-03-04
 
 ### Changed

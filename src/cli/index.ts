@@ -1,29 +1,10 @@
 #!/usr/bin/env node
-// Terminal hard reset (combines both cleanups into one)
-function cleanupTerminalHard() {
-  if (!process.stdin.isTTY) return;
-  try { process.stdout.write("\x1b[?1049l\x1b[0m\x1b[?25h"); } catch {}
-  try { process.stdin.setRawMode(false); } catch {}
-  try { process.stdin.pause(); } catch {}
-}
-
-// Debug: dump active handles
-function dumpActiveHandles(label = "final") {
-  try {
-    const handles = (process as any)._getActiveHandles?.() ?? [];
-    const requests = (process as any)._getActiveRequests?.() ?? [];
-    const hNames = handles.map((h: any) => h?.constructor?.name ?? "Unknown");
-    const rNames = requests.map((r: any) => r?.constructor?.name ?? "Unknown");
-    console.error("[DEBUG] Active handles (" + label + "):", hNames.slice(0,5));
-    console.error("[DEBUG] Active requests (" + label + "):", rNames.slice(0,5));
-    console.error("[DEBUG] stdin: isTTY=" + process.stdin.isTTY + " readable=" + (process.stdin as any).readable);
-  } catch(e) { console.error("[DEBUG] Error:", e); }
-}
-
-// Register cleanup handlers
-process.on("exit", cleanupTerminalHard);
-process.on("SIGINT", () => { cleanupTerminalHard(); process.exit(130); });
-process.on("SIGTERM", () => { cleanupTerminalHard(); process.exit(143); });
+// DISABLED: Terminal cleanup causing bugs (line wrap issues, debug spam)
+// function cleanupTerminalHard() { ... }
+// function dumpActiveHandles() { ... }
+// process.on("exit", cleanupTerminalHard);
+// process.on("SIGINT", () => { cleanupTerminalHard(); process.exit(130); });
+// process.on("SIGTERM", () => { cleanupTerminalHard(); process.exit(143); });
 
 import { Command } from "commander";
 import { Store } from "../memory/store.js";
@@ -76,7 +57,7 @@ const daemonManager = new DaemonManager();
 program
   .name("memphis")
   .description("Local-first AI brain with persistent memory")
-  .version("3.7.1");
+  .version("3.7.2");
 
 program
   .command("init")
@@ -999,6 +980,7 @@ program.addCommand(collectiveCommand);
 program.addCommand(metaCommand);
 program.parse();
 
-process.on("exit", () => dumpActiveHandles("exit"));
-process.on("SIGINT", () => { dumpActiveHandles("SIGINT"); process.exit(130); });
-process.on("SIGTERM", () => { dumpActiveHandles("SIGTERM"); process.exit(143); });
+// DISABLED: Debug handlers causing terminal issues
+// process.on("exit", () => dumpActiveHandles("exit"));
+// process.on("SIGINT", () => { dumpActiveHandles("SIGINT"); process.exit(130); });
+// process.on("SIGTERM", () => { dumpActiveHandles("SIGTERM"); process.exit(143); });
