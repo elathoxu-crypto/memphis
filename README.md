@@ -27,9 +27,12 @@ node dist/cli/index.js init
 
 Pre-built binaries are available on [GitHub Releases](https://github.com/elathoxu-crypto/memphis/releases), but they are **NOT RECOMMENDED** for production use yet:
 
-- ✅ **Linux x64**: Not thoroughly tested
-- ✅ **macOS x64/ARM64**: Not thoroughly tested
-- ❌ **Windows x64**: Known issues (multiple process spawning, high CPU)
+| Platform | Status | Notes |
+|----------|--------|-------|
+| Linux x64 | ⚠️ UNTESTED | Needs community testing |
+| macOS x64 | ⚠️ UNTESTED | Needs community testing |
+| macOS ARM64 | ⚠️ UNTESTED | M1/M2/M3 support unknown |
+| Windows x64 | ❌ BROKEN | pkg issue - spawns multiple processes |
 
 **Recommended approach:**
 - Use classic installation (Node.js + Git) above
@@ -37,6 +40,11 @@ Pre-built binaries are available on [GitHub Releases](https://github.com/elathox
 - Windows users: Use WSL2 or wait for fixes
 
 **Binaries will be marked as stable after community testing.**
+
+**Uninstall:**
+```bash
+~/memphis/uninstall.sh
+```
 
 [→ Full guide: QUICKSTART.md](QUICKSTART.md) | [→ Complete setup: BOOTSTRAP.md](BOOTSTRAP.md)
 
