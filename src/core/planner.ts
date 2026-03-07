@@ -98,8 +98,11 @@ export async function plan(store: Store, options: PlanOptions = {}): Promise<Pla
 
   if (decisions.length) {
     contextParts.push("**Recent decisions:**");
-    for (const d of decisions.slice(0, 3) as any[]) {
-      contextParts.push(`- ${d.title}: chose "${d.chosen}" (${d.scope})`);
+    for (const d of decisions.slice(0, 3)) {
+      const title = d.decision.title || "(untitled decision)";
+      const chosen = d.decision.chosenOption || "(no chosen option)";
+      const scope = d.decision.scope || "project";
+      contextParts.push(`- ${title}: chose "${chosen}" (${scope})`);
     }
   }
 

@@ -16,15 +16,13 @@ export interface DecisionResult {
 
 // Decision keywords and patterns
 const DECISION_PATTERNS = [
-  // Polish
-  /\b(postanawiam|postanowiliśmy|decyduję|decide|ustalam|ustaliliśmy|ustalmy|wybieram|wybraliśmy|od teraz|to jest|muszę|zrobimy|najlepiej|rekomenduję)\b/i,
+  // Polish (explicit decision language)
+  /\b(postanawiam|postanowiliśmy|decyduję|ustalam|ustaliliśmy|ustalmy|wybieram|wybraliśmy|rekomenduję)\b/i,
   /\b(decyzja|decision)\s*[:\-]/i,
-  // English
+  // English (explicit decision language)
   /\b(I decided|we decided|I've decided|going with|settling on|choosing|picking|opting for)\b/i,
   /\b(decision|conclusion)\s*[:\-]/i,
-  // Action phrases
-  /\b(will do|must do|need to|should|going to)\b.*\b(instead|rather|instead of)\b/i,
-  // Priority/importance
+  // Priority/importance with commitment signal
   /\b(prioritize|priority is|most important|first thing|main goal)\b/i,
 ];
 
@@ -299,13 +297,23 @@ export async function checkAndSaveDecision(
     return undefined;
   }
 
+  // Hardening: ask blocks need explicit decision markers to avoid false positives
+  if (block.data.type === "ask") {
+    const text = String(block.data.content || "");
+    const hasExplicitDecisionMarker = /\b(decision|decyzja|i decided|we decided|postanawiam|decyduję)\b/i.test(text);
+    if (!hasExplicitDecisionMarker) {
+      return undefined;
+    }
+  }
+
   const result = await detectDecision(store, {
     content: block.data.content,
     type: block.data.type,
     tags: block.data.tags,
   });
 
-  if (result.isDecision && result.confidence >= 0.5) {
+  const threshold = block.data.type === "ask" ? 0.75 : 0.5;
+  if (result.isDecision && result.confidence >= threshold) {
     return saveDecision(store, block, result);
   }
 

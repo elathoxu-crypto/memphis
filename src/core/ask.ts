@@ -244,6 +244,8 @@ const EXTERNAL_QUERY_HINTS = [
   "source",
   "źród",
   "zrod",
+  "gateway",
+  "openclaw",
 ];
 
 function isExternalQuery(question: string): boolean {
@@ -578,6 +580,7 @@ function computeExternalConfidence(params: {
 function buildPrompt(question: string, context: string, options: PromptBuildOptions = {}): LLMMessage[] {
   const q = question.toLowerCase();
   const operationalMode = ["status", "roadmap", "plan", "infrastr", "co dalej", "next", "risk", "blocker"].some(k => q.includes(k));
+  const statusIntent = /^\s*(status|stan|health|system status)\s*\??\s*$/i.test(question);
   const queryMode = options.queryMode ?? "memory-only";
 
   const interviewGuardrail = isSevenPointInterview(question)
@@ -596,18 +599,26 @@ function buildPrompt(question: string, context: string, options: PromptBuildOpti
 - If uncertain, explicitly mark UNKNOWN instead of guessing`
     : "";
 
+  const statusGuardrail = statusIntent
+    ? `\n\nStatus intent mode:
+- Do NOT just list recalled hits.
+- Produce a concise operational status summary from context.
+- Include at least 2 concrete facts (e.g., counts, component states, timestamps) when available.`
+    : "";
+
   const sourceGuardrail = queryMode === "external"
     ? `\n\nExternal-data mode:
 - Prefer WEB CONTEXT when available.
 - If WEB CONTEXT has a source, include final section: SOURCES with bullet list URLs/identifiers.
 - If a source is already provided in context (${options.webSource || "unknown"}), include it in SOURCES.
 - End with CONFIDENCE: high|medium|low (based on source quality/coverage).
-- If external source is unavailable, state that clearly and continue with best-effort answer from memory/context.`
+- If user asked about a specific URL and WEB CONTEXT for that URL is unavailable, explicitly say URL fetch failed/unavailable.
+- Never pretend you know page contents without fetched WEB CONTEXT.`
     : "";
 
   const systemPrompt = `You are Memphis, an AI assistant with access to the user's memory chains.
 Use the provided context from memory to answer the question. If the context doesn't contain
-relevant information, say so honestly. Be concise and helpful.${interviewGuardrail}${operationalGuardrail}${sourceGuardrail}`;
+relevant information, say so honestly. Be concise and helpful.${interviewGuardrail}${operationalGuardrail}${statusGuardrail}${sourceGuardrail}`;
 
   const messages: LLMMessage[] = [
     { role: "system", content: systemPrompt },
@@ -781,6 +792,7 @@ export async function askWithContext(
   let webSources: string[] = [];
 
   if (queryMode === "external") {
+    const requestedUrl = extractFirstUrl(question);
     const web = await fetchExternalWebContext(question);
     if (web.used && web.snippet) {
       const webBlock = [
@@ -794,6 +806,8 @@ export async function askWithContext(
       webContextUsed = true;
       webSource = web.source;
       webSources = web.sources || (web.source ? [web.source] : []);
+    } else if (requestedUrl) {
+      contextStr = `${contextStr}\n\nWEB CONTEXT: unavailable (failed to fetch requested URL: ${requestedUrl})`;
     } else if (hits.length === 0) {
       contextStr = `${contextStr}\n\nWEB CONTEXT: unavailable (no external source resolved)`;
     }

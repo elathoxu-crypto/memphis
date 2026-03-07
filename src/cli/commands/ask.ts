@@ -24,10 +24,16 @@ export async function askCommand(question: string, options?: {
   noSemantic?: boolean;
   graph?: boolean;
 }) {
+  const normalizedQuestion = (question || "").trim();
+  if (!normalizedQuestion) {
+    console.log(chalk.yellow("⚠ Empty question. Usage: memphis ask \"your question\""));
+    return;
+  }
+
   const { guard } = createWorkspaceStore();
 
   const askOptions: AskOptions = {
-    question,
+    question: normalizedQuestion,
     provider: options?.provider || options?.model, // model flag maps to provider (ollama)
     includeVault: options?.includeVault || options?.useVault || false,
     topK: options?.top || 8,
@@ -79,7 +85,8 @@ export async function askCommand(question: string, options?: {
         
         // Show context info
         console.log(chalk.gray(`\n📚 Context: ${result.context.hits.length} hits`));
-        console.log(chalk.gray(`🤖 Provider: ${result.provider} (${result.model})`));
+        const modelLabel = (result.model || "default").trim() || "default";
+        console.log(chalk.gray(`🤖 Provider: ${result.provider} (${modelLabel})`));
         
         if (result.tokens_used) {
           console.log(chalk.gray(`💬 Tokens: ${result.tokens_used}`));
