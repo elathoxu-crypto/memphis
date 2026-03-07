@@ -1,5 +1,24 @@
 # Changelog
 
+## [3.8.11] - 2026-03-07
+
+### Added
+- Rust-core execution program docs:
+  - `docs/RUST-CORE-MIGRATION-PLAN.md`
+  - `docs/CANARY-GATES.md`
+  - `docs/ROLLBACK-RUNBOOK.md`
+- Migration automation scripts:
+  - `scripts/core-parity-check.sh`
+  - `scripts/canary-health-check.sh`
+
+### Changed
+- `docs/README.md` deployment/ops index now links migration, canary, and rollback docs.
+
+### Validation
+- ✅ Script syntax checks pass (`bash -n`)
+
+---
+
 ## [3.8.10] - 2026-03-07
 
 ### Added

@@ -59,6 +59,9 @@
 | [DEPLOYMENT.md](DEPLOYMENT.md) | Production deployment | Ops |
 | [MONITORING.md](MONITORING.md) | Monitoring and logging | Ops |
 | [SECURITY.md](SECURITY.md) | Security considerations | Ops |
+| [RUST-CORE-MIGRATION-PLAN.md](RUST-CORE-MIGRATION-PLAN.md) | No-downtime Rust core migration plan | Ops |
+| [CANARY-GATES.md](CANARY-GATES.md) | Canary rollout acceptance gates | Ops |
+| [ROLLBACK-RUNBOOK.md](ROLLBACK-RUNBOOK.md) | Emergency rollback playbook | Ops |
 
 ### Community
 
