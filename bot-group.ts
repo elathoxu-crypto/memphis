@@ -296,7 +296,7 @@ class MemphisBot {
     if (!text) return "";
     const lines = text
       .split(/\r?\n/)
-      .map((l) => l.trimEnd())
+      .map((l) => l.replace(/\x1B\[[0-9;]*[A-Za-z]/g, "").trimEnd())
       .filter((l) => l.trim().length > 0)
       .filter((l) => !/^\s*\[?EmbeddingCache\]?/i.test(l))
       .filter((l) => !/^\s*DEBUG\s+EmbeddingCache/i.test(l))
