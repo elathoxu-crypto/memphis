@@ -25,21 +25,24 @@ node dist/cli/index.js init
 
 ## ⚠️ Binary Releases (EXPERIMENTAL)
 
-Pre-built binaries are available on [GitHub Releases](https://github.com/elathoxu-crypto/memphis/releases), but they are **NOT RECOMMENDED** for production use yet:
+Pre-built binaries are available on [GitHub Releases](https://github.com/elathoxu-crypto/memphis/releases), but they are **NOT RECOMMENDED** for production use yet.
+
+Current known issue:
+- ❌ Snapshot bundle / Node compatibility errors may break startup on some hosts.
 
 | Platform | Status | Notes |
 |----------|--------|-------|
-| Linux x64 | ⚠️ UNTESTED | Needs community testing |
-| macOS x64 | ⚠️ UNTESTED | Needs community testing |
-| macOS ARM64 | ⚠️ UNTESTED | M1/M2/M3 support unknown |
-| Windows x64 | ❌ BROKEN | pkg issue - spawns multiple processes |
+| Linux x64 | ⚠️ EXPERIMENTAL | Snapshot compatibility risk |
+| macOS x64 | ⚠️ EXPERIMENTAL | Snapshot compatibility risk |
+| macOS ARM64 | ⚠️ EXPERIMENTAL | Snapshot compatibility risk |
+| Windows x64 | ❌ BROKEN | Snapshot + multi-process issues |
 
-**Recommended approach:**
-- Use classic installation (Node.js + Git) above
-- WSL2 users: Use Linux binary or classic install
-- Windows users: Use WSL2 or wait for fixes
+**Recommended approach (production):**
+1. Use classic installation (Node.js + Git) from source.
+2. Or use npm install flow once verified in your environment.
+3. Treat release binaries as test artifacts only.
 
-**Binaries will be marked as stable after community testing.**
+**Binaries will be marked stable only after cross-platform smoke PASS.**
 
 **Uninstall:**
 ```bash
@@ -123,7 +126,7 @@ memphis ask "question"           # Ask with context
 
 ## 🚀 Status
 
-**Current Version:** v3.0.1
+**Current Version:** v3.8.2
 **Tests:** 306/310 (98.7%)
 **Chains:** 8 active
 **Blocks:** 1,187 total

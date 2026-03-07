@@ -6,6 +6,8 @@
 
 ## 🚀 Method 1: One-Liner (Recommended)
 
+> Note: source/npm install is currently the only production-safe path. Binary artifacts are experimental.
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/elathoxu-crypto/memphis/main/quick-install.sh | bash
 ```
@@ -39,6 +41,8 @@ openclaw gateway restart  # If using OpenClaw
 ---
 
 ## 📦 Method 3: ClawHub (OpenClaw Only)
+
+> For production reliability, prefer this + source-built CLI over binary release downloads.
 
 If you already have OpenClaw:
 

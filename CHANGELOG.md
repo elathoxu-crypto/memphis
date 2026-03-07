@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.8.2] - 2026-03-07
+
+### Changed
+- **README UX hardening:** made source/npm the explicit production-default path.
+- **Binary policy clarified:** release binaries explicitly marked experimental due to snapshot compatibility issues.
+- **Quickstart guidance updated:** users are steered to source/npm flows for reliable onboarding.
+
+### Validation
+- ✅ Documentation now reflects real-world install reliability and avoids misleading binary-first expectations.
+
+---
+
 ## [3.8.1] - 2026-03-07
 
 ### Added
