@@ -298,8 +298,9 @@ class MemphisBot {
       .split(/\r?\n/)
       .map((l) => l.trimEnd())
       .filter((l) => l.trim().length > 0)
-      .filter((l) => !/^\[?EmbeddingCache\]?/i.test(l))
-      .filter((l) => !/^DEBUG\s+EmbeddingCache/i.test(l));
+      .filter((l) => !/^\s*\[?EmbeddingCache\]?/i.test(l))
+      .filter((l) => !/^\s*DEBUG\s+EmbeddingCache/i.test(l))
+      .filter((l) => !/^\s*EmbeddingCache\b/i.test(l));
 
     return lines.join("\n").trim();
   }
