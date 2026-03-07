@@ -34,3 +34,14 @@ systemctl --user restart memphis-bot.service
 2. `/ask test` returns response (provider ollama/qwen for bot path).
 3. `/restart` causes service restart and bot comes back.
 4. No recurring `409 Conflict` / `401 Unauthorized` in logs.
+
+## Daily ops automation
+Run daily quick health check:
+```bash
+bash scripts/daily-ops-check.sh
+```
+
+Recommended cron (example: every day 08:30):
+```bash
+30 8 * * * cd ~/memphis && bash scripts/daily-ops-check.sh >> ~/.memphis/logs/daily-ops-check.log 2>&1
+```

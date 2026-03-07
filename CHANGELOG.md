@@ -1,5 +1,21 @@
 # Changelog
 
+## [3.8.6] - 2026-03-07
+
+### Added
+- `scripts/daily-ops-check.sh` — daily operations health check (memphis/openclaw/bot/share-sync).
+- `scripts/first-time-user-smoke.sh` — one-command new-user PASS/FAIL smoke test.
+
+### Changed
+- `docs/TELEGRAM_BOT_OPERATIONS.md` updated with daily ops automation + cron example.
+- `docs/INSTALL-VERIFIED-PRODUCTION.md` updated with one-command smoke step.
+
+### Validation
+- ✅ script shell syntax checks pass (`bash -n`)
+- ✅ first-time smoke script returns PASS
+
+---
+
 ## [3.8.5] - 2026-03-07
 
 ### Added

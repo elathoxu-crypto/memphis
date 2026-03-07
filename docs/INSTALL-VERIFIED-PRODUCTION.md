@@ -97,3 +97,10 @@ Reference: `docs/TELEGRAM_BOT_OPERATIONS.md`
 - [ ] `memphis journal/recall` smoke passes
 - [ ] (optional) OpenClaw skill installed and gateway healthy
 - [ ] (optional) bot service healthy and no recurring 401/409 in logs
+
+## 8) One-command first-time smoke
+
+Use automated PASS/FAIL smoke:
+```bash
+bash scripts/first-time-user-smoke.sh
+```
