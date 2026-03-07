@@ -125,15 +125,14 @@ async function showSyncStatus(
   let lastSync: string | null = null;
 
   const sshTarget = useSSHConfig ? "memphis" : `${remoteUser}@${remoteHost}`;
-  const memphisCmd = useSSHConfig ? "node ~/memphis/dist/cli/index.js" : "memphis";
 
   try {
     const remoteStatus = execSync(
-      `ssh -o ConnectTimeout=3 -o BatchMode=yes ${sshTarget} '${memphisCmd} status 2>/dev/null | grep -A 1 "share" | grep "✓" | grep -oE "[0-9]+" | head -1'`,
+      `ssh -o ConnectTimeout=3 -o BatchMode=yes ${sshTarget} 'ls -1 ~/.memphis/chains/share/*.json 2>/dev/null | wc -l'`,
       { encoding: "utf8", timeout: 5000 }
     ).trim();
-    
-    remoteBlocks = parseInt(remoteStatus) || 0;
+
+    remoteBlocks = parseInt(remoteStatus, 10) || 0;
     connectionStatus = "ok";
   } catch (error) {
     connectionStatus = "error";

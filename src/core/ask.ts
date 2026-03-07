@@ -222,6 +222,150 @@ interface GraphNeighborEntry {
   score: number;
 }
 
+interface WebContextResult {
+  used: boolean;
+  source?: string;
+  sources?: string[];
+  snippet?: string;
+}
+
+const EXTERNAL_QUERY_HINTS = [
+  "internet",
+  "online",
+  "web",
+  "www",
+  "latest",
+  "news",
+  "aktualnie",
+  "obecnie",
+  "dzisiaj",
+  "sprawdź",
+  "sprawdz",
+  "source",
+  "źród",
+  "zrod",
+];
+
+function isExternalQuery(question: string): boolean {
+  const q = question.toLowerCase();
+  if (/https?:\/\//i.test(question)) return true;
+  return EXTERNAL_QUERY_HINTS.some((hint) => q.includes(hint));
+}
+
+function classifyQueryMode(question: string): AskQueryMode {
+  return isExternalQuery(question) ? "external" : "memory-only";
+}
+
+function extractFirstUrl(text: string): string | null {
+  const match = text.match(/https?:\/\/[^\s)]+/i);
+  return match?.[0] || null;
+}
+
+function stripHtml(input: string): string {
+  return input
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+async function fetchUrlSnippet(url: string): Promise<WebContextResult> {
+  try {
+    const res = await fetch(url, { headers: { "user-agent": "memphis-ask/1.0" } });
+    if (!res.ok) return { used: false };
+    const contentType = (res.headers.get("content-type") || "").toLowerCase();
+    const raw = await res.text();
+    const text = contentType.includes("html") ? stripHtml(raw) : raw;
+    if (!text.trim()) return { used: false };
+    return {
+      used: true,
+      source: url,
+      sources: [url],
+      snippet: text.slice(0, 1400),
+    };
+  } catch {
+    return { used: false };
+  }
+}
+
+async function fetchDuckDuckGoContext(question: string): Promise<WebContextResult> {
+  try {
+    const endpoint = `https://api.duckduckgo.com/?q=${encodeURIComponent(question)}&format=json&no_redirect=1&no_html=1`;
+    const res = await fetch(endpoint, {
+      headers: { "user-agent": "memphis-ask/1.0" },
+    });
+
+    if (!res.ok) return { used: false };
+
+    const payload = await res.json() as {
+      AbstractText?: string;
+      AbstractURL?: string;
+      RelatedTopics?: Array<{ Text?: string; FirstURL?: string }>;
+      Answer?: string;
+      Definition?: string;
+    };
+
+    const primary = payload.AbstractText?.trim() || payload.Answer?.trim() || payload.Definition?.trim();
+    if (primary) {
+      const src = payload.AbstractURL || "duckduckgo:abstract";
+      return {
+        used: true,
+        source: src,
+        sources: [src],
+        snippet: primary.slice(0, 1000),
+      };
+    }
+
+    const related = payload.RelatedTopics?.find((item) => item?.Text?.trim());
+    if (related?.Text) {
+      const src = related.FirstURL || "duckduckgo:related-topic";
+      return {
+        used: true,
+        source: src,
+        sources: [src],
+        snippet: related.Text.slice(0, 1000),
+      };
+    }
+
+    return { used: false };
+  } catch {
+    return { used: false };
+  }
+}
+
+async function fetchExternalWebContext(question: string): Promise<WebContextResult> {
+  const firstUrl = extractFirstUrl(question);
+  const direct = firstUrl ? await fetchUrlSnippet(firstUrl) : { used: false } as WebContextResult;
+  const ddg = await fetchDuckDuckGoContext(question);
+
+  const snippets: string[] = [];
+  const sources = new Set<string>();
+
+  if (direct.used && direct.snippet) {
+    snippets.push(`Primary source (${direct.source || firstUrl || "url"}):\n${direct.snippet}`);
+    for (const s of (direct.sources || (direct.source ? [direct.source] : []))) sources.add(s);
+  }
+
+  if (ddg.used && ddg.snippet) {
+    snippets.push(`Search context (${ddg.source || "duckduckgo"}):\n${ddg.snippet}`);
+    for (const s of (ddg.sources || (ddg.source ? [ddg.source] : []))) sources.add(s);
+  }
+
+  if (snippets.length === 0) {
+    return { used: false };
+  }
+
+  const mergedSources = Array.from(sources);
+  return {
+    used: true,
+    source: mergedSources[0],
+    sources: mergedSources,
+    snippet: snippets.join("\n\n---\n\n").slice(0, 1800),
+  };
+}
+
 function formatBlockRef(nodeId: string): string {
   const [chain, indexStr] = nodeId.split(":");
   const index = Number.parseInt(indexStr ?? "0", 10);
@@ -400,10 +544,70 @@ function buildContextString(hits: RecallHit[], maxChars: number = 6000): string 
 /**
  * Build prompt with context
  */
-function buildPrompt(question: string, context: string): LLMMessage[] {
+function isSevenPointInterview(question: string): boolean {
+  const q = question.toLowerCase();
+  const triggerWords = [
+    "01", "02", "03", "04", "05", "06", "07",
+    "agenda", "rapport", "goals", "trial", "tribulation", "needed information",
+    "wywiad", "7 punkt", "siedem punkt",
+  ];
+  return triggerWords.filter(word => q.includes(word)).length >= 4;
+}
+
+type AskQueryMode = "memory-only" | "external";
+
+interface PromptBuildOptions {
+  queryMode?: AskQueryMode;
+  webSource?: string;
+  webContextUsed?: boolean;
+}
+
+type ConfidenceLevel = "high" | "medium" | "low";
+
+function computeExternalConfidence(params: {
+  webContextUsed: boolean;
+  sourceCount: number;
+  recallHits: number;
+}): ConfidenceLevel {
+  const { webContextUsed, sourceCount, recallHits } = params;
+  if (webContextUsed && sourceCount >= 2 && recallHits >= 1) return "high";
+  if ((webContextUsed && sourceCount >= 1) || recallHits >= 2) return "medium";
+  return "low";
+}
+
+function buildPrompt(question: string, context: string, options: PromptBuildOptions = {}): LLMMessage[] {
+  const q = question.toLowerCase();
+  const operationalMode = ["status", "roadmap", "plan", "infrastr", "co dalej", "next", "risk", "blocker"].some(k => q.includes(k));
+  const queryMode = options.queryMode ?? "memory-only";
+
+  const interviewGuardrail = isSevenPointInterview(question)
+    ? `\n\nInterview response mode (STRICT):
+- Return exactly 7 numbered sections: 01..07
+- Each section: max 3 bullet points, concrete and action-oriented
+- Section 06 must include 1-3 explicit decisions for immediate action
+- Section 07 must list missing data needed from user
+- Do not output meta-commentary about the prompt`
+    : "";
+
+  const operationalGuardrail = operationalMode
+    ? `\n\nOperational response mode:
+- Use this structure: CURRENT STATE / NEXT 3 ACTIONS / RISKS / NEEDS
+- Be specific (commands, files, concrete actions), avoid generic coaching language
+- If uncertain, explicitly mark UNKNOWN instead of guessing`
+    : "";
+
+  const sourceGuardrail = queryMode === "external"
+    ? `\n\nExternal-data mode:
+- Prefer WEB CONTEXT when available.
+- If WEB CONTEXT has a source, include final section: SOURCES with bullet list URLs/identifiers.
+- If a source is already provided in context (${options.webSource || "unknown"}), include it in SOURCES.
+- End with CONFIDENCE: high|medium|low (based on source quality/coverage).
+- If external source is unavailable, state that clearly and continue with best-effort answer from memory/context.`
+    : "";
+
   const systemPrompt = `You are Memphis, an AI assistant with access to the user's memory chains.
 Use the provided context from memory to answer the question. If the context doesn't contain
-relevant information, say so honestly. Be concise and helpful.`;
+relevant information, say so honestly. Be concise and helpful.${interviewGuardrail}${operationalGuardrail}${sourceGuardrail}`;
 
   const messages: LLMMessage[] = [
     { role: "system", content: systemPrompt },
@@ -444,6 +648,41 @@ async function selectProvider(preferred?: string, useVault = false, vaultPasswor
     vaultPassword: useVault ? vaultPassword : undefined,
   });
   return { provider: resolved.provider, name: resolved.name, model: resolved.model };
+}
+
+function isRateLimitError(err: unknown): boolean {
+  const msg = String(err ?? "").toLowerCase();
+  return msg.includes("429") || msg.includes("limit exhausted") || msg.includes("rate limit");
+}
+
+async function tryProviderFallback(messages: LLMMessage[]): Promise<{ response: LLMResponse; providerName: string; providerModel: string; fallbackUsed: boolean; fallbackNote?: string }> {
+  const fallbackChain: Array<{ provider: string; model?: string }> = [
+    { provider: "openclaw" },
+    { provider: "ollama", model: process.env.OLLAMA_MODEL || "qwen2.5-coder:3b" },
+  ];
+
+  let lastError: unknown;
+
+  for (const candidate of fallbackChain) {
+    try {
+      const resolved = await resolveProvider({ provider: candidate.provider, model: candidate.model, skipCodex: true });
+      const resp = await resolved.provider.chat(messages, {
+        model: candidate.model || resolved.model,
+        temperature: 0.7,
+      });
+      return {
+        response: resp,
+        providerName: resolved.name,
+        providerModel: candidate.model || resolved.model || "",
+        fallbackUsed: true,
+        fallbackNote: `fallback activated: ${candidate.provider}`,
+      };
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw new Error(`Fallback failed: ${String(lastError ?? "unknown error")}`);
 }
 
 /**
@@ -535,6 +774,31 @@ export async function askWithContext(
     }
   }
 
+  // RM-088/RM-089: external-data classification + enrichment policy
+  const queryMode = classifyQueryMode(question);
+  let webContextUsed = false;
+  let webSource: string | undefined;
+  let webSources: string[] = [];
+
+  if (queryMode === "external") {
+    const web = await fetchExternalWebContext(question);
+    if (web.used && web.snippet) {
+      const webBlock = [
+        "WEB CONTEXT (best-effort)",
+        "=".repeat(40),
+        `Source: ${web.source || "unknown"}`,
+        "",
+        web.snippet,
+      ].join("\n");
+      contextStr = `${contextStr}\n\n${webBlock}`;
+      webContextUsed = true;
+      webSource = web.source;
+      webSources = web.sources || (web.source ? [web.source] : []);
+    } else if (hits.length === 0) {
+      contextStr = `${contextStr}\n\nWEB CONTEXT: unavailable (no external source resolved)`;
+    }
+  }
+
   if (explainContext) {
     console.log(`[Context] Summary hits: ${summaryUsed}, Direct hits: ${directUsed}`);
     console.log(`[Context] Context length: ${contextStr.length} chars`);
@@ -548,6 +812,7 @@ export async function askWithContext(
       graphStatus = `${graphLabel} (disabled)`;
     }
     console.log(`[Context] ${graphStatus}`);
+    console.log(`[Context] queryMode=${queryMode} webContext=${webContextUsed ? "yes" : "no"}`);
   }
 
   // Step 4: Get provider
@@ -575,19 +840,48 @@ export async function askWithContext(
   }
 
   // Step 4: Call LLM
-  const messages = buildPrompt(question, contextStr);
-  
+  const messages = buildPrompt(question, contextStr, {
+    queryMode,
+    webSource,
+    webContextUsed,
+  });
+
   let response: LLMResponse;
+  let usedProviderName = String(providerResult.name);
+  let usedProviderModel = providerResult.model ?? "";
+  let fallbackNote: string | undefined;
   try {
     response = await providerResult.provider.chat(messages, {
       model: providerResult.model,
       temperature: 0.7,
     });
   } catch (err) {
-    throw new Error(`Provider error: ${err}`);
+    if (isRateLimitError(err) && (!provider || providerResult.name === "zai")) {
+      const fb = await tryProviderFallback(messages);
+      response = fb.response;
+      usedProviderName = fb.providerName;
+      usedProviderModel = fb.providerModel;
+      fallbackNote = fb.fallbackNote;
+    } else {
+      throw new Error(`Provider error: ${err}`);
+    }
   }
 
-  const answer = response.content;
+  let answer = fallbackNote ? `[${fallbackNote}]\n\n${response.content}` : response.content;
+
+  if (queryMode === "external" && webContextUsed && webSource && !/\bSOURCES\b/i.test(answer)) {
+    const deduped = Array.from(new Set(webSources.length > 0 ? webSources : [webSource]));
+    answer = `${answer}\n\nSOURCES:\n- ${deduped.join("\n- ")}`;
+  }
+
+  if (queryMode === "external" && !/\bCONFIDENCE\b/i.test(answer)) {
+    const confidence = computeExternalConfidence({
+      webContextUsed,
+      sourceCount: webSources.length,
+      recallHits: hits.length,
+    });
+    answer = `${answer}\n\nCONFIDENCE: ${confidence}`;
+  }
 
   // Step 5: Save block (unless noSave)
   let savedBlock: Block | undefined;
@@ -610,7 +904,7 @@ export async function askWithContext(
       type: "ask",
       content: blockContent,
       tags: ["ask", ...(tags || [])],
-      provider: providerResult.name,
+      provider: usedProviderName,
       tokens_used: response.usage?.total_tokens,
       agent: "cli",
       context_refs: contextRefs,
@@ -620,8 +914,8 @@ export async function askWithContext(
   // Step 6: Return result
   return {
     answer,
-    provider: String(providerResult.name),
-    model: providerResult.model ?? "",
+    provider: usedProviderName,
+    model: usedProviderModel,
     tokens_used: response.usage?.total_tokens,
     context: {
       hits: hits.map(h => ({
