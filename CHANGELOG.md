@@ -1,5 +1,20 @@
 # Changelog
 
+## [3.8.5] - 2026-03-07
+
+### Added
+- `docs/INSTALL-VERIFIED-PRODUCTION.md` with a tested, end-to-end onboarding flow for new users.
+
+### Changed
+- `README.md` now points to verified production install as the primary onboarding route.
+- `docs/README.md` getting-started index updated with verified install path.
+- `QUICKSTART.md` now explicitly redirects production users to the verified guide.
+
+### Validation
+- ✅ Documentation now provides a single "golden path" for clone/install/verify.
+
+---
+
 ## [3.8.4] - 2026-03-07
 
 ### Fixed

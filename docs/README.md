@@ -13,6 +13,7 @@
 |----------|-------------|------|
 | [README.md](../README.md) | Project overview and features | 5 min |
 | [QUICKSTART.md](QUICKSTART.md) | 5-minute setup guide | 5 min |
+| [Verified Install](INSTALL-VERIFIED-PRODUCTION.md) | Golden path for new users | 10 min |
 | [Installation Guide](INSTALLATION.md) | Detailed installation | 10 min |
 
 ### Architecture & Design

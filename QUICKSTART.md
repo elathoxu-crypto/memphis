@@ -1,5 +1,7 @@
 # Memphis Quick Start
 
+For production onboarding, use: **[docs/INSTALL-VERIFIED-PRODUCTION.md](docs/INSTALL-VERIFIED-PRODUCTION.md)**
+
 **3 installation methods - pick your style:**
 
 ---

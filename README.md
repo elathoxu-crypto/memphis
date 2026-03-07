@@ -108,7 +108,8 @@ memphis ask "question"           # Ask with context
 
 ## 📚 Documentation
 
-- [**QUICKSTART.md**](QUICKSTART.md) - 1-minute install
+- [**docs/INSTALL-VERIFIED-PRODUCTION.md**](docs/INSTALL-VERIFIED-PRODUCTION.md) - ✅ Golden path for new users
+- [**QUICKSTART.md**](QUICKSTART.md) - Quick install
 - [**BOOTSTRAP.md**](BOOTSTRAP.md) - Full setup guide
 - [**docs/**](docs/) - Complete documentation
 
