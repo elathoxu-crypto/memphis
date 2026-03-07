@@ -1,5 +1,19 @@
 # Changelog
 
+## [3.8.1] - 2026-03-07
+
+### Added
+- `docs/MEMORY-WORKFLOWS.md` as canonical memory operating model (journal -> decide -> ask/recall -> reflect).
+- `docs/SKILLS-KNOWLEDGE-HARVEST-2026-03-07.md` linked from docs index for migration traceability.
+
+### Changed
+- `docs/README.md` updated with canonical memory workflow + harvest references.
+
+### Validation
+- ✅ Docs merged before ClawHub cleanup/hide actions.
+
+---
+
 ## [3.8.0] - 2026-03-07
 
 ### Added

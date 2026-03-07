@@ -40,6 +40,8 @@
 | [EXAMPLES.md](EXAMPLES.md) | Real-world examples | Guide |
 | [FAQ.md](FAQ.md) | Frequently asked questions | Help |
 | [TROUBLESHOOTING.md](TROUBLESHOOTING.md) | Common issues and fixes | Help |
+| [MEMORY-WORKFLOWS.md](MEMORY-WORKFLOWS.md) | Canonical journal/decide/ask/reflect workflow | Guide |
+| [SKILLS-KNOWLEDGE-HARVEST-2026-03-07.md](SKILLS-KNOWLEDGE-HARVEST-2026-03-07.md) | Harvested knowledge from legacy skills | Ops |
 
 ### Testing
 
