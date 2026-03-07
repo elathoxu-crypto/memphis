@@ -110,6 +110,7 @@ function getEnvKeyForProvider(providerName: ProviderName): string {
     openai: "OPENAI_API_KEY",
     openrouter: "OPENROUTER_API_KEY",
     minimax: "MINIMAX_API_KEY",
+    zai: "ZAI_API_KEY",
   };
   return mapping[providerName];
 }

@@ -47,6 +47,7 @@ import { reflectCommand } from "./commands/reflect.js";
 import { planCommand } from "./commands/plan.js";
 import { ingestCommand } from "./commands/ingest.js";
 import { watchCommand } from "./commands/watch.js";
+import { logCommand } from "./commands/log.js";
 import { DaemonManager } from "../daemon/index.js";
 import { mcpStartCommand, mcpInspectCommand } from "./commands/mcp.js";
 import { doctorCommand } from "./commands/doctor.js";
@@ -145,6 +146,132 @@ program
       noEmbed: opts.noEmbed,
       quiet: opts.quiet,
     });
+  });
+
+program
+  .command("log <level> <message>")
+  .description("📊 Log management - add and query logs in Memphis chains")
+  .option("-s, --source <source>", "Log source: memphis-cli, memphis-bot, openclaw, system, exec", "memphis-cli")
+  .option("--context <json>", "Additional context as JSON string")
+  .action(async (level: string, message: string, opts: any) => {
+    await logCommand([level, message, opts.source ? `--source ${opts.source}` : "", opts.context ? `--context ${opts.context}` : ""]);
+  });
+
+program
+  .command("logs")
+  .description("📊 Query logs from Memphis chains")
+  .option("-s, --source <source>", "Filter by source: memphis-cli, memphis-bot, openclaw, system, exec")
+  .option("-l, --level <level>", "Filter by level: DEBUG, INFO, WARN, ERROR, CRITICAL")
+  .option("--last <duration>", "Show logs from last X time: 1h, 24h, 7d")
+  .option("--search <text>", "Search in log messages")
+  .option("--tail <n>", "Show last N logs (default: 100)", "100")
+  .option("-j, --json", "Output as JSON")
+  .action(async (opts: any) => {
+    const params: string[] = [];
+    if (opts.source) params.push(`--source ${opts.source}`);
+    if (opts.level) params.push(`--level ${opts.level}`);
+    if (opts.last) params.push(`--last ${opts.last}`);
+    if (opts.search) params.push(`--search ${opts.search}`);
+    if (opts.tail !== undefined) params.push(`--tail ${opts.tail}`);
+    if (opts.json) params.push(`--json`);
+    await logCommand(["logs", ...params]);
+  });
+
+program
+  .command("log-stats")
+  .description("📊 Show log statistics")
+  .action(async () => {
+    await logCommand(["stats"]);
+  });
+
+program
+  .command("log-tail <n>")
+  .description("📊 Show last N logs")
+  .option("-s, --source <source>", "Filter by source")
+  .option("-l, --level <level>", "Filter by level")
+  .action(async (n: string, opts: any) => {
+    const params = [`--tail ${n}`];
+    if (opts.source) params.push(`--source ${opts.source}`);
+    if (opts.level) params.push(`--level ${opts.level}`);
+    await logCommand(["logs", ...params]);
+  });
+
+program
+  .command("log-export")
+  .description("📊 Export logs to file")
+  .option("-f, --format <format>", "Export format: json, csv", "json")
+  .option("-o, --output <file>", "Output file path")
+  .action(async (opts: any) => {
+    const params = [`--export ${opts.format}`];
+    if (opts.output) console.log(`Export to: ${opts.output}`);
+    await logCommand(["logs", ...params]);
+  });
+
+const chainProgram = program
+  .command("chain")
+  .description("Manage custom chains");
+
+chainProgram
+  .command("add <name>")
+  .description("Create a custom chain with validation")
+  .option("--desc <description>", "Optional chain description")
+  .option("--tags <tags>", "Comma-separated metadata tags")
+  .option("--private", "Mark chain as private in metadata", false)
+  .action(async (name: string, opts: any) => {
+    const normalized = String(name || "").trim().toLowerCase();
+    const valid = /^[a-z0-9][a-z0-9_-]{1,47}$/.test(normalized);
+
+    const reserved = new Set([
+      "journal", "ask", "decision", "decisions", "summary", "share", "vault", "log", "logs", "exec",
+    ]);
+
+    if (!valid) {
+      console.log(chalk.red("❌ Invalid chain name. Use: ^[a-z0-9][a-z0-9_-]{1,47}$"));
+      process.exit(1);
+    }
+
+    if (reserved.has(normalized) || normalized.startsWith(".") || normalized.startsWith("_internal")) {
+      console.log(chalk.red(`❌ Reserved chain name: ${normalized}`));
+      process.exit(1);
+    }
+
+    const { mkdirSync, existsSync, writeFileSync } = await import("node:fs");
+    const { join } = await import("node:path");
+
+    const memphisHome = process.env.MEMPHIS_HOME || `${process.env.HOME || ""}/.memphis`;
+    const chainsDir = join(memphisHome, "chains");
+    const chainDir = join(chainsDir, normalized);
+
+    if (!chainDir.startsWith(chainsDir)) {
+      console.log(chalk.red("❌ Invalid chain path"));
+      process.exit(1);
+    }
+
+    if (existsSync(chainDir)) {
+      console.log(chalk.yellow(`ℹ️ Chain already exists: ${normalized}`));
+      return;
+    }
+
+    mkdirSync(chainDir, { recursive: true, mode: 0o700 });
+    writeFileSync(join(chainDir, ".gitkeep"), "", { encoding: "utf-8" });
+
+    const tags = String(opts.tags || "")
+      .split(",")
+      .map((t: string) => t.trim())
+      .filter(Boolean);
+
+    const meta = {
+      name: normalized,
+      description: opts.desc || "",
+      tags,
+      private: Boolean(opts.private),
+      createdAt: new Date().toISOString(),
+      createdBy: "memphis-cli",
+    };
+
+    writeFileSync(join(chainDir, ".chain.meta.json"), JSON.stringify(meta, null, 2) + "\n", { encoding: "utf-8" });
+
+    console.log(chalk.green(`✅ Chain created: ${normalized}`));
   });
 
 const mcpProgram = program

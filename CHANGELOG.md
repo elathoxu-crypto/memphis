@@ -1,5 +1,32 @@
 # Changelog
 
+## [3.8.0] - 2026-03-07
+
+### Added
+- **RM-061 roadmap package** with roadmap + operational scripts + CLI extensions.
+- `ROADMAP.md` (LOGS → EXEC → SYSTEM management phases and milestones).
+- New scripts:
+  - `scripts/embedding-coverage-report.sh`
+  - `scripts/embedding-coverage-alert.sh`
+  - `scripts/night-backup-heartbeat.sh`
+  - `scripts/share-sync-runner.sh`
+- New CLI modules:
+  - `src/chains/log.ts`
+  - `src/cli/commands/log.ts`
+
+### Changed
+- `src/cli/index.ts`:
+  - added `memphis chain add <name>` command with validation and metadata support.
+  - wired log command surface (`log` / `logs`) for roadmap workflow.
+- `src/integrations/vault-providers.ts`:
+  - added `zai -> ZAI_API_KEY` mapping for env-based provider resolution.
+
+### Validation
+- ✅ TypeScript build passes (`npm run build`)
+- ✅ Release pushed to origin with tag `v3.8.0`
+
+---
+
 ## [3.7.3] - 2026-03-07
 
 ### Fixed
