@@ -600,7 +600,7 @@ code blocks
 |--------|--------|
 | Cell   | Cell   |
 
-[Link text](url)
+[Project repository](https://github.com/elathoxu-crypto/memphis)
 ```
 
 ---

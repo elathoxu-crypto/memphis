@@ -379,7 +379,7 @@ Time: 38 minutes
 **Documentation:**
 - [Safety Features Guide](docs/SAFETY-FEATURES.md)
 - [Full Changelog](CHANGELOG.md)
-- [Production Roadmap](docs/ROADMAP-v3.0.x-to-v3.1.0.md)
+- [Production Roadmap](ROADMAP.md)
 
 **Community:**
 - [Discord](https://discord.com/invite/clawd)

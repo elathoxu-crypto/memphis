@@ -651,7 +651,7 @@ Benchmark:
 
 **Vision:**
 - [VISION.md](./VISION.md) — Oficjalna wizja
-- [VISION-MAP.md](/tmp/memphis-vision-map.md) — Visual map
+- [VISION.md](VISION.md) — Visual + narrative roadmap context
 
 **Current State:**
 - [CHANGELOG.md](../CHANGELOG.md) — v1.7.3-v1.7.6

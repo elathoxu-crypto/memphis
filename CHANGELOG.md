@@ -1,5 +1,25 @@
 # Changelog
 
+## [3.8.3] - 2026-03-07
+
+### Added
+- Missing canonical docs pages to complete README/docs navigation:
+  - `CONTRIBUTING.md` (root redirect to docs)
+  - `docs/MODEL-A-GUIDE.md`
+  - `docs/MONITORING.md`
+  - `docs/CODE_OF_CONDUCT.md`
+
+### Fixed
+- Broken documentation links in:
+  - `docs/VISION-IMPLEMENTATION-ROADMAP.md`
+  - `docs/CONTRIBUTING.md`
+  - `RELEASE-NOTES-v3.0.1.md`
+
+### Validation
+- ✅ Docs navigation tightened for user onboarding and contributor UX.
+
+---
+
 ## [3.8.2] - 2026-03-07
 
 ### Changed
