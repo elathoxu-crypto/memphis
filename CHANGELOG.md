@@ -1,5 +1,15 @@
 # Changelog
 
+## [3.8.7] - 2026-03-07
+
+### Fixed
+- `scripts/daily-ops-check.sh` now works in non-interactive systemd contexts by falling back to `node ~/memphis/dist/cli/index.js` when `memphis` is not in PATH.
+
+### Validation
+- ✅ Daily ops check returns PASS in service-like environment.
+
+---
+
 ## [3.8.6] - 2026-03-07
 
 ### Added

@@ -13,8 +13,15 @@ echo "== Memphis Daily Ops Check =="
 
 date
 
+MEMPHIS_CMD=""
 if command -v memphis >/dev/null 2>&1; then
-  if memphis status >/tmp/memphis-status.out 2>/tmp/memphis-status.err; then
+  MEMPHIS_CMD="memphis"
+elif [ -f "$HOME/memphis/dist/cli/index.js" ] && command -v node >/dev/null 2>&1; then
+  MEMPHIS_CMD="node $HOME/memphis/dist/cli/index.js"
+fi
+
+if [ -n "$MEMPHIS_CMD" ]; then
+  if bash -lc "$MEMPHIS_CMD status" >/tmp/memphis-status.out 2>/tmp/memphis-status.err; then
     ok "memphis status"
   else
     bad "memphis status failed"
@@ -50,8 +57,8 @@ else
   warn "memphis-bot.service not enabled"
 fi
 
-if command -v memphis >/dev/null 2>&1; then
-  if memphis share-sync --status >/tmp/share-sync-status.out 2>/tmp/share-sync-status.err; then
+if [ -n "$MEMPHIS_CMD" ]; then
+  if bash -lc "$MEMPHIS_CMD share-sync --status" >/tmp/share-sync-status.out 2>/tmp/share-sync-status.err; then
     ok "share-sync status command"
   else
     warn "share-sync status failed"
