@@ -23,14 +23,22 @@ interface SyncStatus {
   connectionStatus: "ok" | "error" | "unknown";
 }
 
+function ensureRsyncAvailable(): void {
+  try {
+    execSync("command -v rsync", { stdio: "ignore" });
+  } catch {
+    throw new Error("rsync is not installed. Install rsync and retry share-sync.");
+  }
+}
+
 export function registerShareSyncCommand(program: Command): void {
   program
     .command("share-sync")
     .description("Synchronize share chain with remote Memphis agent")
     .option("--push", "Push local share blocks to remote")
     .option("--pull", "Pull remote share blocks to local")
-    .option("--remote <host>", "Remote Memphis host (IP or hostname)", "10.0.0.80")
-    .option("--user <user>", "Remote user", "memphis")
+    .option("--remote <host>", "Remote Memphis host (IP or hostname)")
+    .option("--user <user>", "Remote user")
     .option("--status", "Show sync status only")
     .option("--force", "Force sync even if conflicts detected")
     .action(async (options: ShareSyncOptions) => {
@@ -54,7 +62,7 @@ async function handleShareSync(options: ShareSyncOptions): Promise<void> {
     } catch {}
   }
 
-  const remoteHost = options.remote || "10.0.0.80";
+  const remoteHost = options.remote || "10.0.0.22";
   const remoteUser = options.user || "memphis";
 
   console.log(chalk.bold.cyan("\n🔄 Memphis Share Sync"));
@@ -204,6 +212,8 @@ async function pushToRemote(
     { stdio: "inherit" }
   );
 
+  ensureRsyncAvailable();
+
   // Push share blocks
   console.log(chalk.gray("  Syncing blocks..."));
   execSync(
@@ -252,6 +262,8 @@ async function pullFromRemote(
   }
 
   console.log(chalk.white("  Blocks to pull:"), chalk.green(remoteBlockCount.toString()));
+
+  ensureRsyncAvailable();
 
   // Pull share blocks
   console.log(chalk.gray("  Syncing blocks..."));

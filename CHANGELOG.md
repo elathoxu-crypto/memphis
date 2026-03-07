@@ -1,5 +1,23 @@
 # Changelog
 
+## [3.8.4] - 2026-03-07
+
+### Fixed
+- **RM-062 (share-sync reliability):** improved `share-sync` defaults and resilience:
+  - remote host default set to `10.0.0.22` for Memphis↔Watra topology
+  - SSH config auto-detection now works when remote/user are omitted
+  - explicit `rsync` availability guard with actionable error
+
+### Added
+- `docs/RELEASE-REPORT-2026-03-07-v3.8.0-v3.8.3.md`
+- `docs/CLAWHUB-MANUAL-CLEANUP-CHECKLIST.md`
+
+### Validation
+- ✅ TypeScript build PASS
+- ✅ `memphis share-sync --status` smoke PASS
+
+---
+
 ## [3.8.3] - 2026-03-07
 
 ### Added
