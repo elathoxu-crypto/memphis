@@ -1,5 +1,29 @@
 # Changelog
 
+## [3.7.3] - 2026-03-07
+
+### Fixed
+- **Telegram bot stability:** removed duplicate poller race by enforcing single-instance runtime lock (`/tmp/memphis-bot.lock`).
+- **Intermittent help failures:** added fallback resend without Markdown when Telegram rejects entities.
+- **Operational drift:** standardized production run mode to systemd user service (`memphis-bot.service`).
+
+### Added
+- **Bot operations runbook:** `docs/TELEGRAM_BOT_OPERATIONS.md` (restart, logs, token rotation, smoke tests).
+
+### Changed
+- **bot-group.ts:**
+  - single-instance lock acquisition + stale lock recovery
+  - lock release on shutdown
+  - safer message send logging and Markdown parse fallback
+  - bot ask path pinned to local Ollama model for resilience
+
+### Validation
+- ✅ `memphis-bot.service` active and stable
+- ✅ `/help` processed successfully (`OK (fallback plain)`)
+- ✅ polling healthy (`ok:true`) after restart
+
+---
+
 ## [3.7.2] - 2026-03-05
 
 ### Fixed
