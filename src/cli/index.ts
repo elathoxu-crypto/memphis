@@ -51,6 +51,7 @@ import { logCommand } from "./commands/log.js";
 import { DaemonManager } from "../daemon/index.js";
 import { mcpStartCommand, mcpInspectCommand } from "./commands/mcp.js";
 import { doctorCommand } from "./commands/doctor.js";
+import { updateRunCommand, updateStatusCommand } from "./commands/update.js";
 
 const program = new Command();
 const daemonManager = new DaemonManager();
@@ -73,6 +74,29 @@ program
   .option("-j, --json", "Output JSON format")
   .action((options) => {
     doctorCommand(options);
+  });
+
+program
+  .command("update [action]")
+  .description("Update Memphis (status/run/check)")
+  .option("-j, --json", "Output JSON")
+  .option("-y, --yes", "Skip safety checks (allow dirty working tree)")
+  .action(async (action: string | undefined, options) => {
+    const mode = (action || "status").toLowerCase();
+
+    if (mode === "status" || mode === "check") {
+      await updateStatusCommand({ json: options.json, yes: options.yes, check: mode === "check" });
+      return;
+    }
+
+    if (mode === "run" || mode === "apply") {
+      await updateRunCommand({ json: options.json, yes: options.yes });
+      return;
+    }
+
+    console.log(chalk.red(`Unknown update action: ${mode}`));
+    console.log(chalk.gray("Use: memphis update status | memphis update run"));
+    process.exit(1);
   });
 
 program

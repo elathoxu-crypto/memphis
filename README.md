@@ -108,6 +108,8 @@ memphis ask "question"           # Ask with context
 
 ## 📚 Documentation
 
+- [**docs/VISION.md**](docs/VISION.md) - Core vision (original)
+- [**docs/VISION-FULL.md**](docs/VISION-FULL.md) - Full project vision (expanded)
 - [**docs/INSTALL-VERIFIED-PRODUCTION.md**](docs/INSTALL-VERIFIED-PRODUCTION.md) - ✅ Golden path for new users
 - [**docs/REPOSITORY-MAP.md**](docs/REPOSITORY-MAP.md) - Which repo to clone (and why)
 - [**QUICKSTART.md**](QUICKSTART.md) - Quick install

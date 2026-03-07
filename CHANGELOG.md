@@ -1,5 +1,17 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- `docs/VISION-FULL.md` — expanded, production-grade project vision (strategy, architecture, operations, governance, known limits).
+
+### Changed
+- `README.md` documentation section now links both vision tracks:
+  - `docs/VISION.md` (core/original)
+  - `docs/VISION-FULL.md` (expanded/full)
+
+---
+
 ## [3.8.11] - 2026-03-07
 
 ### Added
