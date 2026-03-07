@@ -1,5 +1,19 @@
 # Changelog
 
+## [3.8.10] - 2026-03-07
+
+### Added
+- `docs/REPOSITORY-MAP.md` to clarify multi-repo structure and define the canonical clone path.
+
+### Changed
+- `README.md` now links repository map directly from the main docs section.
+- `docs/README.md` getting-started table includes repository map for faster onboarding decisions.
+
+### Validation
+- ✅ New users now have explicit guidance: clone `memphis` by default; use `memphis-chain-core` only for advanced Rust core work.
+
+---
+
 ## [3.8.7] - 2026-03-07
 
 ### Fixed

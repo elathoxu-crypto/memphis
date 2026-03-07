@@ -109,6 +109,7 @@ memphis ask "question"           # Ask with context
 ## 📚 Documentation
 
 - [**docs/INSTALL-VERIFIED-PRODUCTION.md**](docs/INSTALL-VERIFIED-PRODUCTION.md) - ✅ Golden path for new users
+- [**docs/REPOSITORY-MAP.md**](docs/REPOSITORY-MAP.md) - Which repo to clone (and why)
 - [**QUICKSTART.md**](QUICKSTART.md) - Quick install
 - [**BOOTSTRAP.md**](BOOTSTRAP.md) - Full setup guide
 - [**docs/**](docs/) - Complete documentation
